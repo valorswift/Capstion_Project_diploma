@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS users (
         console.log("Database & Users table ready ✅");
     } catch (err) {
         console.error("DB Init Error:", err);
-        process.exit(1);
+       
     }
 }
 
