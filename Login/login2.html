@@ -201,6 +201,23 @@
             .brand-side { display: none; }
             .auth-side { width: 100%; }
         }
+
+        .btn-guest {
+    width: 100%;
+    padding: 10px;
+    margin-top: 0.7rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-guest:hover {
+    background: rgba(255,255,255,0.05);
+    color: white;
+}
     </style>
 </head>
 <body>
@@ -261,6 +278,10 @@
                 </div>
 
                 <button type="submit" class="btn-primary" id="btn-submit">Log In</button>
+
+                <button type="button" class="btn-guest" onclick="app.continueAsGuest()">
+    Continue as Guest
+</button>
             </form>
 
             <!-- Overlay -->
@@ -292,6 +313,13 @@ class App {
             form: document.getElementById('auth-form')
         };
     }
+    continueAsGuest() {
+    localStorage.setItem("userName", "Guest");
+    localStorage.setItem("userEmail", "guest@local");
+
+    alert("Continuing as Guest 👤");
+    window.location.href = '../Product/index.html';
+}
 
     setMode(mode) {
         this.mode = mode;
