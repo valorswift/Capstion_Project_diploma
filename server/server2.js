@@ -45,10 +45,13 @@ const otpStore = new Map();
 // MySQL connection config
 const dbConfig = {
     host: process.env.DB_HOST,
-user: process.env.DB_USER,
-password: process.env.DB_PASS,
-  port: process.env.DB_PORT,
-database: process.env.DB_NAME
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    ssl: {
+        rejectUnauthorized: false
+    }
 };
 
 let db;
