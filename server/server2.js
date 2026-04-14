@@ -49,6 +49,7 @@ const dbConfig = {
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
+    connectTimeout: 60000,
     ssl: {
         rejectUnauthorized: false
     }
