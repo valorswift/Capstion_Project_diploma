@@ -1,0 +1,2644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hierarchical Clustering - ML Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #f59e0b;
+  --accent-alt: #14b8a6;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --amber: #f59e0b;
+  --teal: #14b8a6;
+  --cyan: #22d3ee;
+  --rose: #f472b6;
+  --emerald: #10b981;
+  --violet: #8b5cf6;
+  --orange: #f97316;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 30% 20%, rgba(245, 158, 11, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(20, 184, 166, 0.03) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--amber), var(--teal));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--amber), var(--teal));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--amber);
+}
+
+.hero {
+  min-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--amber);
+  background: rgba(245, 158, 11, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--amber);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--amber); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--amber); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--amber) 50%, var(--teal) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 620px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Theory Card */
+.theory-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.theory-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--amber), var(--teal), var(--amber));
+  opacity: 0.6;
+}
+
+.theory-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.theory-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.theory-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(20, 184, 166, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.theory-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.theory-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px;
+  align-items: start;
+}
+
+.theory-text {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.theory-text p {
+  margin: 0 0 18px 0;
+}
+
+.theory-text p:last-child {
+  margin-bottom: 0;
+}
+
+.theory-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Conceptual Diagram */
+.concept-diagram {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.diagram-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.diagram-box {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(20, 184, 166, 0.1));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+  min-width: 110px;
+}
+
+.diagram-box.highlight {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(20, 184, 166, 0.2));
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.diagram-box-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diagram-box-value {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.diagram-arrow {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* Key Concepts */
+.key-concepts {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.key-concepts-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-concepts-title::before {
+  content: '';
+  width: 12px;
+  height: 2px;
+  background: var(--amber);
+}
+
+.concept-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.concept-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.15);
+  font-size: 13px;
+  color: var(--muted);
+  transition: all 0.3s ease;
+}
+
+.concept-list li:last-child {
+  border-bottom: none;
+}
+
+.concept-list li:hover {
+  padding-left: 8px;
+  color: var(--text);
+}
+
+.concept-list li strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.concept-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--amber), var(--teal));
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* Simulator Section */
+.simulator-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 60px;
+}
+
+.simulator-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--amber), var(--teal), var(--amber));
+  opacity: 0.6;
+}
+
+.simulator-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simulator-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.simulator-title svg {
+  color: var(--amber);
+}
+
+.simulator-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  background: rgba(245, 158, 11, 0.1);
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* Fixed height simulator body */
+.simulator-body {
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+  gap: 0;
+  min-height: 480px;
+}
+
+/* Control Panel */
+.control-panel {
+  padding: 24px;
+  border-right: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.control-section {
+  margin-bottom: 24px;
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.control-select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(10, 16, 32, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c7090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.control-select:hover, .control-select:focus {
+  border-color: var(--amber);
+  outline: none;
+}
+
+.control-slider-group {
+  margin-bottom: 16px;
+}
+
+.control-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.control-slider-label span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.control-slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--amber);
+  background: rgba(245, 158, 11, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.control-slider {
+  width: 100%;
+  height: 6px;
+  background: rgba(92, 112, 144, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.control-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--amber), var(--teal));
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.control-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.control-btn.primary {
+  background: linear-gradient(135deg, var(--amber), var(--teal));
+  color: var(--bg);
+}
+
+.control-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 4px 20px -4px var(--amber);
+  transform: translateY(-2px);
+}
+
+.control-btn.secondary {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--amber);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.control-btn.secondary:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Visualization Panel */
+.viz-panel {
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.viz-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.viz-section {
+  background: rgba(10, 16, 32, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  flex: 1;
+  height: 420px;
+}
+
+.viz-section-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.viz-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.viz-section-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.viz-canvas-wrap {
+  padding: 16px;
+  height: calc(100% - 44px);
+  display: flex;
+  gap: 16px;
+}
+
+.viz-canvas {
+  flex: 1;
+  border-radius: 8px;
+  background: #060a14;
+}
+
+.dendrogram-canvas {
+  width: 180px;
+  border-radius: 8px;
+  background: #060a14;
+}
+
+/* Explanation Panel - Fixed height with overflow */
+.explanation-panel {
+  padding: 24px;
+  border-left: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  height: 468px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.explanation-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--teal);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.explanation-header::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--teal);
+  border-radius: 2px;
+}
+
+.explanation-step {
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.explanation-step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  margin-bottom: 6px;
+}
+
+.explanation-step-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.explanation-step-text {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Metrics Display */
+.metrics-display {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.metrics-display-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-name {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.metric-value.highlight {
+  color: var(--amber);
+}
+
+/* Merge Log */
+.merge-log {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.merge-log-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.merge-log-item {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.05);
+}
+
+.merge-log-item:last-child {
+  border-bottom: none;
+}
+
+.merge-log-item .cluster-id {
+  color: var(--amber);
+}
+
+/* Advantages Section */
+.advantages-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.advantages-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--amber), var(--teal), var(--amber));
+  opacity: 0.6;
+}
+
+.advantages-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.advantages-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(20, 184, 166, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.advantages-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.advantages-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.advantage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  transition: all 0.3s ease;
+}
+
+.advantage-item:hover {
+  border-color: rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.03);
+}
+
+.advantage-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(20, 184, 166, 0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.advantage-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* Help Button */
+.help-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--amber), var(--teal));
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 32px -8px rgba(245, 158, 11, 0.4),
+    0 0 48px -12px rgba(20, 184, 166, 0.3);
+  transition: all 0.3s ease;
+}
+
+.help-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 12px 40px -8px rgba(245, 158, 11, 0.5),
+    0 0 60px -12px rgba(20, 184, 166, 0.4);
+}
+
+.help-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--amber), var(--teal));
+  opacity: 0.3;
+  filter: blur(10px);
+  z-index: -1;
+}
+
+/* Help Modal */
+.help-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 13, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  padding: 20px;
+}
+
+.help-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.help-modal {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.98), rgba(8, 12, 22, 0.99));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.help-modal-overlay.active .help-modal {
+  transform: translateY(0) scale(1);
+}
+
+.help-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--amber), var(--teal), var(--amber));
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.help-modal-title svg {
+  color: var(--amber);
+}
+
+.help-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.help-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.help-modal-body {
+  padding: 28px;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-section-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--amber);
+  border-radius: 2px;
+}
+
+.help-section-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.help-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.help-list li:last-child {
+  border-bottom: none;
+}
+
+.help-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--amber), var(--teal));
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+/* Scroll reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .simulator-body {
+    grid-template-columns: 260px 1fr 280px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .theory-content {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  
+  .simulator-body {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  
+  .control-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .explanation-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    height: auto;
+    min-height: 400px;
+  }
+  
+  .advantages-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .viz-section {
+    height: 350px;
+  }
+  
+  .viz-canvas-wrap {
+    flex-direction: column;
+  }
+  
+  .dendrogram-canvas {
+    width: 100%;
+    height: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 35vh;
+  }
+  
+  .theory-card {
+    padding: 28px 24px;
+  }
+  
+  .simulator-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .diagram-flow {
+    flex-direction: column;
+  }
+  
+  .diagram-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .help-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+}
+
+/* Custom scrollbar */
+.explanation-panel::-webkit-scrollbar,
+.merge-log::-webkit-scrollbar,
+.help-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.explanation-panel::-webkit-scrollbar-track,
+.merge-log::-webkit-scrollbar-track,
+.help-modal::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.explanation-panel::-webkit-scrollbar-thumb,
+.merge-log::-webkit-scrollbar-thumb,
+.help-modal::-webkit-scrollbar-thumb {
+  background: rgba(92, 112, 144, 0.3);
+  border-radius: 3px;
+}
+
+.explanation-panel::-webkit-scrollbar-thumb:hover,
+.merge-log::-webkit-scrollbar-thumb:hover,
+.help-modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(92, 112, 144, 0.5);
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="clusteringHolder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="ml_lab.html">Machine Learning</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="unsupervised.html">Unsupervised</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="clustering.html">Clustering</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Hierarchical Clustering</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Clustering Algorithm</div>
+    <h1 class="main-title">Hierarchical Clustering</h1>
+    <p class="subtitle">
+      // A clustering method that builds a hierarchy of clusters by<br>
+      // iteratively merging the closest data groups to form a tree structure.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <!-- Theory Card -->
+    <div class="theory-card reveal">
+      <div class="theory-header">
+        <div class="theory-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="5" r="3"/>
+            <circle cx="6" cy="17" r="3"/>
+            <circle cx="18" cy="17" r="3"/>
+            <line x1="12" y1="8" x2="6" y2="14"/>
+            <line x1="12" y1="8" x2="18" y2="14"/>
+          </svg>
+        </div>
+        <h2 class="theory-title">Understanding Hierarchical Clustering</h2>
+      </div>
+      
+      <div class="theory-content">
+        <div class="theory-text">
+          <p>
+            <strong>Hierarchical Clustering is an unsupervised learning algorithm</strong> that builds a hierarchy of clusters by progressively merging or dividing groups. Unlike K-Means, it doesn't require specifying the number of clusters beforehand.
+          </p>
+          <p>
+            There are two approaches: <strong>Agglomerative (bottom-up)</strong> starts with each point as its own cluster and merges the closest pairs, while <strong>Divisive (top-down)</strong> starts with all points in one cluster and recursively splits them.
+          </p>
+          
+          <!-- Conceptual Diagram -->
+          <div class="concept-diagram">
+            <div class="diagram-flow">
+              <div class="diagram-box">
+                <div class="diagram-box-title">Input</div>
+                <div class="diagram-box-value">Dataset</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Compute</div>
+                <div class="diagram-box-value">Distance Matrix</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Merge</div>
+                <div class="diagram-box-value">Closest Clusters</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Update</div>
+                <div class="diagram-box-value">Distances</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Output</div>
+                <div class="diagram-box-value">Dendrogram</div>
+              </div>
+            </div>
+          </div>
+          
+          <p><strong>Dendrogram:</strong> A tree-like diagram that records the sequences of merges. The height at which two clusters merge represents the distance between them, allowing you to choose the number of clusters by cutting at different levels.</p>
+        </div>
+        
+        <div class="key-concepts">
+          <div class="key-concepts-title">Key Concepts</div>
+          <ul class="concept-list">
+            <li>
+              <div>
+                <strong>Cluster Hierarchy</strong>
+                A tree structure showing how clusters are formed by successive merges or splits.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Dendrogram</strong>
+                Visual representation of the clustering hierarchy with merge distances on the vertical axis.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Linkage Methods</strong>
+                Ways to measure distance between clusters: single, complete, average, or Ward's method.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Distance Metrics</strong>
+                Euclidean, Manhattan, or other metrics for measuring point-to-point distances.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Merge Levels</strong>
+                Each iteration merges the two closest clusters, building the hierarchy level by level.
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Simulator -->
+    <div class="simulator-card reveal">
+      <div class="simulator-header">
+        <h3 class="simulator-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="5" r="3"/>
+            <circle cx="6" cy="17" r="3"/>
+            <circle cx="18" cy="17" r="3"/>
+            <line x1="12" y1="8" x2="6" y2="14"/>
+            <line x1="12" y1="8" x2="18" y2="14"/>
+          </svg>
+          Interactive Hierarchical Clustering Simulator
+        </h3>
+        <span class="simulator-badge">STEP-BY-STEP</span>
+      </div>
+      
+      <div class="simulator-body">
+        <!-- Control Panel -->
+        <div class="control-panel">
+          <div class="control-section">
+            <label class="control-label">Dataset Type</label>
+            <select class="control-select" id="datasetSelect">
+              <option value="clustered">Clustered Dataset</option>
+              <option value="random">Random Dataset</option>
+              <option value="grid">Grid Dataset</option>
+            </select>
+          </div>
+          
+          <div class="control-section">
+            <label class="control-label">Linkage Method</label>
+            <select class="control-select" id="linkageSelect">
+              <option value="single">Single Linkage</option>
+              <option value="complete">Complete Linkage</option>
+              <option value="average">Average Linkage</option>
+            </select>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Number of Points</span>
+                <span class="control-slider-value" id="pointsValueDisplay">15</span>
+              </div>
+              <input type="range" class="control-slider" id="pointsSlider" min="8" max="30" step="1" value="15">
+            </div>
+            
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Animation Speed</span>
+                <span class="control-slider-value" id="speedValueDisplay">1.0x</span>
+              </div>
+              <input type="range" class="control-slider" id="speedSlider" min="0.5" max="3" step="0.25" value="1">
+            </div>
+            
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Cluster Threshold</span>
+                <span class="control-slider-value" id="thresholdValueDisplay">3</span>
+              </div>
+              <input type="range" class="control-slider" id="thresholdSlider" min="2" max="8" step="1" value="3">
+            </div>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-buttons">
+              <button class="control-btn primary" id="generateBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                </svg>
+                Generate Dataset
+              </button>
+              <button class="control-btn secondary" id="clusterBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Start Clustering
+              </button>
+              <button class="control-btn secondary" id="resetBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="1 4 1 10 7 10"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Visualization Panel -->
+        <div class="viz-panel">
+          <div class="viz-container">
+            <div class="viz-section">
+              <div class="viz-section-header">
+                <span class="viz-section-title">Cluster Visualization</span>
+                <span class="viz-section-info" id="datasetInfo">Generate dataset to begin</span>
+              </div>
+              <div class="viz-canvas-wrap">
+                <canvas class="viz-canvas" id="mainCanvas"></canvas>
+                <canvas class="dendrogram-canvas" id="dendrogramCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Explanation Panel -->
+        <div class="explanation-panel">
+          <div class="explanation-header">Algorithm Progress</div>
+          
+          <div class="explanation-step" id="currentStep">
+            <div class="explanation-step-num" id="stepNum">READY</div>
+            <div class="explanation-step-title" id="stepTitle">Generate Dataset</div>
+            <div class="explanation-step-text" id="stepText">
+              Select dataset type and parameters, then click "Generate Dataset" to create data points for clustering.
+            </div>
+          </div>
+          
+          <div class="metrics-display">
+            <div class="metrics-display-title">Current Metrics</div>
+            <div class="metric-row">
+              <span class="metric-name">Data Points</span>
+              <span class="metric-value highlight" id="metricPoints">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Current Clusters</span>
+              <span class="metric-value" id="metricClusters">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Merge Level</span>
+              <span class="metric-value" id="metricLevel">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Last Merge Distance</span>
+              <span class="metric-value" id="metricDistance">-</span>
+            </div>
+          </div>
+          
+          <div class="merge-log" id="mergeLog" style="display: none;">
+            <div class="merge-log-title">Merge History</div>
+            <div id="mergeLogContent"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advantages Section -->
+    <div class="advantages-card reveal">
+      <div class="advantages-header">
+        <div class="advantages-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3 class="advantages-title">Advantages of Hierarchical Clustering</h3>
+      </div>
+      
+      <div class="advantages-grid">
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+              <path d="M12 20V10"/>
+              <path d="M18 20V4"/>
+              <path d="M6 20v-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">No need to specify the number of clusters in advance - the dendrogram reveals natural cluster structure.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Produces a hierarchy of clusters, allowing analysis at multiple levels of granularity.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="3" y1="9" x2="21" y2="9"/>
+              <line x1="9" y1="21" x2="9" y2="9"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Works well with non-convex cluster shapes that K-Means cannot handle properly.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Dendrogram provides interpretable visualization of the clustering process and structure.</div>
+        </div>
+      </div>
+    </div>
+    
+  </section>
+
+  <footer style="padding: 40px 20px; text-align: center; border-top: 1px solid var(--border);">
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);">
+      // Hierarchical Clustering algorithm visualization for machine learning education
+    </p>
+  </footer>
+  
+</div>
+
+<!-- Help Button -->
+<button class="help-btn" id="helpBtn" aria-label="Help">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+</button>
+
+<!-- Help Modal -->
+<div class="help-modal-overlay" id="helpModal">
+  <div class="help-modal">
+    <div class="help-modal-header">
+      <h3 class="help-modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Hierarchical Clustering Guide
+      </h3>
+      <button class="help-modal-close" id="closeModal" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="help-modal-body">
+      <div class="help-section">
+        <h4 class="help-section-title">What is Hierarchical Clustering?</h4>
+        <p class="help-section-text">
+          Hierarchical Clustering is an unsupervised learning algorithm that builds a hierarchy of clusters by iteratively merging or dividing groups of data points. It creates a tree-like structure called a dendrogram that shows the relationships between clusters.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">What is a Dendrogram?</h4>
+        <p class="help-section-text">
+          A dendrogram is a tree diagram that shows the hierarchical relationship between clusters. The vertical axis represents the distance or dissimilarity at which clusters merge. By cutting the dendrogram at different heights, you can obtain different numbers of clusters.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How Cluster Merging Works</h4>
+        <ul class="help-list">
+          <li><strong>Single Linkage:</strong> Distance between clusters = minimum distance between any two points.</li>
+          <li><strong>Complete Linkage:</strong> Distance between clusters = maximum distance between any two points.</li>
+          <li><strong>Average Linkage:</strong> Distance between clusters = average distance between all pairs of points.</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Hierarchical vs K-Means</h4>
+        <p class="help-section-text">
+          Unlike K-Means, Hierarchical Clustering doesn't require specifying K in advance. It produces a hierarchy that allows analysis at multiple levels. K-Means is faster for large datasets but Hierarchical Clustering provides more interpretability and works better with non-spherical clusters.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How to Use the Simulator</h4>
+        <ul class="help-list">
+          <li>Select a dataset type and linkage method</li>
+          <li>Adjust the number of points and animation speed</li>
+          <li>Click "Generate Dataset" to create data points</li>
+          <li>Click "Start Clustering" to watch the algorithm</li>
+          <li>Observe the dendrogram building and cluster merging</li>
+          <li>Use the threshold slider to cut the dendrogram</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const bgNodes = [];
+const bgNodeCount = 45;
+
+function initBgNodes() {
+  bgNodes.length = 0;
+  
+  for (let i = 0; i < bgNodeCount; i++) {
+    bgNodes.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'amber' : 'teal'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < bgNodes.length; i++) {
+    for (let j = i + 1; j < bgNodes.length; j++) {
+      const dx = bgNodes[i].x - bgNodes[j].x;
+      const dy = bgNodes[i].y - bgNodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 100) {
+        const alpha = (1 - dist / 100) * 0.12;
+        const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 1.5 + i * 0.3));
+        
+        if (bgNodes[i].type === 'amber') {
+          bgCtx.strokeStyle = 'rgba(245, 158, 11, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(20, 184, 166, ' + pulseAlpha + ')';
+        }
+        
+        bgCtx.beginPath();
+        bgCtx.moveTo(bgNodes[i].x, bgNodes[i].y);
+        bgCtx.lineTo(bgNodes[j].x, bgNodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  
+  bgNodes.forEach(node => {
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.025;
+    
+    if (node.x < 0 || node.x > bgWidth) node.vx *= -1;
+    if (node.y < 0 || node.y > bgHeight) node.vy *= -1;
+    
+    const dx = mouseX - node.x;
+    const dy = mouseY - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 120) {
+      node.x -= dx * 0.008;
+      node.y -= dy * 0.008;
+    }
+    
+    const pulseRadius = node.radius + Math.sin(node.pulse) * 0.5;
+    const glowRadius = Math.max(1, pulseRadius + 3);
+    
+    const glow = bgCtx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, glowRadius
+    );
+    
+    if (node.type === 'amber') {
+      glow.addColorStop(0, 'rgba(245, 158, 11, 0.35)');
+      glow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(20, 184, 166, 0.35)');
+      glow.addColorStop(1, 'rgba(20, 184, 166, 0)');
+    }
+    
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+    bgCtx.fill();
+    
+    bgCtx.fillStyle = node.type === 'amber' ? '#f59e0b' : '#14b8a6';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pulseRadius), 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 180);
+  gradient.addColorStop(0, 'rgba(245, 158, 11, 0.03)');
+  gradient.addColorStop(0.5, 'rgba(20, 184, 166, 0.015)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animateBg() {
+  mouseX += (targetMouseX - mouseX) * 0.06;
+  mouseY += (targetMouseY - mouseY) * 0.06;
+  
+  drawBackground();
+  requestAnimationFrame(animateBg);
+}
+
+// === CLUSTER COLORS ===
+const clusterColors = [
+  '#f59e0b', // amber
+  '#14b8a6', // teal
+  '#8b5cf6', // violet
+  '#f472b6', // rose
+  '#22d3ee', // cyan
+  '#10b981', // emerald
+  '#f97316', // orange
+  '#6366f1', // indigo
+];
+
+// === HIERARCHICAL CLUSTERING SIMULATOR ===
+let mainCanvas = null;
+let mainCtx = null;
+let dendrogramCanvas = null;
+let dendrogramCtx = null;
+
+let dataPoints = [];
+let clusters = [];
+let dendrogramNodes = [];
+let mergeHistory = [];
+let distanceMatrix = [];
+
+let linkageMethod = 'single';
+let numPoints = 15;
+let animationSpeed = 1;
+let clusterThreshold = 3;
+
+let isClustering = false;
+let currentStep = 0;
+let animationId = null;
+let mergeAnimationProgress = 0;
+let currentMergePair = null;
+
+// Dendrogram state
+let dendrogramHeight = 0;
+let maxMergeDistance = 0;
+
+function initSimulator() {
+  mainCanvas = document.getElementById('mainCanvas');
+  dendrogramCanvas = document.getElementById('dendrogramCanvas');
+  
+  if (!mainCanvas) return;
+  
+  mainCtx = mainCanvas.getContext('2d');
+  dendrogramCtx = dendrogramCanvas.getContext('2d');
+  
+  resizeCanvases();
+  
+  // Generate initial dataset
+  generateDataset('clustered');
+}
+
+function resizeCanvases() {
+  if (!mainCanvas) return;
+  
+  const rect = mainCanvas.parentElement.getBoundingClientRect();
+  const mainWidth = Math.max(1, rect.width - 200);
+  const mainHeight = Math.max(1, rect.height - 32);
+  
+  mainCanvas.width = mainWidth;
+  mainCanvas.height = mainHeight;
+  
+  dendrogramCanvas.width = 170;
+  dendrogramCanvas.height = mainHeight;
+  
+  drawScene();
+  drawDendrogram();
+}
+
+// === DATASET GENERATION ===
+function generateDataset(type) {
+  dataPoints = [];
+  
+  switch (type) {
+    case 'clustered':
+      generateClusteredData();
+      break;
+    case 'random':
+      generateRandomData();
+      break;
+    case 'grid':
+      generateGridData();
+      break;
+  }
+  
+  resetClustering();
+  
+  document.getElementById('datasetInfo').textContent = dataPoints.length + ' points generated';
+  document.getElementById('clusterBtn').disabled = false;
+  
+  updateStepDisplay('READY', 'Dataset Generated', 
+    dataPoints.length + ' data points created. Click "Start Clustering" to begin hierarchical clustering.');
+  
+  drawScene();
+  drawDendrogram();
+}
+
+function generateClusteredData() {
+  const numClusters = 3;
+  const pointsPerCluster = Math.floor(numPoints / numClusters);
+  const clusterCenters = [
+    { x: 0.25, y: 0.3 },
+    { x: 0.75, y: 0.35 },
+    { x: 0.5, y: 0.75 }
+  ];
+  
+  clusterCenters.forEach((center, ci) => {
+    const count = ci === numClusters - 1 ? numPoints - dataPoints.length : pointsPerCluster;
+    for (let i = 0; i < count; i++) {
+      dataPoints.push({
+        x: center.x + (Math.random() - 0.5) * 0.2,
+        y: center.y + (Math.random() - 0.5) * 0.2,
+        id: dataPoints.length,
+        cluster: dataPoints.length,
+        color: clusterColors[0]
+      });
+    }
+  });
+}
+
+function generateRandomData() {
+  for (let i = 0; i < numPoints; i++) {
+    dataPoints.push({
+      x: 0.1 + Math.random() * 0.8,
+      y: 0.1 + Math.random() * 0.8,
+      id: i,
+      cluster: i,
+      color: clusterColors[0]
+    });
+  }
+}
+
+function generateGridData() {
+  const gridSize = Math.ceil(Math.sqrt(numPoints));
+  const spacing = 0.8 / (gridSize + 1);
+  
+  let count = 0;
+  for (let i = 0; i < gridSize && count < numPoints; i++) {
+    for (let j = 0; j < gridSize && count < numPoints; j++) {
+      dataPoints.push({
+        x: 0.1 + spacing * (i + 1) + (Math.random() - 0.5) * spacing * 0.3,
+        y: 0.1 + spacing * (j + 1) + (Math.random() - 0.5) * spacing * 0.3,
+        id: count,
+        cluster: count,
+        color: clusterColors[0]
+      });
+      count++;
+    }
+  }
+}
+
+function resetClustering() {
+  clusters = [];
+  mergeHistory = [];
+  dendrogramNodes = [];
+  distanceMatrix = [];
+  currentStep = 0;
+  isClustering = false;
+  mergeAnimationProgress = 0;
+  currentMergePair = null;
+  dendrogramHeight = 0;
+  maxMergeDistance = 0;
+  
+  // Initialize each point as its own cluster
+  dataPoints.forEach((point, i) => {
+    point.cluster = i;
+    point.color = clusterColors[0];
+    clusters.push({
+      id: i,
+      points: [i],
+      centroid: { x: point.x, y: point.y }
+    });
+    
+    dendrogramNodes.push({
+      id: i,
+      pointIndex: i,
+      x: point.x,
+      y: point.y,
+      level: 0,
+      parent: null,
+      children: []
+    });
+  });
+  
+  // Compute initial distance matrix
+  computeDistanceMatrix();
+  
+  updateMetrics();
+  
+  document.getElementById('mergeLog').style.display = 'none';
+  document.getElementById('mergeLogContent').innerHTML = '';
+}
+
+// === DISTANCE COMPUTATION ===
+function euclideanDistance(p1, p2) {
+  const dx = p1.x - p2.x;
+  const dy = p1.y - p2.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function computeDistanceMatrix() {
+  distanceMatrix = [];
+  
+  for (let i = 0; i < clusters.length; i++) {
+    distanceMatrix[i] = [];
+    for (let j = 0; j < clusters.length; j++) {
+      if (i === j) {
+        distanceMatrix[i][j] = Infinity;
+      } else {
+        distanceMatrix[i][j] = computeClusterDistance(clusters[i], clusters[j]);
+      }
+    }
+  }
+}
+
+function computeClusterDistance(c1, c2) {
+  const distances = [];
+  
+  c1.points.forEach(i => {
+    c2.points.forEach(j => {
+      distances.push(euclideanDistance(dataPoints[i], dataPoints[j]));
+    });
+  });
+  
+  switch (linkageMethod) {
+    case 'single':
+      return Math.min(...distances);
+    case 'complete':
+      return Math.max(...distances);
+    case 'average':
+      return distances.reduce((a, b) => a + b, 0) / distances.length;
+    default:
+      return Math.min(...distances);
+  }
+}
+
+function findClosestClusters() {
+  let minDist = Infinity;
+  let pair = null;
+  
+  for (let i = 0; i < clusters.length; i++) {
+    for (let j = i + 1; j < clusters.length; j++) {
+      if (distanceMatrix[i][j] < minDist) {
+        minDist = distanceMatrix[i][j];
+        pair = [i, j];
+      }
+    }
+  }
+  
+  return { pair, distance: minDist };
+}
+
+// === CLUSTERING ALGORITHM ===
+function startClustering() {
+  if (isClustering || dataPoints.length === 0) return;
+  
+  isClustering = true;
+  currentStep = 1;
+  mergeAnimationProgress = 0;
+  
+  document.getElementById('clusterBtn').disabled = true;
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('mergeLog').style.display = 'block';
+  
+  runClusteringStep();
+}
+
+function runClusteringStep() {
+  if (clusters.length <= 1) {
+    finishClustering();
+    return;
+  }
+  
+  const stepDelay = 600 / animationSpeed;
+  
+  switch (currentStep % 4) {
+    case 1:
+      stepComputeDistances();
+      break;
+    case 2:
+      stepFindClosest();
+      break;
+    case 3:
+      stepMergeClusters();
+      break;
+    case 0:
+      stepUpdateDendrogram();
+      break;
+  }
+  
+  currentStep++;
+  
+  if (animationId) clearTimeout(animationId);
+  animationId = setTimeout(runClusteringStep, stepDelay);
+}
+
+function stepComputeDistances() {
+  computeDistanceMatrix();
+  
+  updateStepDisplay('STEP ' + Math.floor((currentStep + 3) / 4), 'Compute Distance Matrix',
+    'Computing pairwise distances between all ' + clusters.length + ' clusters using ' + linkageMethod + ' linkage.');
+  
+  drawScene();
+}
+
+function stepFindClosest() {
+  const result = findClosestClusters();
+  currentMergePair = result;
+  
+  updateStepDisplay('STEP ' + Math.floor((currentStep + 3) / 4), 'Find Closest Clusters',
+    'Found closest pair: Cluster ' + clusters[result.pair[0]].id + ' and Cluster ' + clusters[result.pair[1]].id + 
+    ' with distance ' + result.distance.toFixed(4));
+  
+  // Highlight the pair
+  mergeAnimationProgress = 0;
+  animateMergeHighlight();
+}
+
+function animateMergeHighlight() {
+  mergeAnimationProgress += 0.05 * animationSpeed;
+  if (mergeAnimationProgress > 1) mergeAnimationProgress = 1;
+  
+  drawScene();
+  
+  if (mergeAnimationProgress < 1 && isClustering) {
+    requestAnimationFrame(animateMergeHighlight);
+  }
+}
+
+function stepMergeClusters() {
+  if (!currentMergePair) return;
+  
+  const [i1, i2] = currentMergePair.pair;
+  const c1 = clusters[i1];
+  const c2 = clusters[i2];
+  const distance = currentMergePair.distance;
+  
+  // Create merged cluster
+  const mergedCluster = {
+    id: Math.min(c1.id, c2.id),
+    points: [...c1.points, ...c2.points],
+    centroid: computeCentroid([...c1.points, ...c2.points]),
+    mergedFrom: [c1.id, c2.id],
+    mergeDistance: distance
+  };
+  
+  // Update dendrogram
+  const newNode = {
+    id: dendrogramNodes.length,
+    level: dendrogramHeight + 1,
+    mergeDistance: distance,
+    children: [
+      dendrogramNodes.find(n => n.id === c1.id && !n.parent),
+      dendrogramNodes.find(n => n.id === c2.id && !n.parent)
+    ].filter(n => n),
+    parent: null
+  };
+  
+  if (newNode.children[0]) newNode.children[0].parent = newNode;
+  if (newNode.children[1]) newNode.children[1].parent = newNode;
+  
+  dendrogramNodes.push(newNode);
+  dendrogramHeight++;
+  maxMergeDistance = Math.max(maxMergeDistance, distance);
+  
+  // Remove old clusters and add merged
+  clusters = clusters.filter((_, i) => i !== i1 && i !== i2);
+  clusters.push(mergedCluster);
+  
+  // Update point colors
+  const newColor = clusterColors[(dendrogramHeight - 1) % clusterColors.length];
+  mergedCluster.points.forEach(pi => {
+    dataPoints[pi].cluster = mergedCluster.id;
+    dataPoints[pi].color = newColor;
+  });
+  
+  // Record merge history
+  mergeHistory.push({
+    level: dendrogramHeight,
+    clusters: [c1.id, c2.id],
+    distance: distance,
+    newCluster: mergedCluster.id
+  });
+  
+  // Update merge log
+  addMergeLogEntry(dendrogramHeight, c1.id, c2.id, mergedCluster.id, distance);
+  
+  updateStepDisplay('STEP ' + Math.floor((currentStep + 3) / 4), 'Merge Clusters',
+    'Merged Cluster ' + c1.id + ' and Cluster ' + c2.id + ' into Cluster ' + mergedCluster.id + 
+    ' at distance ' + distance.toFixed(4));
+  
+  updateMetrics();
+  drawScene();
+  drawDendrogram();
+}
+
+function computeCentroid(pointIndices) {
+  let sumX = 0, sumY = 0;
+  pointIndices.forEach(i => {
+    sumX += dataPoints[i].x;
+    sumY += dataPoints[i].y;
+  });
+  return {
+    x: sumX / pointIndices.length,
+    y: sumY / pointIndices.length
+  };
+}
+
+function stepUpdateDendrogram() {
+  updateStepDisplay('STEP ' + Math.floor((currentStep + 3) / 4), 'Update Distance Matrix',
+    'Updated distance matrix for ' + clusters.length + ' remaining clusters.');
+  
+  currentMergePair = null;
+  mergeAnimationProgress = 0;
+}
+
+function finishClustering() {
+  isClustering = false;
+  
+  updateStepDisplay('COMPLETE', 'Clustering Complete',
+    'Hierarchical clustering finished. Dendrogram constructed with ' + dendrogramHeight + ' merge levels.');
+  
+  document.getElementById('generateBtn').disabled = false;
+  document.getElementById('clusterBtn').disabled = false;
+  
+  drawScene();
+  drawDendrogram();
+}
+
+function addMergeLogEntry(level, c1, c2, newC, distance) {
+  const logContent = document.getElementById('mergeLogContent');
+  const entry = document.createElement('div');
+  entry.className = 'merge-log-item';
+  entry.innerHTML = 'Level ' + level + ': <span class="cluster-id">C' + c1 + '</span> + <span class="cluster-id">C' + c2 + '</span> → C' + newC + ' (' + distance.toFixed(3) + ')';
+  logContent.appendChild(entry);
+  logContent.scrollTop = logContent.scrollHeight;
+}
+
+function updateMetrics() {
+  document.getElementById('metricPoints').textContent = dataPoints.length;
+  document.getElementById('metricClusters').textContent = clusters.length;
+  document.getElementById('metricLevel').textContent = dendrogramHeight;
+  document.getElementById('metricDistance').textContent = maxMergeDistance > 0 ? maxMergeDistance.toFixed(3) : '-';
+}
+
+function updateStepDisplay(step, title, text) {
+  document.getElementById('stepNum').textContent = step;
+  document.getElementById('stepTitle').textContent = title;
+  document.getElementById('stepText').textContent = text;
+}
+
+// === DRAWING FUNCTIONS ===
+function drawScene() {
+  if (!mainCtx) return;
+  
+  const w = mainCanvas.width;
+  const h = mainCanvas.height;
+  
+  // Clear
+  mainCtx.fillStyle = '#060a14';
+  mainCtx.fillRect(0, 0, w, h);
+  
+  // Grid
+  mainCtx.strokeStyle = 'rgba(92, 112, 144, 0.08)';
+  mainCtx.lineWidth = 1;
+  
+  for (let x = 0; x <= w; x += 30) {
+    mainCtx.beginPath();
+    mainCtx.moveTo(x, 0);
+    mainCtx.lineTo(x, h);
+    mainCtx.stroke();
+  }
+  
+  for (let y = 0; y <= h; y += 30) {
+    mainCtx.beginPath();
+    mainCtx.moveTo(0, y);
+    mainCtx.lineTo(w, y);
+    mainCtx.stroke();
+  }
+  
+  // Draw merge connections if animating
+  if (currentMergePair && mergeAnimationProgress > 0) {
+    const [i1, i2] = currentMergePair.pair;
+    const c1 = clusters[i1];
+    const c2 = clusters[i2];
+    
+    // Draw connections between merging clusters
+    mainCtx.strokeStyle = 'rgba(245, 158, 11, ' + (mergeAnimationProgress * 0.6) + ')';
+    mainCtx.lineWidth = 2;
+    
+    c1.points.forEach(pi => {
+      c2.points.forEach(pj => {
+        const p1 = dataPoints[pi];
+        const p2 = dataPoints[pj];
+        
+        mainCtx.beginPath();
+        mainCtx.moveTo(p1.x * w, p1.y * h);
+        mainCtx.lineTo(p2.x * w, p2.y * h);
+        mainCtx.stroke();
+      });
+    });
+  }
+  
+  // Draw cluster hulls
+  const clusterGroups = {};
+  dataPoints.forEach(p => {
+    if (!clusterGroups[p.cluster]) clusterGroups[p.cluster] = [];
+    clusterGroups[p.cluster].push(p);
+  });
+  
+  Object.keys(clusterGroups).forEach(clusterId => {
+    const points = clusterGroups[clusterId];
+    if (points.length < 2) return;
+    
+    // Draw hull outline
+    mainCtx.strokeStyle = points[0].color;
+    mainCtx.lineWidth = 1;
+    mainCtx.globalAlpha = 0.3;
+    
+    const hull = computeConvexHull(points);
+    if (hull.length > 2) {
+      mainCtx.beginPath();
+      mainCtx.moveTo(hull[0].x * w, hull[0].y * h);
+      hull.forEach(p => mainCtx.lineTo(p.x * w, p.y * h));
+      mainCtx.closePath();
+      mainCtx.stroke();
+    }
+    
+    mainCtx.globalAlpha = 1;
+  });
+  
+  // Draw data points
+  dataPoints.forEach(point => {
+    const px = point.x * w;
+    const py = point.y * h;
+    
+    // Glow
+    const glow = mainCtx.createRadialGradient(px, py, 0, px, py, 12);
+    glow.addColorStop(0, point.color + '66');
+    glow.addColorStop(1, point.color + '00');
+    mainCtx.fillStyle = glow;
+    mainCtx.beginPath();
+    mainCtx.arc(px, py, 12, 0, Math.PI * 2);
+    mainCtx.fill();
+    
+    // Point
+    mainCtx.fillStyle = point.color;
+    mainCtx.beginPath();
+    mainCtx.arc(px, py, 5, 0, Math.PI * 2);
+    mainCtx.fill();
+    
+    // Highlight if in merge pair
+    if (currentMergePair && mergeAnimationProgress > 0) {
+      const [i1, i2] = currentMergePair.pair;
+      if (clusters[i1] && clusters[i1].points.includes(point.id)) {
+        mainCtx.strokeStyle = '#ffffff';
+        mainCtx.lineWidth = 2;
+        mainCtx.beginPath();
+        mainCtx.arc(px, py, 8, 0, Math.PI * 2);
+        mainCtx.stroke();
+      } else if (clusters[i2] && clusters[i2].points.includes(point.id)) {
+        mainCtx.strokeStyle = '#ffffff';
+        mainCtx.beginPath();
+        mainCtx.arc(px, py, 8, 0, Math.PI * 2);
+        mainCtx.stroke();
+      }
+    }
+  });
+  
+  // Legend
+  mainCtx.font = '10px JetBrains Mono';
+  mainCtx.fillStyle = '#5c7090';
+  mainCtx.textAlign = 'left';
+  
+  const uniqueClusters = [...new Set(dataPoints.map(p => p.cluster))];
+  uniqueClusters.slice(0, 6).forEach((clusterId, i) => {
+    const color = dataPoints.find(p => p.cluster === clusterId)?.color || clusterColors[0];
+    mainCtx.fillStyle = color;
+    mainCtx.beginPath();
+    mainCtx.arc(12, 16 + i * 18, 4, 0, Math.PI * 2);
+    mainCtx.fill();
+    mainCtx.fillStyle = '#5c7090';
+    mainCtx.fillText('C' + clusterId, 22, 20 + i * 18);
+  });
+}
+
+function computeConvexHull(points) {
+  if (points.length < 3) return points;
+  
+  // Simple convex hull using Graham scan
+  const sorted = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+  
+  const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  
+  const lower = [];
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+      lower.pop();
+    }
+    lower.push(p);
+  }
+  
+  const upper = [];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const p = sorted[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+      upper.pop();
+    }
+    upper.push(p);
+  }
+  
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
+}
+
+function drawDendrogram() {
+  if (!dendrogramCtx) return;
+  
+  const w = dendrogramCanvas.width;
+  const h = dendrogramCanvas.height;
+  
+  // Clear
+  dendrogramCtx.fillStyle = '#060a14';
+  dendrogramCtx.fillRect(0, 0, w, h);
+  
+  if (dendrogramNodes.length === 0 || dataPoints.length === 0) return;
+  
+  // Calculate positions
+  const padding = 20;
+  const leafHeight = h - padding;
+  const maxLevel = Math.max(...dendrogramNodes.map(n => n.level || 0), 1);
+  const levelHeight = (leafHeight - padding) / (maxLevel + 1);
+  
+  // Position leaf nodes
+  const leafNodes = dendrogramNodes.filter(n => n.pointIndex !== undefined);
+  const leafSpacing = (w - padding * 2) / Math.max(leafNodes.length - 1, 1);
+  
+  leafNodes.forEach((node, i) => {
+    node.dendroX = padding + i * leafSpacing;
+    node.dendroY = leafHeight;
+  });
+  
+  // Position internal nodes
+  const internalNodes = dendrogramNodes.filter(n => n.children && n.children.length > 0);
+  internalNodes.sort((a, b) => a.level - b.level);
+  
+  internalNodes.forEach(node => {
+    if (node.children && node.children.length === 2) {
+      const c1 = node.children[0];
+      const c2 = node.children[1];
+      node.dendroX = (c1.dendroX + c2.dendroX) / 2;
+      node.dendroY = leafHeight - node.level * levelHeight;
+    }
+  });
+  
+  // Draw connections
+  dendrogramCtx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+  dendrogramCtx.lineWidth = 1.5;
+  
+  internalNodes.forEach(node => {
+    if (node.children && node.children.length === 2) {
+      const c1 = node.children[0];
+      const c2 = node.children[1];
+      
+      // Draw U-shaped connection
+      dendrogramCtx.beginPath();
+      dendrogramCtx.moveTo(c1.dendroX, c1.dendroY);
+      dendrogramCtx.lineTo(c1.dendroX, node.dendroY);
+      dendrogramCtx.lineTo(c2.dendroX, node.dendroY);
+      dendrogramCtx.lineTo(c2.dendroX, c2.dendroY);
+      dendrogramCtx.stroke();
+    }
+  });
+  
+  // Draw leaf nodes
+  leafNodes.forEach(node => {
+    const color = dataPoints[node.pointIndex]?.color || clusterColors[0];
+    
+    dendrogramCtx.fillStyle = color;
+    dendrogramCtx.beginPath();
+    dendrogramCtx.arc(node.dendroX, node.dendroY, 3, 0, Math.PI * 2);
+    dendrogramCtx.fill();
+  });
+  
+  // Draw internal nodes
+  internalNodes.forEach(node => {
+    dendrogramCtx.fillStyle = '#f59e0b';
+    dendrogramCtx.beginPath();
+    dendrogramCtx.arc(node.dendroX, node.dendroY, 2, 0, Math.PI * 2);
+    dendrogramCtx.fill();
+  });
+  
+  // Draw threshold line if clustering is complete
+  if (!isClustering && dendrogramHeight > 0) {
+    const thresholdY = leafHeight - clusterThreshold * levelHeight;
+    dendrogramCtx.strokeStyle = 'rgba(20, 184, 166, 0.6)';
+    dendrogramCtx.lineWidth = 1;
+    dendrogramCtx.setLineDash([4, 4]);
+    dendrogramCtx.beginPath();
+    dendrogramCtx.moveTo(padding, thresholdY);
+    dendrogramCtx.lineTo(w - padding, thresholdY);
+    dendrogramCtx.stroke();
+    dendrogramCtx.setLineDash([]);
+    
+    // Label
+    dendrogramCtx.fillStyle = '#14b8a6';
+    dendrogramCtx.font = '8px JetBrains Mono';
+    dendrogramCtx.textAlign = 'right';
+    dendrogramCtx.fillText('Cut', w - padding - 2, thresholdY - 4);
+  }
+  
+  // Title
+  dendrogramCtx.fillStyle = '#5c7090';
+  dendrogramCtx.font = '9px JetBrains Mono';
+  dendrogramCtx.textAlign = 'center';
+  dendrogramCtx.fillText('DENDROGRAM', w / 2, 12);
+}
+
+// === HELP MODAL ===
+function initHelpModal() {
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const closeModal = document.getElementById('closeModal');
+  
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('active');
+  });
+  
+  closeModal.addEventListener('click', () => {
+    helpModal.classList.remove('active');
+  });
+  
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.classList.remove('active');
+    }
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && helpModal.classList.contains('active')) {
+      helpModal.classList.remove('active');
+    }
+  });
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initBgNodes();
+  
+  resizeCanvases();
+});
+
+// === CONTROL BINDINGS ===
+document.addEventListener('DOMContentLoaded', function() {
+  const datasetSelect = document.getElementById('datasetSelect');
+  const linkageSelect = document.getElementById('linkageSelect');
+  const pointsSlider = document.getElementById('pointsSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const thresholdSlider = document.getElementById('thresholdSlider');
+  const generateBtn = document.getElementById('generateBtn');
+  const clusterBtn = document.getElementById('clusterBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  
+  datasetSelect.addEventListener('change', function() {
+    if (!isClustering) {
+      generateDataset(this.value);
+    }
+  });
+  
+  linkageSelect.addEventListener('change', function() {
+    linkageMethod = this.value;
+  });
+  
+  pointsSlider.addEventListener('input', function() {
+    numPoints = parseInt(this.value);
+    document.getElementById('pointsValueDisplay').textContent = numPoints;
+  });
+  
+  speedSlider.addEventListener('input', function() {
+    animationSpeed = parseFloat(this.value);
+    document.getElementById('speedValueDisplay').textContent = this.value + 'x';
+  });
+  
+  thresholdSlider.addEventListener('input', function() {
+    clusterThreshold = parseInt(this.value);
+    document.getElementById('thresholdValueDisplay').textContent = clusterThreshold;
+    drawDendrogram();
+  });
+  
+  generateBtn.addEventListener('click', function() {
+    if (!isClustering) {
+      generateDataset(datasetSelect.value);
+    }
+  });
+  
+  clusterBtn.addEventListener('click', startClustering);
+  
+  resetBtn.addEventListener('click', function() {
+    if (animationId) {
+      clearTimeout(animationId);
+      animationId = null;
+    }
+    
+    isClustering = false;
+    resetClustering();
+    
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('clusterBtn').disabled = false;
+    
+    updateStepDisplay('READY', 'Reset Complete',
+      'Canvas cleared. Generate a new dataset to begin clustering.');
+    
+    drawScene();
+    drawDendrogram();
+  });
+  
+  // Initialize
+  initSimulator();
+});
+
+// === INITIALIZE ===
+initBgNodes();
+animateBg();
+initScrollReveal();
+initHelpModal();
+</script>
+
+</body>
+</html>

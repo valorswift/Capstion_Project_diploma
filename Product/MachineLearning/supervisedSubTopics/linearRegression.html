@@ -1,0 +1,2694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Regression - ML Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #00e5ff;
+  --accent-alt: #3b82f6;
+  --accent-warm: #06b6d4;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #22d3ee;
+  --blue: #3b82f6;
+  --green: #10b981;
+  --teal: #14b8a6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(0, 229, 255, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(59, 130, 246, 0.04) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--cyan);
+}
+
+.hero {
+  min-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--cyan);
+  background: rgba(0, 229, 255, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--cyan);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--cyan); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--cyan); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--cyan) 50%, var(--blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 620px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Theory Card */
+.theory-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.theory-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--blue), var(--cyan));
+  opacity: 0.6;
+}
+
+.theory-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at center, rgba(0, 229, 255, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.theory-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.theory-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(59, 130, 246, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.theory-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.theory-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px;
+  align-items: start;
+}
+
+.theory-text {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.theory-text p {
+  margin: 0 0 18px 0;
+}
+
+.theory-text p:last-child {
+  margin-bottom: 0;
+}
+
+.theory-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Conceptual Diagram */
+.concept-diagram {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.diagram-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.diagram-box {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(59, 130, 246, 0.1));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+  min-width: 110px;
+}
+
+.diagram-box.highlight {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(59, 130, 246, 0.2));
+  border-color: rgba(0, 229, 255, 0.3);
+}
+
+.diagram-box-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diagram-box-value {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.diagram-arrow {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* Key Concepts */
+.key-concepts {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.key-concepts-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-concepts-title::before {
+  content: '';
+  width: 12px;
+  height: 2px;
+  background: var(--cyan);
+}
+
+.concept-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.concept-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.15);
+  font-size: 13px;
+  color: var(--muted);
+  transition: all 0.3s ease;
+}
+
+.concept-list li:last-child {
+  border-bottom: none;
+}
+
+.concept-list li:hover {
+  padding-left: 8px;
+  color: var(--text);
+}
+
+.concept-list li strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.concept-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* Simulator Section */
+.simulator-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 60px;
+}
+
+.simulator-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--blue), var(--cyan));
+  opacity: 0.6;
+}
+
+.simulator-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simulator-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.simulator-title svg {
+  color: var(--cyan);
+}
+
+.simulator-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  background: rgba(0, 229, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.simulator-body {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 0;
+}
+
+/* Control Panel */
+.control-panel {
+  padding: 24px;
+  border-right: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.control-section {
+  margin-bottom: 24px;
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.control-select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(10, 16, 32, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c7090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.control-select:hover, .control-select:focus {
+  border-color: var(--cyan);
+  outline: none;
+}
+
+.control-slider-group {
+  margin-bottom: 16px;
+}
+
+.control-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.control-slider-label span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.control-slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--cyan);
+  background: rgba(0, 229, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.control-slider {
+  width: 100%;
+  height: 6px;
+  background: rgba(92, 112, 144, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.control-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.control-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.control-btn.primary {
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  color: var(--bg);
+}
+
+.control-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 4px 20px -4px var(--cyan);
+  transform: translateY(-2px);
+}
+
+.control-btn.secondary {
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.control-btn.secondary:hover:not(:disabled) {
+  background: rgba(0, 229, 255, 0.15);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Visualization Panel */
+.viz-panel {
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.viz-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.viz-section {
+  background: rgba(10, 16, 32, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  flex: 1;
+  height: 420px;
+}
+
+.viz-section-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.viz-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.viz-section-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.viz-canvas-wrap {
+  padding: 16px;
+  height: 370px;
+}
+
+.viz-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: #060a14;
+  cursor: crosshair;
+}
+
+/* Explanation Panel */
+.explanation-panel {
+  padding: 24px;
+  border-left: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.explanation-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explanation-header::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--blue);
+  border-radius: 2px;
+}
+
+.explanation-step {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.explanation-step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explanation-step-num::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: rgba(0, 229, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.explanation-step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.explanation-step-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Metrics Display */
+.metrics-display {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.metrics-display-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-name {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.metric-value.highlight {
+  color: var(--cyan);
+}
+
+/* Equation Display */
+.equation-display {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.equation-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.equation-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--cyan);
+  text-align: center;
+  padding: 8px;
+  background: rgba(0, 229, 255, 0.05);
+  border-radius: 4px;
+}
+
+/* Error Visualization */
+.error-viz {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.error-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.error-bar-container {
+  height: 8px;
+  background: rgba(92, 112, 144, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.error-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), var(--cyan));
+  transition: width 0.5s ease;
+}
+
+.error-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Advantages Section */
+.advantages-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.advantages-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--blue), var(--cyan));
+  opacity: 0.6;
+}
+
+.advantages-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.advantages-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(59, 130, 246, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.advantages-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.advantages-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.advantage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  transition: all 0.3s ease;
+}
+
+.advantage-item:hover {
+  border-color: rgba(0, 229, 255, 0.2);
+  background: rgba(0, 229, 255, 0.03);
+}
+
+.advantage-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(59, 130, 246, 0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.advantage-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* Help Button */
+.help-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 32px -8px rgba(0, 229, 255, 0.4),
+    0 0 48px -12px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.help-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 12px 40px -8px rgba(0, 229, 255, 0.5),
+    0 0 60px -12px rgba(59, 130, 246, 0.4);
+}
+
+.help-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  opacity: 0.3;
+  filter: blur(10px);
+  z-index: -1;
+}
+
+/* Help Modal */
+.help-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 13, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  padding: 20px;
+}
+
+.help-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.help-modal {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.98), rgba(8, 12, 22, 0.99));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.help-modal-overlay.active .help-modal {
+  transform: translateY(0) scale(1);
+}
+
+.help-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--blue), var(--cyan));
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.help-modal-title svg {
+  color: var(--cyan);
+}
+
+.help-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.help-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.help-modal-body {
+  padding: 28px;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-section-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--cyan);
+  border-radius: 2px;
+}
+
+.help-section-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.help-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.help-list li:last-child {
+  border-bottom: none;
+}
+
+.help-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  background: rgba(10, 16, 32, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 150;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(8px);
+  max-width: 200px;
+}
+
+.tooltip.visible {
+  opacity: 1;
+}
+
+.tooltip-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--cyan);
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.tooltip-label {
+  color: var(--muted);
+}
+
+.tooltip-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text);
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Scroll reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .simulator-body {
+    grid-template-columns: 260px 1fr 260px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .theory-content {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  
+  .simulator-body {
+    grid-template-columns: 1fr;
+  }
+  
+  .control-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .explanation-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  
+  .advantages-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .viz-canvas-wrap {
+    height: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 35vh;
+  }
+  
+  .theory-card {
+    padding: 28px 24px;
+  }
+  
+  .simulator-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .diagram-flow {
+    flex-direction: column;
+  }
+  
+  .diagram-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .help-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .viz-canvas-wrap {
+    height: 300px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="regressionHolder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="ml_lab.html">Machine Learning</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="supervised.html">Supervised</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="regression.html">Regression</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Linear Regression</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Regression Algorithm</div>
+    <h1 class="main-title">Linear Regression</h1>
+    <p class="subtitle">
+      // A fundamental supervised learning algorithm that models relationships<br>
+      // between variables by fitting a linear equation to observed data.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <!-- Theory Card -->
+    <div class="theory-card reveal">
+      <div class="theory-header">
+        <div class="theory-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2" stroke-linecap="round">
+            <line x1="4" y1="20" x2="20" y2="4"/>
+            <circle cx="6" cy="18" r="2"/>
+            <circle cx="10" cy="14" r="2"/>
+            <circle cx="14" cy="10" r="2"/>
+            <circle cx="18" cy="6" r="2"/>
+          </svg>
+        </div>
+        <h2 class="theory-title">Understanding Linear Regression</h2>
+      </div>
+      
+      <div class="theory-content">
+        <div class="theory-text">
+          <p>
+            <strong>Linear Regression is a supervised learning algorithm</strong> that models the relationship between a dependent variable and one or more independent variables by fitting a linear equation to the observed data points.
+          </p>
+          <p>
+            The algorithm finds the <strong>best-fit line</strong> that minimizes the sum of squared differences between predicted and actual values. This line is represented by the equation <strong>y = mx + b</strong>, where m is the slope and b is the y-intercept.
+          </p>
+          
+          <!-- Conceptual Diagram -->
+          <div class="concept-diagram">
+            <div class="diagram-flow">
+              <div class="diagram-box">
+                <div class="diagram-box-title">Input</div>
+                <div class="diagram-box-value">Dataset</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Compute</div>
+                <div class="diagram-box-value">Best Fit Line</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Minimize</div>
+                <div class="diagram-box-value">Error</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Predict</div>
+                <div class="diagram-box-value">Output</div>
+              </div>
+            </div>
+          </div>
+          
+          <p><strong>Training Process:</strong> The algorithm uses gradient descent or ordinary least squares to find optimal values for slope and intercept. The goal is to minimize <strong>Mean Squared Error (MSE)</strong> - the average of squared residuals between predicted and actual values.</p>
+        </div>
+        
+        <div class="key-concepts">
+          <div class="key-concepts-title">Key Concepts</div>
+          <ul class="concept-list">
+            <li>
+              <div>
+                <strong>Dependent Variable (y)</strong>
+                The output variable we want to predict based on input features.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Independent Variable (x)</strong>
+                The input feature(s) used to make predictions about the output.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Slope (m)</strong>
+                The rate of change - how much y changes for each unit change in x.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Intercept (b)</strong>
+                The value of y when x equals zero - where the line crosses the y-axis.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Residual Error</strong>
+                The vertical distance between a data point and the regression line.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Mean Squared Error</strong>
+                Average of squared residuals - measures model accuracy.
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Simulator -->
+    <div class="simulator-card reveal">
+      <div class="simulator-header">
+        <h3 class="simulator-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" y1="20" x2="20" y2="4"/>
+            <circle cx="6" cy="18" r="2"/>
+            <circle cx="14" cy="10" r="2"/>
+          </svg>
+          Interactive Linear Regression Simulator
+        </h3>
+        <span class="simulator-badge">STEP-BY-STEP</span>
+      </div>
+      
+      <div class="simulator-body">
+        <!-- Control Panel -->
+        <div class="control-panel">
+          <div class="control-section">
+            <label class="control-label">Dataset</label>
+            <select class="control-select" id="datasetSelect">
+              <option value="perfect">Perfect Linear</option>
+              <option value="noise">Slight Noise</option>
+              <option value="random">Random Data</option>
+            </select>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Number of Points</span>
+                <span class="control-slider-value" id="pointsValueDisplay">15</span>
+              </div>
+              <input type="range" class="control-slider" id="pointsSlider" min="5" max="30" step="1" value="15">
+            </div>
+            
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Learning Rate</span>
+                <span class="control-slider-value" id="lrValueDisplay">0.01</span>
+              </div>
+              <input type="range" class="control-slider" id="lrSlider" min="0.001" max="0.1" step="0.001" value="0.01">
+            </div>
+            
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Animation Speed</span>
+                <span class="control-slider-value" id="speedValueDisplay">1.0x</span>
+              </div>
+              <input type="range" class="control-slider" id="speedSlider" min="0.5" max="2" step="0.25" value="1">
+            </div>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-buttons">
+              <button class="control-btn primary" id="addPointBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Test Point
+              </button>
+              <button class="control-btn secondary" id="trainBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Train Model
+              </button>
+              <button class="control-btn secondary" id="resetBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="1 4 1 10 7 10"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Visualization Panel -->
+        <div class="viz-panel">
+          <div class="viz-container">
+            <div class="viz-section">
+              <div class="viz-section-header">
+                <span class="viz-section-title">Feature Space</span>
+                <span class="viz-section-info" id="datasetInfo">Click canvas to add test point</span>
+              </div>
+              <div class="viz-canvas-wrap">
+                <canvas class="viz-canvas" id="mainCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Explanation Panel -->
+        <div class="explanation-panel">
+          <div class="explanation-header">Algorithm Progress</div>
+          
+          <div class="explanation-step" id="currentStep">
+            <div class="explanation-step-num" id="stepNum">READY</div>
+            <div class="explanation-step-title" id="stepTitle">Select Dataset</div>
+            <div class="explanation-step-text" id="stepText">
+              Choose a dataset type from the dropdown, adjust parameters, then click "Add Test Point" or click directly on the canvas to place a prediction point.
+            </div>
+          </div>
+          
+          <div class="metrics-display">
+            <div class="metrics-display-title">Current Settings</div>
+            <div class="metric-row">
+              <span class="metric-name">Dataset Type</span>
+              <span class="metric-value highlight" id="currentDataset">Perfect Linear</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Training Points</span>
+              <span class="metric-value" id="trainingCount">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Learning Rate</span>
+              <span class="metric-value" id="currentLR">0.01</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Test Point</span>
+              <span class="metric-value" id="testPointStatus">Not placed</span>
+            </div>
+          </div>
+          
+          <div class="equation-display" id="equationDisplay" style="display: none;">
+            <div class="equation-title">Regression Equation</div>
+            <div class="equation-text" id="regressionEq">y = 0.00x + 0.00</div>
+          </div>
+          
+          <div class="error-viz" id="errorViz" style="display: none;">
+            <div class="error-title">Mean Squared Error</div>
+            <div class="error-bar-container">
+              <div class="error-bar" id="errorBar" style="width: 100%;"></div>
+            </div>
+            <div class="error-labels">
+              <span>0</span>
+              <span id="mseValue">0.000</span>
+              <span>Max</span>
+            </div>
+          </div>
+          
+          <div class="metrics-display" id="resultMetrics" style="display: none;">
+            <div class="metrics-display-title">Model Metrics</div>
+            <div class="metric-row">
+              <span class="metric-name">Slope (m)</span>
+              <span class="metric-value highlight" id="slopeValue">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Intercept (b)</span>
+              <span class="metric-value" id="interceptValue">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">MSE</span>
+              <span class="metric-value" id="mseResult">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">R-Squared</span>
+              <span class="metric-value" id="rSquared">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Prediction</span>
+              <span class="metric-value highlight" id="predictionValue">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advantages Section -->
+    <div class="advantages-card reveal">
+      <div class="advantages-header">
+        <div class="advantages-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3 class="advantages-title">Advantages of Linear Regression</h3>
+      </div>
+      
+      <div class="advantages-grid">
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
+              <path d="M12 20V10"/>
+              <path d="M18 20V4"/>
+              <path d="M6 20v-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Simple and interpretable - easy to understand the relationship between variables through slope and intercept values.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Computationally efficient - requires minimal processing power and trains quickly even on large datasets.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Works well for linearly related data - provides accurate predictions when relationships are approximately linear.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+            </svg>
+          </div>
+          <div class="advantage-text">No overfitting with proper regularization - techniques like Ridge and Lasso can prevent overfitting issues.</div>
+        </div>
+      </div>
+    </div>
+    
+  </section>
+
+  <footer>
+    <p>// Linear Regression algorithm visualization for machine learning education</p>
+  </footer>
+  
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-title" id="tooltipTitle"></div>
+  <div class="tooltip-content" id="tooltipContent"></div>
+</div>
+
+<!-- Help Button -->
+<button class="help-btn" id="helpBtn" aria-label="Help">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+</button>
+
+<!-- Help Modal -->
+<div class="help-modal-overlay" id="helpModal">
+  <div class="help-modal">
+    <div class="help-modal-header">
+      <h3 class="help-modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Linear Regression Guide
+      </h3>
+      <button class="help-modal-close" id="closeModal" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="help-modal-body">
+      <div class="help-section">
+        <h4 class="help-section-title">What is Linear Regression?</h4>
+        <p class="help-section-text">
+          Linear Regression is a supervised learning algorithm that models the relationship between variables by fitting a linear equation to observed data. It predicts continuous values based on input features.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How to Use the Simulator</h4>
+        <ul class="help-list">
+          <li>Select a dataset type from the dropdown menu</li>
+          <li>Adjust the number of points, learning rate, and animation speed</li>
+          <li>Click "Add Test Point" or click directly on the canvas</li>
+          <li>Click "Train Model" to watch the algorithm learn step-by-step</li>
+          <li>Observe the regression line forming and residuals decreasing</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Understanding Slope and Intercept</h4>
+        <p class="help-section-text">
+          The slope (m) indicates how much y changes for each unit change in x. A positive slope means y increases with x. The intercept (b) is where the line crosses the y-axis - the predicted y value when x equals zero.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Mean Squared Error</h4>
+        <p class="help-section-text">
+          MSE measures the average squared difference between predicted and actual values. Lower MSE indicates better fit. The algorithm minimizes MSE to find the optimal regression line.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Dataset Types</h4>
+        <ul class="help-list">
+          <li><strong>Perfect Linear:</strong> Points lie exactly on a line - minimal error achievable.</li>
+          <li><strong>Slight Noise:</strong> Points scatter around a line - some residual error expected.</li>
+          <li><strong>Random Data:</strong> Randomly distributed points - regression finds best approximation.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const bgNodes = [];
+const bgNodeCount = 50;
+
+function initBgNodes() {
+  bgNodes.length = 0;
+  
+  for (let i = 0; i < bgNodeCount; i++) {
+    bgNodes.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'cyan' : 'blue'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < bgNodes.length; i++) {
+    for (let j = i + 1; j < bgNodes.length; j++) {
+      const dx = bgNodes[i].x - bgNodes[j].x;
+      const dy = bgNodes[i].y - bgNodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 120) {
+        const alpha = (1 - dist / 120) * 0.15;
+        const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+        
+        if (bgNodes[i].type === 'cyan') {
+          bgCtx.strokeStyle = 'rgba(0, 229, 255, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(59, 130, 246, ' + pulseAlpha + ')';
+        }
+        
+        bgCtx.beginPath();
+        bgCtx.moveTo(bgNodes[i].x, bgNodes[i].y);
+        bgCtx.lineTo(bgNodes[j].x, bgNodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  
+  bgNodes.forEach(node => {
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.03;
+    
+    if (node.x < 0 || node.x > bgWidth) node.vx *= -1;
+    if (node.y < 0 || node.y > bgHeight) node.vy *= -1;
+    
+    const dx = mouseX - node.x;
+    const dy = mouseY - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 150) {
+      node.x -= dx * 0.01;
+      node.y -= dy * 0.01;
+    }
+    
+    const pulseRadius = node.radius + Math.sin(node.pulse) * 0.5;
+    const glowRadius = Math.max(1, pulseRadius + 4);
+    
+    const glow = bgCtx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, glowRadius
+    );
+    
+    if (node.type === 'cyan') {
+      glow.addColorStop(0, 'rgba(0, 229, 255, 0.4)');
+      glow.addColorStop(1, 'rgba(0, 229, 255, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+      glow.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    }
+    
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+    bgCtx.fill();
+    
+    bgCtx.fillStyle = node.type === 'cyan' ? '#00e5ff' : '#3b82f6';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pulseRadius), 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  gradient.addColorStop(0, 'rgba(0, 229, 255, 0.04)');
+  gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.02)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animateBg() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animateBg);
+}
+
+// === DATASETS ===
+const datasets = {
+  perfect: { name: 'Perfect Linear', points: [] },
+  noise: { name: 'Slight Noise', points: [] },
+  random: { name: 'Random Data', points: [] }
+};
+
+function generateDataset(type, numPoints) {
+  const points = [];
+  
+  switch (type) {
+    case 'perfect':
+      // Perfect linear: y = 2x + 0.2
+      for (let i = 0; i < numPoints; i++) {
+        const x = 0.1 + (i / (numPoints - 1)) * 0.75;
+        const y = 0.1 + 0.6 * (x - 0.1) / 0.75;
+        points.push({ x: x, y: y });
+      }
+      break;
+      
+    case 'noise':
+      // Linear with slight noise
+      for (let i = 0; i < numPoints; i++) {
+        const x = 0.1 + (i / (numPoints - 1)) * 0.75;
+        const baseY = 0.1 + 0.6 * (x - 0.1) / 0.75;
+        const noise = (Math.random() - 0.5) * 0.12;
+        points.push({ x: x, y: Math.max(0.05, Math.min(0.95, baseY + noise)) });
+      }
+      break;
+      
+    case 'random':
+      // Random scattered points with slight upward trend
+      for (let i = 0; i < numPoints; i++) {
+        const x = 0.1 + Math.random() * 0.75;
+        const y = 0.15 + Math.random() * 0.65;
+        points.push({ x: x, y: y });
+      }
+      break;
+  }
+  
+  return points;
+}
+
+// === LINEAR REGRESSION SIMULATOR ===
+let mainCanvas = null;
+let mainCtx = null;
+
+let trainingPoints = [];
+let testPoint = null;
+let datasetType = 'perfect';
+let numPoints = 15;
+let learningRate = 0.01;
+let animationSpeed = 1;
+
+// Model parameters
+let slope = 0;
+let intercept = 0.5;
+let isTraining = false;
+let currentStep = 0;
+let animationId = null;
+let iterationCount = 0;
+let maxIterations = 100;
+
+// Animation state
+let lineProgress = 0;
+let showResiduals = false;
+let highlightPoints = false;
+
+// History for animation
+let slopeHistory = [];
+let interceptHistory = [];
+
+function initSimulator() {
+  mainCanvas = document.getElementById('mainCanvas');
+  if (!mainCanvas) return;
+  
+  mainCtx = mainCanvas.getContext('2d');
+  resizeMainCanvas();
+  loadDataset('perfect');
+  
+  mainCanvas.addEventListener('click', handleCanvasClick);
+  mainCanvas.addEventListener('mousemove', handleCanvasHover);
+  mainCanvas.addEventListener('mouseleave', hideTooltip);
+}
+
+function resizeMainCanvas() {
+  if (!mainCanvas) return;
+  
+  const rect = mainCanvas.parentElement.getBoundingClientRect();
+  mainCanvas.width = Math.max(1, rect.width - 32);
+  mainCanvas.height = Math.max(1, rect.height - 32);
+  
+  drawScene();
+}
+
+function loadDataset(type) {
+  datasetType = type;
+  trainingPoints = generateDataset(type, numPoints);
+  testPoint = null;
+  slope = 0;
+  intercept = 0.5;
+  currentStep = 0;
+  isTraining = false;
+  lineProgress = 0;
+  showResiduals = false;
+  highlightPoints = false;
+  slopeHistory = [];
+  interceptHistory = [];
+  
+  const names = { perfect: 'Perfect Linear', noise: 'Slight Noise', random: 'Random Data' };
+  
+  document.getElementById('datasetInfo').textContent = 
+    trainingPoints.length + ' training points | Click to add test point';
+  document.getElementById('trainingCount').textContent = trainingPoints.length;
+  document.getElementById('currentDataset').textContent = names[type];
+  document.getElementById('testPointStatus').textContent = 'Not placed';
+  document.getElementById('trainBtn').disabled = true;
+  
+  updateStepDisplay('READY', 'Dataset Loaded', 
+    trainingPoints.length + ' training points loaded. Click on the canvas or use "Add Test Point" to place a prediction point.');
+  
+  document.getElementById('equationDisplay').style.display = 'none';
+  document.getElementById('errorViz').style.display = 'none';
+  document.getElementById('resultMetrics').style.display = 'none';
+  
+  drawScene();
+}
+
+function handleCanvasClick(e) {
+  if (isTraining) return;
+  
+  const rect = mainCanvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / mainCanvas.width;
+  const y = (e.clientY - rect.top) / mainCanvas.height;
+  
+  addTestPointAt(x, y);
+}
+
+function handleCanvasHover(e) {
+  const rect = mainCanvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  
+  let hoveredPoint = null;
+  
+  trainingPoints.forEach(point => {
+    const px = point.x * mainCanvas.width;
+    const py = point.y * mainCanvas.height;
+    const dist = Math.sqrt((mouseX - px) ** 2 + (mouseY - py) ** 2);
+    
+    if (dist < 15) {
+      hoveredPoint = point;
+    }
+  });
+  
+  if (hoveredPoint) {
+    showTooltip(e.clientX, e.clientY, hoveredPoint, 'training');
+  } else if (testPoint) {
+    const tx = testPoint.x * mainCanvas.width;
+    const ty = testPoint.y * mainCanvas.height;
+    const dist = Math.sqrt((mouseX - tx) ** 2 + (mouseY - ty) ** 2);
+    if (dist < 15) {
+      showTooltip(e.clientX, e.clientY, testPoint, 'test');
+    } else {
+      hideTooltip();
+    }
+  } else {
+    hideTooltip();
+  }
+}
+
+function showTooltip(x, y, point, type) {
+  const tooltip = document.getElementById('tooltip');
+  const titleEl = document.getElementById('tooltipTitle');
+  const contentEl = document.getElementById('tooltipContent');
+  
+  if (type === 'training') {
+    titleEl.textContent = 'Training Point';
+    
+    let predY = slope * point.x + intercept;
+    let residual = point.y - predY;
+    
+    contentEl.innerHTML = 
+      '<div class="tooltip-row"><span class="tooltip-label">X:</span><span class="tooltip-value">' + point.x.toFixed(3) + '</span></div>' +
+      '<div class="tooltip-row"><span class="tooltip-label">Y:</span><span class="tooltip-value">' + point.y.toFixed(3) + '</span></div>' +
+      (showResiduals ? '<div class="tooltip-row"><span class="tooltip-label">Residual:</span><span class="tooltip-value">' + residual.toFixed(3) + '</span></div>' : '');
+  } else {
+    titleEl.textContent = 'Test Point';
+    let predY = slope * point.x + intercept;
+    
+    contentEl.innerHTML = 
+      '<div class="tooltip-row"><span class="tooltip-label">X:</span><span class="tooltip-value">' + point.x.toFixed(3) + '</span></div>' +
+      '<div class="tooltip-row"><span class="tooltip-label">Input Y:</span><span class="tooltip-value">' + point.y.toFixed(3) + '</span></div>' +
+      (lineProgress > 0 ? '<div class="tooltip-row"><span class="tooltip-label">Predicted Y:</span><span class="tooltip-value">' + predY.toFixed(3) + '</span></div>' : '');
+  }
+  
+  tooltip.style.left = (x + 15) + 'px';
+  tooltip.style.top = (y + 15) + 'px';
+  tooltip.classList.add('visible');
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+function addTestPoint() {
+  if (isTraining) return;
+  
+  const x = 0.2 + Math.random() * 0.6;
+  const y = 0.2 + Math.random() * 0.5;
+  addTestPointAt(x, y);
+}
+
+function addTestPointAt(x, y) {
+  testPoint = { x: x, y: y };
+  
+  document.getElementById('testPointStatus').textContent = 
+    '(' + (x * 100).toFixed(0) + '%, ' + (y * 100).toFixed(0) + '%)';
+  document.getElementById('trainBtn').disabled = false;
+  
+  updateStepDisplay('READY', 'Test Point Placed', 
+    'Test point placed at (' + (x * 100).toFixed(0) + '%, ' + (y * 100).toFixed(0) + '%). Adjust parameters and click "Train Model" to start learning.');
+  
+  drawScene();
+}
+
+// === LINEAR REGRESSION TRAINING ===
+function trainModel() {
+  if (!testPoint || isTraining) return;
+  
+  isTraining = true;
+  currentStep = 1;
+  lineProgress = 0;
+  showResiduals = false;
+  highlightPoints = false;
+  iterationCount = 0;
+  slopeHistory = [];
+  interceptHistory = [];
+  
+  document.getElementById('trainBtn').disabled = true;
+  document.getElementById('addPointBtn').disabled = true;
+  
+  runTrainingStep();
+}
+
+function runTrainingStep() {
+  const stepDelay = 800 / animationSpeed;
+  
+  switch (currentStep) {
+    case 1:
+      step1_LoadData();
+      break;
+    case 2:
+      step2_InitializeParameters();
+      break;
+    case 3:
+      step3_GradientDescent();
+      return;
+    case 4:
+      step4_ShowResiduals();
+      break;
+    case 5:
+      step5_Predict();
+      return;
+  }
+  
+  currentStep++;
+  
+  if (animationId) clearTimeout(animationId);
+  animationId = setTimeout(runTrainingStep, stepDelay);
+}
+
+function step1_LoadData() {
+  updateStepDisplay('STEP 1', 'Loading Training Data', 
+    'Processing ' + trainingPoints.length + ' data points. Calculating mean values and preparing for gradient descent optimization.');
+  
+  highlightPoints = true;
+  drawScene();
+}
+
+function step2_InitializeParameters() {
+  updateStepDisplay('STEP 2', 'Initializing Parameters', 
+    'Setting initial slope m = 0 and intercept b = 0.5. These will be iteratively refined to minimize Mean Squared Error.');
+  
+  slope = 0;
+  intercept = 0.5;
+  
+  document.getElementById('equationDisplay').style.display = 'block';
+  document.getElementById('errorViz').style.display = 'block';
+  
+  updateEquationDisplay();
+  animateLineAppearance();
+}
+
+function step3_GradientDescent() {
+  updateStepDisplay('STEP 3', 'Gradient Descent Optimization', 
+    'Iteratively adjusting slope and intercept to minimize MSE. Learning rate: ' + learningRate.toFixed(3) + '. Watching the line converge to optimal position.');
+  
+  runGradientDescent();
+}
+
+function runGradientDescent() {
+  const iterations = 150;
+  let currentIter = 0;
+  
+  function iterate() {
+    if (!isTraining || currentIter >= iterations) {
+      currentStep = 4;
+      runTrainingStep();
+      return;
+    }
+    
+    // Calculate gradients
+    let gradSlope = 0;
+    let gradIntercept = 0;
+    const n = trainingPoints.length;
+    
+    trainingPoints.forEach(point => {
+      const pred = slope * point.x + intercept;
+      const error = pred - point.y;
+      gradSlope += (2 / n) * error * point.x;
+      gradIntercept += (2 / n) * error;
+    });
+    
+    // Update parameters
+    slope -= learningRate * gradSlope;
+    intercept -= learningRate * gradIntercept;
+    
+    // Store history for visualization
+    slopeHistory.push(slope);
+    interceptHistory.push(intercept);
+    
+    // Update display
+    lineProgress = 1;
+    updateEquationDisplay();
+    updateMSEDisplay();
+    
+    drawScene();
+    
+    currentIter++;
+    
+    if (animationId) clearTimeout(animationId);
+    animationId = setTimeout(iterate, (20 / animationSpeed));
+  }
+  
+  iterate();
+}
+
+function step4_ShowResiduals() {
+  updateStepDisplay('STEP 4', 'Calculating Residuals', 
+    'Drawing residual lines from each data point to the regression line. These vertical distances represent prediction errors.');
+  
+  showResiduals = true;
+  drawScene();
+}
+
+function step5_Predict() {
+  const predictedY = slope * testPoint.x + intercept;
+  const mse = calculateMSE();
+  const r2 = calculateRSquared();
+  
+  updateStepDisplay('COMPLETE', 'Training Complete', 
+    'Model trained successfully. Test point prediction: y = ' + predictedY.toFixed(3) + ' for x = ' + testPoint.x.toFixed(3) + '. R-squared score: ' + r2.toFixed(3));
+  
+  // Update result metrics
+  document.getElementById('resultMetrics').style.display = 'block';
+  document.getElementById('slopeValue').textContent = slope.toFixed(4);
+  document.getElementById('interceptValue').textContent = intercept.toFixed(4);
+  document.getElementById('mseResult').textContent = mse.toFixed(4);
+  document.getElementById('rSquared').textContent = r2.toFixed(4);
+  document.getElementById('predictionValue').textContent = predictedY.toFixed(3);
+  
+  isTraining = false;
+  document.getElementById('addPointBtn').disabled = false;
+  document.getElementById('trainBtn').disabled = false;
+  
+  drawScene();
+}
+
+function animateLineAppearance() {
+  lineProgress = 0;
+  
+  function animate() {
+    lineProgress += 0.05 * animationSpeed;
+    if (lineProgress > 1) lineProgress = 1;
+    
+    drawScene();
+    
+    if (lineProgress < 1 && isTraining) {
+      requestAnimationFrame(animate);
+    }
+  }
+  
+  animate();
+}
+
+function calculateMSE() {
+  if (trainingPoints.length === 0) return 0;
+  
+  let sumSquaredError = 0;
+  trainingPoints.forEach(point => {
+    const pred = slope * point.x + intercept;
+    sumSquaredError += (pred - point.y) ** 2;
+  });
+  
+  return sumSquaredError / trainingPoints.length;
+}
+
+function calculateRSquared() {
+  if (trainingPoints.length === 0) return 0;
+  
+  // Calculate mean of y
+  let meanY = 0;
+  trainingPoints.forEach(point => meanY += point.y);
+  meanY /= trainingPoints.length;
+  
+  // Calculate total sum of squares and residual sum of squares
+  let ssTotal = 0;
+  let ssResidual = 0;
+  
+  trainingPoints.forEach(point => {
+    ssTotal += (point.y - meanY) ** 2;
+    const pred = slope * point.x + intercept;
+    ssResidual += (point.y - pred) ** 2;
+  });
+  
+  if (ssTotal === 0) return 1;
+  return 1 - (ssResidual / ssTotal);
+}
+
+function updateEquationDisplay() {
+  const eqText = 'y = ' + slope.toFixed(3) + 'x + ' + intercept.toFixed(3);
+  document.getElementById('regressionEq').textContent = eqText;
+}
+
+function updateMSEDisplay() {
+  const mse = calculateMSE();
+  const normalizedMSE = Math.min(100, (mse * 500));
+  
+  document.getElementById('errorBar').style.width = (100 - normalizedMSE) + '%';
+  document.getElementById('mseValue').textContent = mse.toFixed(4);
+}
+
+function drawScene() {
+  if (!mainCtx) return;
+  
+  const w = mainCanvas.width;
+  const h = mainCanvas.height;
+  
+  // Background
+  mainCtx.fillStyle = '#060a14';
+  mainCtx.fillRect(0, 0, w, h);
+  
+  // Grid
+  mainCtx.strokeStyle = 'rgba(92, 112, 144, 0.1)';
+  mainCtx.lineWidth = 1;
+  
+  for (let x = 0; x <= w; x += 40) {
+    mainCtx.beginPath();
+    mainCtx.moveTo(x, 0);
+    mainCtx.lineTo(x, h);
+    mainCtx.stroke();
+  }
+  
+  for (let y = 0; y <= h; y += 40) {
+    mainCtx.beginPath();
+    mainCtx.moveTo(0, y);
+    mainCtx.lineTo(w, y);
+    mainCtx.stroke();
+  }
+  
+  // Draw axes
+  mainCtx.strokeStyle = 'rgba(92, 112, 144, 0.3)';
+  mainCtx.lineWidth = 1;
+  
+  // X-axis
+  mainCtx.beginPath();
+  mainCtx.moveTo(40, h - 40);
+  mainCtx.lineTo(w - 20, h - 40);
+  mainCtx.stroke();
+  
+  // Y-axis
+  mainCtx.beginPath();
+  mainCtx.moveTo(40, 20);
+  mainCtx.lineTo(40, h - 40);
+  mainCtx.stroke();
+  
+  // Axis labels
+  mainCtx.font = '10px JetBrains Mono';
+  mainCtx.fillStyle = '#5c7090';
+  mainCtx.textAlign = 'center';
+  mainCtx.fillText('X', w - 15, h - 25);
+  mainCtx.fillText('Y', 25, 25);
+  
+  // Draw regression line
+  if (lineProgress > 0) {
+    drawRegressionLine(w, h);
+  }
+  
+  // Draw residuals
+  if (showResiduals) {
+    drawResiduals(w, h);
+  }
+  
+  // Draw training points
+  trainingPoints.forEach((point, index) => {
+    const px = point.x * w;
+    const py = (1 - point.y) * h + 40;
+    
+    // Highlight effect during training
+    if (highlightPoints && index < Math.floor(trainingPoints.length * lineProgress * 3) % trainingPoints.length + 1) {
+      mainCtx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
+      mainCtx.lineWidth = 2;
+      mainCtx.beginPath();
+      mainCtx.arc(px, py, 12, 0, Math.PI * 2);
+      mainCtx.stroke();
+    }
+    
+    // Point glow
+    const glow = mainCtx.createRadialGradient(px, py, 0, px, py, 15);
+    glow.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+    glow.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    mainCtx.fillStyle = glow;
+    mainCtx.beginPath();
+    mainCtx.arc(px, py, 15, 0, Math.PI * 2);
+    mainCtx.fill();
+    
+    // Point
+    mainCtx.fillStyle = '#3b82f6';
+    mainCtx.beginPath();
+    mainCtx.arc(px, py, 6, 0, Math.PI * 2);
+    mainCtx.fill();
+    
+    mainCtx.strokeStyle = '#60a5fa';
+    mainCtx.lineWidth = 1;
+    mainCtx.stroke();
+  });
+  
+  // Draw test point
+  if (testPoint) {
+    const tx = testPoint.x * w;
+    const ty = (1 - testPoint.y) * h + 40;
+    const predY = (1 - (slope * testPoint.x + intercept)) * h + 40;
+    
+    // Prediction line
+    if (lineProgress > 0) {
+      mainCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      mainCtx.lineWidth = 1;
+      mainCtx.setLineDash([4, 4]);
+      mainCtx.beginPath();
+      mainCtx.moveTo(tx, predY);
+      mainCtx.lineTo(tx, ty);
+      mainCtx.stroke();
+      mainCtx.setLineDash([]);
+      
+      // Predicted point
+      const predGlow = mainCtx.createRadialGradient(tx, predY, 0, tx, predY, 15);
+      predGlow.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+      predGlow.addColorStop(1, 'rgba(16, 185, 129, 0)');
+      mainCtx.fillStyle = predGlow;
+      mainCtx.beginPath();
+      mainCtx.arc(tx, predY, 12, 0, Math.PI * 2);
+      mainCtx.fill();
+      
+      mainCtx.fillStyle = '#10b981';
+      mainCtx.beginPath();
+      mainCtx.arc(tx, predY, 6, 0, Math.PI * 2);
+      mainCtx.fill();
+    }
+    
+    // Test point glow
+    const testGlow = mainCtx.createRadialGradient(tx, ty, 0, tx, ty, 20);
+    testGlow.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+    testGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    mainCtx.fillStyle = testGlow;
+    mainCtx.beginPath();
+    mainCtx.arc(tx, ty, 20, 0, Math.PI * 2);
+    mainCtx.fill();
+    
+    // Test point
+    mainCtx.fillStyle = '#ffffff';
+    mainCtx.beginPath();
+    mainCtx.arc(tx, ty, 8, 0, Math.PI * 2);
+    mainCtx.fill();
+    
+    // Label
+    mainCtx.font = 'bold 10px JetBrains Mono';
+    mainCtx.fillStyle = '#04060d';
+    mainCtx.textAlign = 'center';
+    mainCtx.textBaseline = 'middle';
+    mainCtx.fillText('?', tx, ty);
+  }
+  
+  // Legend
+  mainCtx.font = '10px JetBrains Mono';
+  mainCtx.fillStyle = '#3b82f6';
+  mainCtx.beginPath();
+  mainCtx.arc(16, 16, 5, 0, Math.PI * 2);
+  mainCtx.fill();
+  mainCtx.fillText('Training', 28, 20);
+  
+  if (testPoint) {
+    mainCtx.fillStyle = '#ffffff';
+    mainCtx.beginPath();
+    mainCtx.arc(100, 16, 5, 0, Math.PI * 2);
+    mainCtx.fill();
+    mainCtx.fillStyle = '#5c7090';
+    mainCtx.fillText('Test', 112, 20);
+  }
+  
+  if (lineProgress > 0) {
+    mainCtx.fillStyle = '#10b981';
+    mainCtx.beginPath();
+    mainCtx.arc(160, 16, 5, 0, Math.PI * 2);
+    mainCtx.fill();
+    mainCtx.fillStyle = '#5c7090';
+    mainCtx.fillText('Predicted', 172, 20);
+  }
+  
+  // Model indicator
+  if (lineProgress > 0) {
+    mainCtx.fillStyle = 'rgba(0, 229, 255, 0.7)';
+    mainCtx.textAlign = 'right';
+    mainCtx.fillText('m=' + slope.toFixed(2) + ' b=' + intercept.toFixed(2), w - 16, 20);
+  }
+}
+
+function drawRegressionLine(w, h) {
+  // Calculate line endpoints
+  const x1 = 0;
+  const x2 = 1;
+  const y1 = slope * x1 + intercept;
+  const y2 = slope * x2 + intercept;
+  
+  const px1 = x1 * w;
+  const py1 = (1 - y1) * h + 40;
+  const px2 = x2 * w;
+  const py2 = (1 - y2) * h + 40;
+  
+  // Animate line drawing
+  const progress = lineProgress;
+  const currentX = px1 + (px2 - px1) * progress;
+  const currentY = py1 + (py2 - py1) * progress;
+  
+  // Glow effect
+  mainCtx.strokeStyle = 'rgba(0, 229, 255, 0.2)';
+  mainCtx.lineWidth = 8;
+  mainCtx.beginPath();
+  mainCtx.moveTo(px1, py1);
+  mainCtx.lineTo(currentX, currentY);
+  mainCtx.stroke();
+  
+  // Main line
+  const gradient = mainCtx.createLinearGradient(px1, py1, px2, py2);
+  gradient.addColorStop(0, '#00e5ff');
+  gradient.addColorStop(1, '#3b82f6');
+  
+  mainCtx.strokeStyle = gradient;
+  mainCtx.lineWidth = 2;
+  mainCtx.beginPath();
+  mainCtx.moveTo(px1, py1);
+  mainCtx.lineTo(currentX, currentY);
+  mainCtx.stroke();
+}
+
+function drawResiduals(w, h) {
+  trainingPoints.forEach(point => {
+    const px = point.x * w;
+    const py = (1 - point.y) * h + 40;
+    const predY = slope * point.x + intercept;
+    const predPy = (1 - predY) * h + 40;
+    
+    // Residual line
+    mainCtx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+    mainCtx.lineWidth = 1;
+    mainCtx.beginPath();
+    mainCtx.moveTo(px, py);
+    mainCtx.lineTo(px, predPy);
+    mainCtx.stroke();
+  });
+}
+
+function updateStepDisplay(step, title, text) {
+  document.getElementById('stepNum').textContent = step;
+  document.getElementById('stepTitle').textContent = title;
+  document.getElementById('stepText').textContent = text;
+}
+
+function resetSimulator() {
+  if (animationId) {
+    clearTimeout(animationId);
+    animationId = null;
+  }
+  
+  isTraining = false;
+  testPoint = null;
+  slope = 0;
+  intercept = 0.5;
+  currentStep = 0;
+  lineProgress = 0;
+  showResiduals = false;
+  highlightPoints = false;
+  slopeHistory = [];
+  interceptHistory = [];
+  
+  document.getElementById('trainBtn').disabled = true;
+  document.getElementById('addPointBtn').disabled = false;
+  document.getElementById('testPointStatus').textContent = 'Not placed';
+  
+  updateStepDisplay('READY', 'Reset Complete', 
+    'Canvas cleared. Click on the canvas or use "Add Test Point" to place a new prediction point.');
+  
+  document.getElementById('equationDisplay').style.display = 'none';
+  document.getElementById('errorViz').style.display = 'none';
+  document.getElementById('resultMetrics').style.display = 'none';
+  
+  drawScene();
+}
+
+// === HELP MODAL ===
+function initHelpModal() {
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const closeModal = document.getElementById('closeModal');
+  
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('active');
+  });
+  
+  closeModal.addEventListener('click', () => {
+    helpModal.classList.remove('active');
+  });
+  
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.classList.remove('active');
+    }
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && helpModal.classList.contains('active')) {
+      helpModal.classList.remove('active');
+    }
+  });
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initBgNodes();
+  
+  resizeMainCanvas();
+});
+
+// === CONTROL BINDINGS ===
+document.addEventListener('DOMContentLoaded', function() {
+  const datasetSelect = document.getElementById('datasetSelect');
+  const pointsSlider = document.getElementById('pointsSlider');
+  const lrSlider = document.getElementById('lrSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const addPointBtn = document.getElementById('addPointBtn');
+  const trainBtn = document.getElementById('trainBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  
+  datasetSelect.addEventListener('change', function() {
+    if (isTraining) return;
+    loadDataset(this.value);
+  });
+  
+  pointsSlider.addEventListener('input', function() {
+    numPoints = parseInt(this.value);
+    document.getElementById('pointsValueDisplay').textContent = numPoints;
+    
+    if (!isTraining) {
+      loadDataset(datasetType);
+    }
+  });
+  
+  lrSlider.addEventListener('input', function() {
+    learningRate = parseFloat(this.value);
+    document.getElementById('lrValueDisplay').textContent = learningRate.toFixed(3);
+    document.getElementById('currentLR').textContent = learningRate.toFixed(3);
+  });
+  
+  speedSlider.addEventListener('input', function() {
+    animationSpeed = parseFloat(this.value);
+    document.getElementById('speedValueDisplay').textContent = this.value + 'x';
+  });
+  
+  addPointBtn.addEventListener('click', addTestPoint);
+  trainBtn.addEventListener('click', trainModel);
+  resetBtn.addEventListener('click', resetSimulator);
+  
+  // Initialize
+  initSimulator();
+});
+
+// === INITIALIZE ===
+initBgNodes();
+animateBg();
+initScrollReveal();
+initHelpModal();
+</script>
+
+</body>
+</html>

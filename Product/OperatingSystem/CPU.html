@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Industrial Workload Scheduling Platform</title>
+    
+    <!-- Tailwind CSS for Enterprise Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Custom Scrollbar & Industrial Theme */
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+        
+        .neon-border {
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+        }
+
+        /* Process Table specific */
+        .process-row:hover { background-color: rgba(51, 65, 85, 0.5); }
+        
+        /* Animation */
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+            100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.3); }
+        }
+        .running-indicator { animation: pulse-glow 2s infinite; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex">
+
+    <!-- ==============================================
+         SIDEBAR NAVIGATION
+         ============================================== -->
+    <aside class="w-64 glass-panel border-r border-slate-700 flex flex-col">
+        <div class="p-6 border-b border-slate-700">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                SchedulerOS
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Industrial Platform v2.0</p>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800 text-white font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+                Dashboard
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path></svg>
+                Workloads
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Analytics
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Settings
+            </a>
+        </nav>
+
+        <!-- System Status -->
+        <div class="p-4 border-t border-slate-700">
+            <div class="flex items-center gap-2 text-sm text-green-400">
+                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                System Operational
+            </div>
+            <div class="mt-2 text-xs text-slate-500">
+                Cluster: US-EAST-1
+            </div>
+        </div>
+    </aside>
+
+    <!-- ==============================================
+         MAIN CONTENT AREA
+         ============================================== -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        
+        <!-- Header -->
+        <header class="h-16 glass-panel border-b border-slate-700 flex items-center justify-between px-8">
+            <div>
+                <h2 class="text-lg font-semibold text-white">Scheduling Dashboard</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="generateRandomWorkload()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-md text-sm font-medium transition-colors">
+                    Randomize Workload
+                </button>
+                <button onclick="runSimulation()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-sm font-medium transition-colors neon-border">
+                    Run Simulation
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="flex-1 overflow-y-auto p-8 bg-slate-900/50">
+            
+            <!-- Top Stats Grid -->
+            <div class="grid grid-cols-4 gap-6 mb-8">
+                <!-- Metric Card Template -->
+                <div class="glass-panel rounded-xl p-5 border-l-4 border-blue-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">CPU Utilization</p>
+                    <p id="stat-cpu" class="text-3xl font-bold text-white mt-2">0.0%</p>
+                    <div class="mt-2 h-1 bg-slate-700 rounded-full overflow-hidden">
+                        <div id="bar-cpu" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-xl p-5 border-l-4 border-green-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Throughput</p>
+                    <p id="stat-throughput" class="text-3xl font-bold text-white mt-2">0.0</p>
+                    <p class="text-xs text-slate-500 mt-1">processes/unit time</p>
+                </div>
+
+                <div class="glass-panel rounded-xl p-5 border-l-4 border-yellow-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Avg Wait Time</p>
+                    <p id="stat-wait" class="text-3xl font-bold text-white mt-2">0.0</p>
+                    <p class="text-xs text-slate-500 mt-1">time units</p>
+                </div>
+
+                <div class="glass-panel rounded-xl p-5 border-l-4 border-purple-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Context Switches</p>
+                    <p id="stat-switches" class="text-3xl font-bold text-white mt-2">0</p>
+                    <p class="text-xs text-slate-500 mt-1">overhead count</p>
+                </div>
+            </div>
+
+            <!-- Main Grid: Config + Gantt -->
+            <div class="grid grid-cols-3 gap-8">
+                
+                <!-- Left Column: Configuration & Process Table -->
+                <div class="col-span-1 space-y-6">
+                    
+                    <!-- Scheduler Config -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">Scheduler Configuration</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-400 mb-1">Algorithm</label>
+                                <select id="algorithm-select" class="w-full bg-slate-800 border-slate-600 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="fcfs">First-Come First-Serve (FCFS)</option>
+                                    <option value="sjf">Shortest Job First (SJF)</option>
+                                    <option value="priority">Priority Scheduling</option>
+                                    <option value="rr">Round Robin (RR)</option>
+                                </select>
+                            </div>
+
+                            <div id="quantum-config" class="hidden">
+                                <label class="block text-sm font-medium text-slate-400 mb-1">Quantum Time (RR)</label>
+                                <input type="number" id="quantum-input" value="2" class="w-full bg-slate-800 border-slate-600 rounded-md px-3 py-2 text-sm">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-400 mb-1">Simulation Speed</label>
+                                <input type="range" id="speed-slider" min="1" max="100" value="50" class="w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Process Input Table -->
+                    <div class="glass-panel rounded-xl p-6 overflow-hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-bold uppercase text-slate-300">Process Queue</h3>
+                            <button onclick="addNewProcess()" class="text-xs px-2 py-1 bg-slate-700 rounded hover:bg-slate-600">+ Add Process</button>
+                        </div>
+                        
+                        <div class="overflow-y-auto max-h-72 scrollbar-thin">
+                            <table class="w-full text-xs">
+                                <thead class="text-slate-400 border-b border-slate-700">
+                                    <tr>
+                                        <th class="pb-2 text-left font-medium">PID</th>
+                                        <th class="pb-2 text-left font-medium">Arrival</th>
+                                        <th class="pb-2 text-left font-medium">Burst</th>
+                                        <th class="pb-2 text-left font-medium">Priority</th>
+                                        <th class="pb-2 text-left font-medium">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="process-table-body" class="divide-y divide-slate-800">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Visualization -->
+                <div class="col-span-2 space-y-6">
+                    
+                    <!-- Gantt Chart -->
+                    <div class="glass-panel rounded-xl p-6 min-h-[400px] relative">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-bold uppercase text-slate-300">Execution Gantt Chart</h3>
+                            <div class="flex gap-2 text-xs">
+                                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-500 rounded"></span> Running</span>
+                                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-red-500/50 rounded"></span> Waiting</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Canvas for Rendering -->
+                        <div class="relative w-full h-80 bg-slate-900/50 rounded-lg overflow-hidden">
+                            <canvas id="gantt-canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                            <!-- Current Time Overlay -->
+                            <div id="time-overlay" class="absolute top-2 right-2 bg-black/70 px-3 py-1 rounded text-xs font-mono">
+                                Time: 0
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Charts -->
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="glass-panel rounded-xl p-6">
+                            <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">Wait Time Distribution</h3>
+                            <canvas id="wait-time-chart" height="150"></canvas>
+                        </div>
+                        <div class="glass-panel rounded-xl p-6">
+                            <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">CPU Utilization Over Time</h3>
+                            <canvas id="cpu-chart" height="150"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==============================================
+         JAVASCRIPT ENGINE
+         ============================================== -->
+    <script>
+        // ==========================================
+        // DATA MODEL & STATE
+        // ==========================================
+        
+        let processes = [];
+        let simulationResults = [];
+        let isSimulating = false;
+        let charts = { waitTime: null, cpu: null };
+        let processIdCounter = 1;
+
+        // ==========================================
+        // SCHEDULING ALGORITHMS
+        // ==========================================
+
+        class Scheduler {
+            constructor(processes, quantum = 2) {
+                this.originalProcesses = JSON.parse(JSON.stringify(processes));
+                this.quantum = quantum;
+                this.timeline = [];
+                this.currentTime = 0;
+            }
+
+            // FCFS Algorithm
+            fcfs() {
+                const queue = [...this.originalProcesses].sort((a, b) => a.arrival - b.arrival);
+                let time = 0;
+                
+                queue.forEach(p => {
+                    if (time < p.arrival) time = p.arrival;
+                    p.start = time;
+                    p.end = time + p.burst;
+                    p.wait = p.start - p.arrival;
+                    p.turnaround = p.end - p.arrival;
+                    
+                    this.timeline.push({ pid: p.pid, start: p.start, end: p.end, color: p.color });
+                    time = p.end;
+                });
+                return this.calculateMetrics(queue);
+            }
+
+            // SJF (Shortest Job First)
+            sjf() {
+                const queue = [...this.originalProcesses];
+                let time = 0;
+                const completed = [];
+                const readyQueue = [];
+
+                while (completed.length < queue.length) {
+                    // Add arrived processes to ready queue
+                    queue.forEach(p => {
+                        if (p.arrival <= time && !completed.includes(p) && !readyQueue.includes(p)) {
+                            readyQueue.push(p);
+                        }
+                    });
+
+                    if (readyQueue.length === 0) {
+                        time++;
+                        continue;
+                    }
+
+                    // Sort by burst time
+                    readyQueue.sort((a, b) => a.burst - b.burst);
+                    const p = readyQueue.shift();
+                    
+                    p.start = time;
+                    p.end = time + p.burst;
+                    p.wait = p.start - p.arrival;
+                    p.turnaround = p.end - p.arrival;
+                    
+                    this.timeline.push({ pid: p.pid, start: p.start, end: p.end, color: p.color });
+                    time = p.end;
+                    completed.push(p);
+                }
+                return this.calculateMetrics(completed);
+            }
+
+            // Priority Scheduling (Lower number = Higher priority)
+            priority() {
+                const queue = [...this.originalProcesses];
+                let time = 0;
+                const completed = [];
+                const readyQueue = [];
+
+                while (completed.length < queue.length) {
+                    queue.forEach(p => {
+                        if (p.arrival <= time && !completed.includes(p) && !readyQueue.includes(p)) {
+                            readyQueue.push(p);
+                        }
+                    });
+
+                    if (readyQueue.length === 0) {
+                        time++;
+                        continue;
+                    }
+
+                    readyQueue.sort((a, b) => a.priority - b.priority);
+                    const p = readyQueue.shift();
+                    
+                    p.start = time;
+                    p.end = time + p.burst;
+                    p.wait = p.start - p.arrival;
+                    p.turnaround = p.end - p.arrival;
+                    
+                    this.timeline.push({ pid: p.pid, start: p.start, end: p.end, color: p.color });
+                    time = p.end;
+                    completed.push(p);
+                }
+                return this.calculateMetrics(completed);
+            }
+
+            // Round Robin
+            roundRobin() {
+                const queue = JSON.parse(JSON.stringify(this.originalProcesses));
+                const readyQueue = [];
+                let time = 0;
+                let gantt = [];
+                
+                // Initial population
+                queue.forEach(p => { p.remaining = p.burst; });
+
+                while (true) {
+                    // Check arrivals
+                    queue.forEach(p => {
+                        if (p.arrival === time) readyQueue.push(p);
+                    });
+
+                    if (readyQueue.length === 0) {
+                        // Check if any process still remaining
+                        if (queue.every(p => p.remaining === 0)) break;
+                        time++;
+                        continue;
+                    }
+
+                    const p = readyQueue.shift();
+                    
+                    // Record start time for waiting calculation
+                    if (p.lastRun === undefined) {
+                        p.wait = time - p.arrival; // Initial wait
+                    } else {
+                        p.wait += (time - p.lastRun);
+                    }
+
+                    const execTime = Math.min(this.quantum, p.remaining);
+                    gantt.push({ pid: p.pid, start: time, end: time + execTime, color: p.color });
+                    
+                    time += execTime;
+                    p.remaining -= execTime;
+                    p.lastRun = time;
+
+                    // Add processes that arrived during execution
+                    queue.forEach(proc => {
+                        if (proc.arrival > (time - execTime) && proc.arrival <= time && !readyQueue.includes(proc) && proc.remaining > 0) {
+                            readyQueue.push(proc);
+                        }
+                    });
+
+                    if (p.remaining > 0) {
+                        readyQueue.push(p);
+                    } else {
+                        p.turnaround = time - p.arrival;
+                    }
+                }
+                
+                this.timeline = gantt;
+                return this.calculateMetrics(queue);
+            }
+
+            calculateMetrics(processes) {
+                const avgWait = processes.reduce((acc, p) => acc + p.wait, 0) / processes.length;
+                const avgTurnaround = processes.reduce((acc, p) => acc + p.turnaround, 0) / processes.length;
+                const totalTime = Math.max(...this.timeline.map(t => t.end));
+                const cpuUtil = (this.timeline.reduce((acc, t) => acc + (t.end - t.start), 0) / totalTime) * 100;
+                
+                return {
+                    avgWait,
+                    avgTurnaround,
+                    cpuUtil,
+                    throughput: processes.length / totalTime,
+                    totalTime,
+                    contextSwitches: this.timeline.length - 1
+                };
+            }
+        }
+
+        // ==========================================
+        // UI & DOM HANDLING
+        // ==========================================
+
+        const tableBody = document.getElementById('process-table-body');
+        const ganttCanvas = document.getElementById('gantt-canvas');
+        const ctx = ganttCanvas.getContext('2d');
+
+        // Generate random color
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 6)]; // Keep it in blue-ish spectrum for dark theme
+            }
+            return color;
+        }
+
+        // Render Process Table
+        function renderTable() {
+            tableBody.innerHTML = '';
+            processes.forEach((p, index) => {
+                const row = document.createElement('tr');
+                row.className = 'process-row';
+                row.innerHTML = `
+                    <td class="py-2 px-1 text-blue-300 font-mono font-bold">P${p.pid}</td>
+                    <td class="py-2 px-1"><input type="number" value="${p.arrival}" onchange="updateProcess(${index}, 'arrival', this.value)" class="w-12 bg-transparent border-b border-slate-600 text-center focus:outline-none focus:border-blue-500"></td>
+                    <td class="py-2 px-1"><input type="number" value="${p.burst}" onchange="updateProcess(${index}, 'burst', this.value)" class="w-12 bg-transparent border-b border-slate-600 text-center focus:outline-none focus:border-blue-500"></td>
+                    <td class="py-2 px-1"><input type="number" value="${p.priority}" onchange="updateProcess(${index}, 'priority', this.value)" class="w-12 bg-transparent border-b border-slate-600 text-center focus:outline-none focus:border-blue-500"></td>
+                    <td class="py-2 px-1">
+                        <button onclick="removeProcess(${index})" class="text-red-500 hover:text-red-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function addNewProcess() {
+            processes.push({
+                pid: processIdCounter++,
+                arrival: Math.floor(Math.random() * 10),
+                burst: Math.floor(Math.random() * 10) + 1,
+                priority: Math.floor(Math.random() * 5),
+                color: getRandomColor()
+            });
+            renderTable();
+        }
+
+        function removeProcess(index) {
+            processes.splice(index, 1);
+            renderTable();
+        }
+
+        function updateProcess(index, key, value) {
+            processes[index][key] = parseInt(value);
+        }
+
+        function generateRandomWorkload() {
+            processes = [];
+            const count = Math.floor(Math.random() * 6) + 4; // 4 to 9 processes
+            for (let i = 0; i < count; i++) {
+                processes.push({
+                    pid: processIdCounter++,
+                    arrival: Math.floor(Math.random() * 10),
+                    burst: Math.floor(Math.random() * 15) + 1,
+                    priority: Math.floor(Math.random() * 10),
+                    color: getRandomColor()
+                });
+            }
+            renderTable();
+        }
+
+        // ==========================================
+        // VISUALIZATION ENGINE
+        // ==========================================
+
+        function renderGantt(timeline, totalTime) {
+            // Resize canvas for HiDPI
+            const rect = ganttCanvas.parentElement.getBoundingClientRect();
+            ganttCanvas.width = rect.width * window.devicePixelRatio;
+            ganttCanvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const width = rect.width;
+            const height = rect.height;
+            
+            const padding = { top: 40, right: 20, bottom: 20, left: 50 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+            
+            // Scale
+            const timeScale = chartWidth / totalTime;
+            const processCount = new Set(timeline.map(t => t.pid)).size;
+            const rowHeight = chartHeight / processCount;
+            
+            // Clear
+            ctx.clearRect(0, 0, width, height);
+            ctx.font = '10px Inter, sans-serif';
+            
+            // Grid Lines
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            
+            // Time Axis
+            for (let i = 0; i <= totalTime; i++) {
+                const x = padding.left + (i * timeScale);
+                ctx.beginPath();
+                ctx.moveTo(x, padding.top);
+                ctx.lineTo(x, height - padding.bottom);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'center';
+                ctx.fillText(i.toString(), x, height - 5);
+            }
+
+            // Draw Timeline Blocks
+            // Re-map Y axis to process rows
+            const pids = [...new Set(timeline.map(t => t.pid))];
+            const pidMap = pids.reduce((acc, pid, idx) => { acc[pid] = idx; return acc; }, {});
+
+            timeline.forEach(block => {
+                const x = padding.left + (block.start * timeScale);
+                const y = padding.top + (pidMap[block.pid] * rowHeight);
+                const w = (block.end - block.start) * timeScale;
+                
+                ctx.fillStyle = block.color || '#3b82f6';
+                ctx.fillRect(x, y + 2, w, rowHeight - 4);
+                
+                // Label
+                if (w > 20) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`P${block.pid}`, x + w/2, y + rowHeight/2 + 4);
+                }
+            });
+        }
+
+        function initCharts() {
+            const waitCtx = document.getElementById('wait-time-chart').getContext('2d');
+            const cpuCtx = document.getElementById('cpu-chart').getContext('2d');
+
+            charts.waitTime = new Chart(waitCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Wait Time',
+                        data: [],
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+
+            charts.cpu = new Chart(cpuCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'CPU %',
+                        data: [],
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        function updateCharts(processes, metrics) {
+            // Update Wait Time Bar Chart
+            charts.waitTime.data.labels = processes.map(p => `P${p.pid}`);
+            charts.waitTime.data.datasets[0].data = processes.map(p => p.wait);
+            charts.waitTime.update();
+
+            // Update CPU Line Chart (Mock snapshot for demo)
+            charts.cpu.data.labels = ['Start', '25%', '50%', '75%', 'End'];
+            charts.cpu.data.datasets[0].data = [0, metrics.cpuUtil * 0.8, metrics.cpuUtil, metrics.cpuUtil * 0.9, metrics.cpuUtil];
+            charts.cpu.update();
+        }
+
+        function updateDashboard(metrics) {
+            document.getElementById('stat-cpu').innerText = metrics.cpuUtil.toFixed(1) + '%';
+            document.getElementById('stat-throughput').innerText = metrics.throughput.toFixed(2);
+            document.getElementById('stat-wait').innerText = metrics.avgWait.toFixed(1);
+            document.getElementById('stat-switches').innerText = metrics.contextSwitches;
+            
+            document.getElementById('bar-cpu').style.width = metrics.cpuUtil + '%';
+        }
+
+        // ==========================================
+        // MAIN EXECUTION
+        // ==========================================
+
+        function runSimulation() {
+            if (processes.length === 0) {
+                alert("Please add processes first!");
+                return;
+            }
+
+            const algo = document.getElementById('algorithm-select').value;
+            const quantum = parseInt(document.getElementById('quantum-input').value);
+            
+            const scheduler = new Scheduler(processes, quantum);
+            let metrics;
+
+            switch(algo) {
+                case 'fcfs': metrics = scheduler.fcfs(); break;
+                case 'sjf': metrics = scheduler.sjf(); break;
+                case 'priority': metrics = scheduler.priority(); break;
+                case 'rr': metrics = scheduler.roundRobin(); break;
+                default: metrics = scheduler.fcfs();
+            }
+
+            // Render Results
+            renderGantt(scheduler.timeline, metrics.totalTime);
+            updateDashboard(metrics);
+            updateCharts(processes, metrics);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            generateRandomWorkload();
+            initCharts();
+            
+            // Handle Quantum toggle
+            document.getElementById('algorithm-select').addEventListener('change', (e) => {
+                const quantumDiv = document.getElementById('quantum-config');
+                if (e.target.value === 'rr') {
+                    quantumDiv.classList.remove('hidden');
+                } else {
+                    quantumDiv.classList.add('hidden');
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>

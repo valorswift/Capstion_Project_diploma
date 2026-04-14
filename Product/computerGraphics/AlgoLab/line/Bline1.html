@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bresenham Line Algorithm | Computer Graphics</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #05080c;
+  --bg-elevated: #0a1018;
+  --card: #0d1520;
+  --border: #1a2535;
+  --accent: #b464ff;
+  --accent-light: #d4a3ff;
+  --text: #e4e8ec;
+  --muted: #5a6a7a;
+  --cyan: #00d4ff;
+  --success: #00ffc8;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 8, 12, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.hero {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 60px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(180, 100, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(180, 100, 255, 0.2);
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.main-title {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  color: var(--text);
+}
+
+.hero-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 650px;
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.section {
+  padding: 80px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: 48px;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 0 0 12px 0;
+}
+
+.section-desc {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.three-col {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.canvas-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.canvas-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.canvas-body {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-body canvas {
+  border-radius: 8px;
+  cursor: crosshair;
+}
+
+.info-panel {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.info-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.content-block {
+  padding: 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.content-block h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.content-block p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 16px 0;
+}
+
+.formula-box {
+  background: rgba(180, 100, 255, 0.05);
+  border: 1px solid rgba(180, 100, 255, 0.2);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.formula {
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 600;
+  text-align: center;
+}
+
+.formula-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+}
+
+.formula-group {
+  display: grid;
+  gap: 12px;
+}
+
+.formula-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(180, 100, 255, 0.08);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.formula-item .label {
+  color: var(--muted);
+}
+
+.formula-item .value {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.decision-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 16px 0;
+}
+
+.decision-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.decision-rule:last-child {
+  margin-bottom: 0;
+}
+
+.decision-rule.negative {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.decision-rule.positive {
+  background: rgba(180, 100, 255, 0.1);
+  border: 1px solid rgba(180, 100, 255, 0.2);
+}
+
+.decision-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.decision-rule.negative .decision-icon {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--cyan);
+}
+
+.decision-rule.positive .decision-icon {
+  background: rgba(180, 100, 255, 0.2);
+  color: var(--accent);
+}
+
+.decision-content h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.decision-content p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.decision-content code {
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.controls-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: #c474ff;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-success {
+  background: var(--success);
+  color: var(--bg);
+}
+
+.btn-success:hover {
+  background: #00e6b8;
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.btn-danger:hover {
+  background: rgba(180, 100, 255, 0.1);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.table-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.table-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.table-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.calc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.calc-table th {
+  padding: 12px 16px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+
+.calc-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.calc-table tr.current {
+  background: rgba(180, 100, 255, 0.1);
+}
+
+.calc-table tr.current td {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.calc-table tr.completed td {
+  color: var(--success);
+}
+
+.calc-table tr.east td:nth-child(2) {
+  color: var(--cyan);
+}
+
+.calc-table tr.northeast td:nth-child(2) {
+  color: var(--accent);
+}
+
+.table-body {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.code-block {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.code-header {
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.code-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.code-dot.red { background: #ff5f56; }
+.code-dot.yellow { background: #ffbd2e; }
+.code-dot.green { background: #27ca40; }
+
+.code-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 8px;
+}
+
+.code-content {
+  padding: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text);
+  overflow-x: auto;
+}
+
+.code-line {
+  display: flex;
+  gap: 16px;
+}
+
+.code-line .number {
+  color: var(--muted);
+  user-select: none;
+  min-width: 24px;
+  text-align: right;
+}
+
+.code-line .content {
+  flex: 1;
+}
+
+.code-keyword {
+  color: var(--accent);
+}
+
+.code-variable {
+  color: var(--cyan);
+}
+
+.code-function {
+  color: var(--success);
+}
+
+.code-comment {
+  color: var(--muted);
+}
+
+.code-condition {
+  color: var(--accent-light);
+}
+
+.pros-cons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.pros-card, .cons-card {
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.pros-card {
+  background: rgba(0, 255, 200, 0.03);
+  border-color: rgba(0, 255, 200, 0.2);
+}
+
+.cons-card {
+  background: rgba(180, 100, 255, 0.03);
+  border-color: rgba(180, 100, 255, 0.2);
+}
+
+.pros-card h4 {
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cons-card h4 {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pros-card ul, .cons-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pros-card li, .cons-card li {
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.pros-card li::before {
+  content: '+';
+  color: var(--success);
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cons-card li::before {
+  content: '-';
+  color: var(--accent);
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: rgba(180, 100, 255, 0.1);
+  border: 1px solid rgba(180, 100, 255, 0.2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.step-indicator .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.step-indicator .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.coordinate-display {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.coord-box {
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.coord-box .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.coord-box .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.decision-indicator {
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.3s ease;
+}
+
+.decision-indicator.east {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: var(--cyan);
+}
+
+.decision-indicator.northeast {
+  background: rgba(180, 100, 255, 0.1);
+  border: 1px solid rgba(180, 100, 255, 0.3);
+  color: var(--accent);
+}
+
+.decision-indicator.waiting {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.comparison-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 32px;
+}
+
+.comparison-box h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: var(--text);
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.comparison-item {
+  padding: 16px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+}
+
+.comparison-item h5 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.comparison-item p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.comparison-item.dda h5 {
+  color: var(--accent-alt);
+}
+
+.comparison-item.bresenham h5 {
+  color: var(--accent);
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  margin-top: 80px;
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (max-width: 1100px) {
+  .three-col {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .two-col {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .pros-cons {
+    grid-template-columns: 1fr;
+  }
+  
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 40px;
+    min-height: 50vh;
+  }
+  
+  .controls-panel {
+    justify-content: center;
+  }
+}
+
+.table-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.table-body::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.table-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.table-body::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="../LineAlgoHolder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#05080c" stroke-width="2.5">
+          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">CG Lab</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="algorithm_lab.html">Algorithms</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="line_algorithms.html">Line</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Bresenham Algorithm</span>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-badge">Line Drawing Algorithm</div>
+    <h1 class="main-title">Bresenham Algorithm</h1>
+    <p class="hero-subtitle">
+      // An efficient integer-only algorithm for drawing lines<br>
+      // Uses a decision parameter to choose the next pixel without floating-point operations.
+    </p>
+  </section>
+
+  <!-- Section 1: Introduction -->
+  <section class="section" id="intro">
+    <div class="section-header">
+      <div class="section-number">01 / Introduction</div>
+      <h2 class="section-title">What is Bresenham's Algorithm?</h2>
+    </div>
+    
+    <div class="two-col">
+      <div class="content-block">
+        <h3>The Gold Standard for Line Drawing</h3>
+        <p>
+          Bresenham's line algorithm, developed by Jack Bresenham in 1962, is the most 
+          efficient algorithm for drawing straight lines on raster displays. It uses 
+          <strong>only integer arithmetic</strong> to determine which pixels to illuminate.
+        </p>
+        <p>
+          Unlike DDA which uses floating-point calculations, Bresenham's algorithm 
+          relies on a <strong>decision parameter</strong> to choose between two candidate 
+          pixels at each step, making it significantly faster.
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">Key Insight: Integer Decision Making</div>
+          <div class="formula-label">No floating-point operations required</div>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Why is it Faster Than DDA?</h3>
+        <p>
+          The algorithm's speed comes from eliminating expensive operations:
+        </p>
+        
+        <ul style="list-style: none; padding: 0; margin: 20px 0;">
+          <li style="padding: 10px 0; display: flex; gap: 12px; border-bottom: 1px solid var(--border);">
+            <span style="color: var(--accent); font-weight: 600;">01</span>
+            <span style="color: var(--muted);">No floating-point arithmetic</span>
+          </li>
+          <li style="padding: 10px 0; display: flex; gap: 12px; border-bottom: 1px solid var(--border);">
+            <span style="color: var(--accent); font-weight: 600;">02</span>
+            <span style="color: var(--muted);">No division or multiplication in loop</span>
+          </li>
+          <li style="padding: 10px 0; display: flex; gap: 12px; border-bottom: 1px solid var(--border);">
+            <span style="color: var(--accent); font-weight: 600;">03</span>
+            <span style="color: var(--muted);">Only addition, subtraction, and comparison</span>
+          </li>
+          <li style="padding: 10px 0; display: flex; gap: 12px;">
+            <span style="color: var(--accent); font-weight: 600;">04</span>
+            <span style="color: var(--muted);">Ideal for hardware implementation</span>
+          </li>
+        </ul>
+        
+        <div style="padding: 16px; background: rgba(0, 255, 200, 0.05); border-radius: 8px; border: 1px solid rgba(0, 255, 200, 0.1);">
+          <p style="margin: 0; font-size: 13px; color: var(--success);">
+            Bresenham is the standard algorithm used in graphics hardware (GPUs) 
+            for line drawing because of its efficiency.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Mathematical Concept -->
+  <section class="section" id="math">
+    <div class="section-header">
+      <div class="section-number">02 / Mathematics</div>
+      <h2 class="section-title">Decision Parameter Concept</h2>
+    </div>
+    
+    <div class="two-col">
+      <div class="content-block">
+        <h3>Initial Calculations</h3>
+        <p>First, compute the differences between endpoints:</p>
+        
+        <div class="formula-box">
+          <div class="formula">dx = x2 - x1</div>
+          <div class="formula">dy = y2 - y1</div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Initial Decision Parameter</h3>
+        <p>The starting value of the decision parameter:</p>
+        
+        <div class="formula-box">
+          <div class="formula">p0 = 2dy - dx</div>
+          <div class="formula-label">Initial decision parameter</div>
+        </div>
+        
+        <p style="margin-top: 16px; font-size: 13px; color: var(--muted);">
+          The decision parameter (p) determines whether the next pixel should be 
+          East (same row) or North-East (next row) of the current pixel.
+        </p>
+      </div>
+      
+      <div class="content-block">
+        <h3>Decision Rules</h3>
+        
+        <div class="decision-box">
+          <div class="decision-rule negative">
+            <div class="decision-icon">p&lt;0</div>
+            <div class="decision-content">
+              <h4 style="color: var(--cyan);">Choose East Pixel</h4>
+              <p>Move to <code>(x+1, y)</code> - same row, next column</p>
+              <p style="margin-top: 8px;">Update: <code>p = p + 2dy</code></p>
+            </div>
+          </div>
+          
+          <div class="decision-rule positive">
+            <div class="decision-icon">p≥0</div>
+            <div class="decision-content">
+              <h4 style="color: var(--accent);">Choose North-East Pixel</h4>
+              <p>Move to <code>(x+1, y+1)</code> - next row, next column</p>
+              <p style="margin-top: 8px;">Update: <code>p = p + 2dy - 2dx</code></p>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 16px; background: rgba(180, 100, 255, 0.05); border-radius: 8px; border: 1px solid rgba(180, 100, 255, 0.1);">
+          <p style="margin: 0; font-size: 13px; color: var(--muted);">
+            <strong style="color: var(--accent);">Note:</strong> The decision parameter essentially measures 
+            the distance from the ideal line to the midpoint between the two candidate pixels.
+            A negative value means the line passes below the midpoint (choose East), 
+            while a positive value means it passes above (choose North-East).
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Interactive Simulator -->
+  <section class="section" id="simulator">
+    <div class="section-header">
+      <div class="section-number">03 / Interactive Simulator</div>
+      <h2 class="section-title">Bresenham Line Drawing Visualization</h2>
+      <p class="section-desc">
+        Click on the pixel grid to select start and end points. Then run the simulation 
+        to see how the decision parameter determines each pixel choice.
+      </p>
+    </div>
+    
+    <div class="three-col">
+      <!-- Canvas -->
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">PIXEL_GRID</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="main-canvas" width="360" height="360"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Grid Size</span>
+            <span class="info-value">20 x 20</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value" id="canvas-status">Click to select P1</span>
+          </div>
+        </div>
+        <div class="controls-panel">
+          <button class="btn btn-primary" id="btn-start" onclick="startSimulation()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            Start
+          </button>
+          <button class="btn btn-secondary" id="btn-next" onclick="nextStep()" disabled>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            Next Step
+          </button>
+          <button class="btn btn-success" id="btn-auto" onclick="autoRun()" disabled>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 4h4v16H6zM14 4h4v16h-4z"/>
+            </svg>
+            Auto Run
+          </button>
+          <button class="btn btn-danger" id="btn-reset" onclick="resetSimulation()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 4v6h6M23 20v-6h-6"/>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+            </svg>
+            Reset
+          </button>
+        </div>
+      </div>
+      
+      <!-- Info Panel -->
+      <div>
+        <div class="step-indicator">
+          <span class="label">Current Step</span>
+          <span class="value" id="step-display">0</span>
+        </div>
+        
+        <div class="content-block">
+          <h3>Point Selection</h3>
+          <div class="coordinate-display">
+            <div class="coord-box">
+              <div class="label">START (P1)</div>
+              <div class="value" id="p1-display">Not Set</div>
+            </div>
+            <div class="coord-box">
+              <div class="label">END (P2)</div>
+              <div class="value" id="p2-display">Not Set</div>
+            </div>
+          </div>
+          
+          <h3 style="margin-top: 20px;">Algorithm Values</h3>
+          <div class="formula-group">
+            <div class="formula-item">
+              <span class="label">dx</span>
+              <span class="value" id="val-dx">-</span>
+            </div>
+            <div class="formula-item">
+              <span class="label">dy</span>
+              <span class="value" id="val-dy">-</span>
+            </div>
+            <div class="formula-item">
+              <span class="label">2dy</span>
+              <span class="value" id="val-2dy">-</span>
+            </div>
+            <div class="formula-item">
+              <span class="label">2dx</span>
+              <span class="value" id="val-2dx">-</span>
+            </div>
+            <div class="formula-item">
+              <span class="label">2dy - 2dx</span>
+              <span class="value" id="val-2dy2dx">-</span>
+            </div>
+          </div>
+          
+          <h3 style="margin-top: 20px;">Current State</h3>
+          <div class="formula-box" style="margin: 0;">
+            <div class="formula" id="current-pos">x = -, y = -</div>
+            <div class="formula-label" id="decision-param">p = -</div>
+          </div>
+          
+          <div class="decision-indicator waiting" id="decision-indicator">
+            Waiting to start
+          </div>
+        </div>
+      </div>
+      
+      <!-- Calculation Table -->
+      <div class="table-container">
+        <div class="table-header">
+          <span class="table-title">CALCULATION_TABLE</span>
+        </div>
+        <table class="calc-table">
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>x</th>
+              <th>y</th>
+              <th>p</th>
+              <th>Decision</th>
+            </tr>
+          </thead>
+          <tbody class="table-body" id="calc-table-body">
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--muted); padding: 40px;">
+                Select two points to begin
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Pseudocode -->
+  <section class="section" id="pseudocode">
+    <div class="section-header">
+      <div class="section-number">04 / Algorithm</div>
+      <h2 class="section-title">Bresenham Pseudocode</h2>
+    </div>
+    
+    <div class="content-block">
+      <p>
+        The complete Bresenham algorithm implementation in pseudocode form. 
+        This version assumes slope less than 1 (|dx| > |dy|).
+      </p>
+      
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-dot red"></span>
+          <span class="code-dot yellow"></span>
+          <span class="code-dot green"></span>
+          <span class="code-title">Bresenham_Line_Algorithm</span>
+        </div>
+        <div class="code-content">
+          <div class="code-line"><span class="number">1</span><span class="content"><span class="code-comment">// Input: Start point (x1, y1) and End point (x2, y2)</span></span></div>
+          <div class="code-line"><span class="number">2</span><span class="content"><span class="code-comment">// Assumption: |dx| > |dy| (slope < 1)</span></span></div>
+          <div class="code-line"><span class="number">3</span><span class="content"></span></div>
+          <div class="code-line"><span class="number">4</span><span class="content"><span class="code-keyword">function</span> <span class="code-function">Bresenham_Line</span>(x1, y1, x2, y2):</span></div>
+          <div class="code-line"><span class="number">5</span><span class="content">    <span class="code-comment">// Calculate differences</span></span></div>
+          <div class="code-line"><span class="number">6</span><span class="content">    <span class="code-variable">dx</span> = x2 - x1</span></div>
+          <div class="code-line"><span class="number">7</span><span class="content">    <span class="code-variable">dy</span> = y2 - y1</span></div>
+          <div class="code-line"><span class="number">8</span><span class="content"></span></div>
+          <div class="code-line"><span class="number">9</span><span class="content">    <span class="code-comment">// Initial decision parameter</span></span></div>
+          <div class="code-line"><span class="number">10</span><span class="content">    <span class="code-variable">p</span> = 2 * dy - dx</span></div>
+          <div class="code-line"><span class="number">11</span><span class="content"></span></div>
+          <div class="code-line"><span class="number">12</span><span class="content">    <span class="code-comment">// Initialize starting position</span></span></div>
+          <div class="code-line"><span class="number">13</span><span class="content">    <span class="code-variable">x</span> = x1</span></div>
+          <div class="code-line"><span class="number">14</span><span class="content">    <span class="code-variable">y</span> = y1</span></div>
+          <div class="code-line"><span class="number">15</span><span class="content"></span></div>
+          <div class="code-line"><span class="number">16</span><span class="content">    <span class="code-comment">// Plot each pixel along the line</span></span></div>
+          <div class="code-line"><span class="number">17</span><span class="content">    <span class="code-keyword">while</span> x <= x2:</span></div>
+          <div class="code-line"><span class="number">18</span><span class="content">        <span class="code-function">plot</span>(x, y)</span></div>
+          <div class="code-line"><span class="number">19</span><span class="content"></span></div>
+          <div class="code-line"><span class="number">20</span><span class="content">        <span class="code-comment">// Decision making</span></span></div>
+          <div class="code-line"><span class="number">21</span><span class="content">        <span class="code-keyword">if</span> p < 0:</span></div>
+          <div class="code-line"><span class="number">22</span><span class="content">            <span class="code-comment">// East pixel chosen</span></span></div>
+          <div class="code-line"><span class="number">23</span><span class="content">            p = p + 2 * dy</span></div>
+          <div class="code-line"><span class="number">24</span><span class="content">        <span class="code-keyword">else</span>:</span></div>
+          <div class="code-line"><span class="number">25</span><span class="content">            <span class="code-comment">// North-East pixel chosen</span></span></div>
+          <div class="code-line"><span class="number">26</span><span class="content">            y = y + 1</span></div>
+          <div class="code-line"><span class="number">27</span><span class="content">            p = p + 2 * dy - 2 * dx</span></div>
+          <div class="code-line"><span class="number">28</span><span class="content"></span></div>
+          <div class="code-line"><span class="number">29</span><span class="content">        x = x + 1</span></div>
+          <div class="code-line"><span class="number">30</span><span class="content">    <span class="code-keyword">end while</span></span></div>
+          <div class="code-line"><span class="number">31</span><span class="content"></span></div>
+          <div class="code-line"><span class="number">32</span><span class="content"><span class="code-keyword">end function</span></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Pros and Cons -->
+  <section class="section" id="analysis">
+    <div class="section-header">
+      <div class="section-number">05 / Analysis</div>
+      <h2 class="section-title">Advantages and Disadvantages</h2>
+    </div>
+    
+    <div class="pros-cons">
+      <div class="pros-card">
+        <h4>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          Advantages
+        </h4>
+        <ul>
+          <li>Uses only integer arithmetic (no floating-point)</li>
+          <li>Significantly faster than DDA algorithm</li>
+          <li>More efficient for raster display systems</li>
+          <li>Only uses addition and subtraction in loop</li>
+          <li>Standard algorithm for graphics hardware</li>
+          <li>Produces accurate and smooth lines</li>
+        </ul>
+      </div>
+      
+      <div class="cons-card">
+        <h4>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          Disadvantages
+        </h4>
+        <ul>
+          <li>More complex logic than DDA to understand</li>
+          <li>Basic version works best when slope < 1</li>
+          <li>Requires modification for other octants</li>
+          <li>Decision parameter concept takes time to grasp</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="comparison-box">
+      <h4>Performance Comparison: DDA vs Bresenham</h4>
+      <div class="comparison-grid">
+        <div class="comparison-item dda">
+          <h5>DDA Algorithm</h5>
+          <p>
+            <strong>Operations per pixel:</strong><br>
+            2 floating-point additions<br>
+            1 rounding operation<br><br>
+            <strong>Speed:</strong> Slower due to FP operations
+          </p>
+        </div>
+        <div class="comparison-item bresenham">
+          <h5>Bresenham Algorithm</h5>
+          <p>
+            <strong>Operations per pixel:</strong><br>
+            1-2 integer additions<br>
+            1 comparison<br><br>
+            <strong>Speed:</strong> Much faster, integer only
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>// Bresenham Line Drawing Algorithm - Computer Graphics Learning Module</p>
+  </footer>
+  
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const particles = [];
+const particleCount = 25;
+
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.1,
+      vy: (Math.random() - 0.5) * 0.1,
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.1 + 0.02
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#05080c';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  // Subtle grid
+  bgCtx.strokeStyle = 'rgba(180, 100, 255, 0.015)';
+  bgCtx.lineWidth = 1;
+  
+  const gridSize = 50;
+  for (let x = 0; x < bgWidth; x += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(x, 0);
+    bgCtx.lineTo(x, bgHeight);
+    bgCtx.stroke();
+  }
+  for (let y = 0; y < bgHeight; y += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, y);
+    bgCtx.lineTo(bgWidth, y);
+    bgCtx.stroke();
+  }
+  
+  // Diagonal lines
+  bgCtx.strokeStyle = 'rgba(180, 100, 255, 0.02)';
+  for (let i = -10; i < 20; i++) {
+    const offset = i * 100 + Math.sin(time * 0.3) * 15;
+    bgCtx.beginPath();
+    bgCtx.moveTo(offset, 0);
+    bgCtx.lineTo(offset + bgHeight, bgHeight);
+    bgCtx.stroke();
+  }
+  
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    if (p.x < 0) p.x = bgWidth;
+    if (p.x > bgWidth) p.x = 0;
+    if (p.y < 0) p.y = bgHeight;
+    if (p.y > bgHeight) p.y = 0;
+    
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 80) {
+      p.x -= dx * 0.003;
+      p.y -= dy * 0.003;
+    }
+    
+    bgCtx.fillStyle = 'rgba(180, 100, 255, ' + p.opacity + ')';
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  // Mouse glow
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 100);
+  gradient.addColorStop(0, 'rgba(180, 100, 255, 0.03)');
+  gradient.addColorStop(1, 'rgba(180, 100, 255, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === BRESENHAM SIMULATOR ===
+const mainCanvas = document.getElementById('main-canvas');
+const ctx = mainCanvas.getContext('2d');
+const pixelSize = 18;
+const gridCols = Math.floor(mainCanvas.width / pixelSize);
+const gridRows = Math.floor(mainCanvas.height / pixelSize);
+
+// State
+let state = {
+  p1: null,
+  p2: null,
+  dx: 0,
+  dy: 0,
+  twoDy: 0,
+  twoDx: 0,
+  twoDyMinusTwoDx: 0,
+  p: 0,
+  currentX: 0,
+  currentY: 0,
+  currentStep: 0,
+  pixels: [],
+  isRunning: false,
+  isAutoRunning: false,
+  autoInterval: null
+};
+
+function drawGrid() {
+  ctx.fillStyle = '#080c10';
+  ctx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+  
+  // Grid lines
+  ctx.strokeStyle = 'rgba(180, 100, 255, 0.1)';
+  ctx.lineWidth = 1;
+  
+  for (let x = 0; x <= gridCols; x++) {
+    ctx.beginPath();
+    ctx.moveTo(x * pixelSize, 0);
+    ctx.lineTo(x * pixelSize, mainCanvas.height);
+    ctx.stroke();
+  }
+  
+  for (let y = 0; y <= gridRows; y++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y * pixelSize);
+    ctx.lineTo(mainCanvas.width, y * pixelSize);
+    ctx.stroke();
+  }
+  
+  // Axis labels
+  ctx.fillStyle = 'rgba(180, 100, 255, 0.3)';
+  ctx.font = '9px JetBrains Mono';
+  ctx.textAlign = 'center';
+  
+  for (let x = 0; x < gridCols; x += 5) {
+    ctx.fillText(x.toString(), x * pixelSize + pixelSize / 2, mainCanvas.height - 4);
+  }
+  
+  ctx.textAlign = 'left';
+  for (let y = 0; y < gridRows; y += 5) {
+    ctx.fillText(y.toString(), 4, y * pixelSize + pixelSize / 2 + 3);
+  }
+}
+
+function drawPoints() {
+  // Draw P1
+  if (state.p1) {
+    const gradient = ctx.createRadialGradient(
+      state.p1.x * pixelSize + pixelSize / 2,
+      state.p1.y * pixelSize + pixelSize / 2,
+      0,
+      state.p1.x * pixelSize + pixelSize / 2,
+      state.p1.y * pixelSize + pixelSize / 2,
+      pixelSize * 1.5
+    );
+    gradient.addColorStop(0, 'rgba(0, 212, 255, 0.3)');
+    gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(
+      state.p1.x * pixelSize - pixelSize,
+      state.p1.y * pixelSize - pixelSize,
+      pixelSize * 3,
+      pixelSize * 3
+    );
+    
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.4)';
+    ctx.fillRect(
+      state.p1.x * pixelSize + 1,
+      state.p1.y * pixelSize + 1,
+      pixelSize - 2,
+      pixelSize - 2
+    );
+    
+    ctx.fillStyle = '#00d4ff';
+    ctx.beginPath();
+    ctx.arc(
+      state.p1.x * pixelSize + pixelSize / 2,
+      state.p1.y * pixelSize + pixelSize / 2,
+      5, 0, Math.PI * 2
+    );
+    ctx.fill();
+    
+    ctx.fillStyle = '#00d4ff';
+    ctx.font = 'bold 10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('P1', state.p1.x * pixelSize + pixelSize / 2, state.p1.y * pixelSize - 6);
+  }
+  
+  // Draw P2
+  if (state.p2) {
+    const gradient = ctx.createRadialGradient(
+      state.p2.x * pixelSize + pixelSize / 2,
+      state.p2.y * pixelSize + pixelSize / 2,
+      0,
+      state.p2.x * pixelSize + pixelSize / 2,
+      state.p2.y * pixelSize + pixelSize / 2,
+      pixelSize * 1.5
+    );
+    gradient.addColorStop(0, 'rgba(180, 100, 255, 0.3)');
+    gradient.addColorStop(1, 'rgba(180, 100, 255, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(
+      state.p2.x * pixelSize - pixelSize,
+      state.p2.y * pixelSize - pixelSize,
+      pixelSize * 3,
+      pixelSize * 3
+    );
+    
+    ctx.fillStyle = 'rgba(180, 100, 255, 0.4)';
+    ctx.fillRect(
+      state.p2.x * pixelSize + 1,
+      state.p2.y * pixelSize + 1,
+      pixelSize - 2,
+      pixelSize - 2
+    );
+    
+    ctx.fillStyle = '#b464ff';
+    ctx.beginPath();
+    ctx.arc(
+      state.p2.x * pixelSize + pixelSize / 2,
+      state.p2.y * pixelSize + pixelSize / 2,
+      5, 0, Math.PI * 2
+    );
+    ctx.fill();
+    
+    ctx.fillStyle = '#b464ff';
+    ctx.font = 'bold 10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('P2', state.p2.x * pixelSize + pixelSize / 2, state.p2.y * pixelSize - 6);
+  }
+  
+  // Draw ideal line (dashed)
+  if (state.p1 && state.p2) {
+    ctx.strokeStyle = 'rgba(180, 100, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(
+      state.p1.x * pixelSize + pixelSize / 2,
+      state.p1.y * pixelSize + pixelSize / 2
+    );
+    ctx.lineTo(
+      state.p2.x * pixelSize + pixelSize / 2,
+      state.p2.y * pixelSize + pixelSize / 2
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawPixels() {
+  state.pixels.forEach((pixel, index) => {
+    const isCurrent = index === state.currentStep - 1;
+    
+    if (isCurrent) {
+      // Glow for current pixel
+      const gradient = ctx.createRadialGradient(
+        pixel.x * pixelSize + pixelSize / 2,
+        pixel.y * pixelSize + pixelSize / 2,
+        0,
+        pixel.x * pixelSize + pixelSize / 2,
+        pixel.y * pixelSize + pixelSize / 2,
+        pixelSize * 1.5
+      );
+      
+      if (pixel.decision === 'E') {
+        gradient.addColorStop(0, 'rgba(0, 212, 255, 0.4)');
+        gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+      } else {
+        gradient.addColorStop(0, 'rgba(180, 100, 255, 0.4)');
+        gradient.addColorStop(1, 'rgba(180, 100, 255, 0)');
+      }
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(
+        pixel.x * pixelSize - pixelSize,
+        pixel.y * pixelSize - pixelSize,
+        pixelSize * 3,
+        pixelSize * 3
+      );
+    }
+    
+    // Pixel color based on decision
+    const alpha = isCurrent ? 0.95 : 0.5 + (index / state.pixels.length) * 0.3;
+    
+    if (pixel.decision === 'E') {
+      ctx.fillStyle = 'rgba(0, 212, 255, ' + alpha + ')';
+    } else {
+      ctx.fillStyle = 'rgba(180, 100, 255, ' + alpha + ')';
+    }
+    
+    ctx.fillRect(
+      pixel.x * pixelSize + 2,
+      pixel.y * pixelSize + 2,
+      pixelSize - 4,
+      pixelSize - 4
+    );
+  });
+}
+
+function render() {
+  drawGrid();
+  drawPixels();
+  drawPoints();
+  requestAnimationFrame(render);
+}
+
+function calculateBresenham() {
+  if (!state.p1 || !state.p2) return;
+  
+  // For simplicity, we handle the case where x2 > x1 and slope < 1
+  // In a full implementation, you'd handle all octants
+  
+  state.dx = state.p2.x - state.p1.x;
+  state.dy = state.p2.y - state.p1.y;
+  state.twoDy = 2 * state.dy;
+  state.twoDx = 2 * state.dx;
+  state.twoDyMinusTwoDx = state.twoDy - state.twoDx;
+  
+  // Initial decision parameter
+  state.p = state.twoDy - state.dx;
+  
+  state.currentX = state.p1.x;
+  state.currentY = state.p1.y;
+  state.currentStep = 0;
+  state.pixels = [];
+  
+  // Update display
+  document.getElementById('val-dx').textContent = state.dx;
+  document.getElementById('val-dy').textContent = state.dy;
+  document.getElementById('val-2dy').textContent = state.twoDy;
+  document.getElementById('val-2dx').textContent = state.twoDx;
+  document.getElementById('val-2dy2dx').textContent = state.twoDyMinusTwoDx;
+}
+
+function startSimulation() {
+  if (!state.p1 || !state.p2) {
+    document.getElementById('canvas-status').textContent = 'Select two points first';
+    return;
+  }
+  
+  // Check if slope is valid for this demo
+  const dx = Math.abs(state.p2.x - state.p1.x);
+  const dy = Math.abs(state.p2.y - state.p1.y);
+  
+  if (state.p2.x <= state.p1.x) {
+    document.getElementById('canvas-status').textContent = 'P2 must be right of P1';
+    return;
+  }
+  
+  if (dy > dx) {
+    document.getElementById('canvas-status').textContent = 'For demo, slope should be < 1';
+    // Still allow it, but show warning
+  }
+  
+  calculateBresenham();
+  state.isRunning = true;
+
+  state.pixels = [];
+
+state.pixels.push({
+  x: state.currentX,
+  y: state.currentY,
+  decision: 'START'
+});
+  
+  document.getElementById('btn-next').disabled = false;
+  document.getElementById('btn-auto').disabled = false;
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('canvas-status').textContent = 'Simulation ready';
+  
+  // Clear table
+  document.getElementById('calc-table-body').innerHTML = '';
+  
+  // Add initial row
+  addTableRow(0, state.currentX, state.currentY, state.p, '-');
+  
+  // Update displays
+  document.getElementById('current-pos').textContent = 'x = ' + state.currentX + ', y = ' + state.currentY;
+  document.getElementById('decision-param').textContent = 'p = ' + state.p;
+}
+
+function nextStep() {
+ if (!state.isRunning || state.currentX > state.p2.x) {
+    return;
+  }
+
+  let decision = state.p < 0 ? 'E' : 'NE';
+
+  state.currentStep++;
+
+  // Decide next pixel
+  if (state.p < 0) {
+    state.p = state.p + state.twoDy;
+  } else {
+    state.currentY++;
+    state.p = state.p + state.twoDyMinusTwoDx;
+  }
+
+  state.currentX++;
+
+  // Store NEW pixel (correct position)
+  state.pixels.push({
+    x: state.currentX,
+    y: state.currentY,
+    decision: decision
+  });
+
+  // Update UI
+  document.getElementById('step-display').textContent = state.currentStep;
+
+  document.getElementById('current-pos').textContent =
+    'x = ' + state.currentX + ', y = ' + state.currentY;
+
+  document.getElementById('decision-param').textContent =
+    'p = ' + state.p;
+
+  // Decision indicator
+  const indicator = document.getElementById('decision-indicator');
+
+  if (decision === 'E') {
+    indicator.className = 'decision-indicator east';
+    indicator.textContent = 'p < 0: Choose EAST (x+1, y)';
+  } else {
+    indicator.className = 'decision-indicator northeast';
+    indicator.textContent = 'p ≥ 0: Choose NORTH-EAST (x+1, y+1)';
+  }
+
+  // Add row
+  addTableRow(state.currentStep, state.currentX, state.currentY, state.p, decision);
+
+  document.getElementById('canvas-status').textContent =
+    'Step ' + state.currentStep + ' - ' + (decision === 'E' ? 'East' : 'North-East');
+
+    if (state.currentX === state.p2.x && state.currentY === state.p2.y) {
+  state.pixels.push({
+    x: state.currentX,
+    y: state.currentY,
+    decision: 'END'
+  });
+}
+
+  // Finish
+  if (state.currentX >= state.p2.x) {
+
+    document.getElementById('btn-next').disabled = true;
+    document.getElementById('btn-auto').disabled = true;
+
+    indicator.className = 'decision-indicator';
+    indicator.style.background = 'rgba(0,255,200,0.1)';
+    indicator.style.borderColor = 'rgba(0,255,200,0.3)';
+    indicator.style.color = '#00ffc8';
+    indicator.textContent = 'Line Complete';
+
+    document.getElementById('canvas-status').textContent =
+      'Complete - ' + state.pixels.length + ' pixels';
+
+    if (state.isAutoRunning) stopAutoRun();
+  }
+}
+
+function addTableRow(step, x, y, p, decision) {
+  const tbody = document.getElementById('calc-table-body');
+  const row = document.createElement('tr');
+  row.id = 'row-' + step;
+  
+  const decisionText = decision === 'E' ? 'East' : (decision === 'NE' ? 'NE' : '-');
+  const decisionClass = decision === 'E' ? 'east' : (decision === 'NE' ? 'northeast' : '');
+  
+  row.className = decisionClass + ' current';
+  
+  row.innerHTML = 
+    '<td>' + step + '</td>' +
+    '<td>' + x + '</td>' +
+    '<td>' + y + '</td>' +
+    '<td>' + p + '</td>' +
+    '<td>' + decisionText + '</td>';
+  
+  // Remove current class from previous rows
+  document.querySelectorAll('.calc-table tr').forEach(r => {
+    r.classList.remove('current');
+    if (r.id !== 'row-' + step) {
+      r.classList.add('completed');
+    }
+  });
+  
+  tbody.appendChild(row);
+  
+  // Scroll to bottom
+  const tableBody = document.querySelector('.table-body');
+  if (tableBody) {
+    tableBody.scrollTop = tableBody.scrollHeight;
+  }
+}
+
+function autoRun() {
+  if (state.isAutoRunning) {
+    stopAutoRun();
+    return;
+  }
+  
+  state.isAutoRunning = true;
+  document.getElementById('btn-auto').innerHTML = 
+    '<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg> Pause';
+  document.getElementById('btn-next').disabled = true;
+  
+  state.autoInterval = setInterval(function() {
+    if (state.currentX < state.p2.x) {
+      nextStep();
+    } else {
+      stopAutoRun();
+    }
+  }, 300);
+}
+
+function stopAutoRun() {
+  state.isAutoRunning = false;
+  
+  if (state.autoInterval) {
+    clearInterval(state.autoInterval);
+    state.autoInterval = null;
+  }
+  
+  document.getElementById('btn-auto').innerHTML = 
+    '<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg> Auto Run';
+  
+  if (state.currentX < state.p2.x) {
+    document.getElementById('btn-next').disabled = false;
+  }
+}
+
+function resetSimulation() {
+  stopAutoRun();
+  
+  state = {
+    p1: null,
+    p2: null,
+    dx: 0,
+    dy: 0,
+    twoDy: 0,
+    twoDx: 0,
+    twoDyMinusTwoDx: 0,
+    p: 0,
+    currentX: 0,
+    currentY: 0,
+    currentStep: 0,
+    pixels: [],
+    isRunning: false,
+    isAutoRunning: false,
+    autoInterval: null
+  };
+  
+  // Reset UI
+  document.getElementById('p1-display').textContent = 'Not Set';
+  document.getElementById('p2-display').textContent = 'Not Set';
+  document.getElementById('val-dx').textContent = '-';
+  document.getElementById('val-dy').textContent = '-';
+  document.getElementById('val-2dy').textContent = '-';
+  document.getElementById('val-2dx').textContent = '-';
+  document.getElementById('val-2dy2dx').textContent = '-';
+  document.getElementById('current-pos').textContent = 'x = -, y = -';
+  document.getElementById('decision-param').textContent = 'p = -';
+  document.getElementById('step-display').textContent = '0';
+  document.getElementById('canvas-status').textContent = 'Click to select P1';
+  
+  const indicator = document.getElementById('decision-indicator');
+  indicator.className = 'decision-indicator waiting';
+  indicator.textContent = 'Waiting to start';
+  
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('btn-auto').disabled = true;
+  
+  document.getElementById('calc-table-body').innerHTML = 
+    '<tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 40px;">Select two points to begin</td></tr>';
+}
+
+// Canvas click handler
+mainCanvas.addEventListener('click', function(e) {
+  if (state.isRunning) return;
+  
+  const rect = mainCanvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / pixelSize);
+  const y = Math.floor((e.clientY - rect.top) / pixelSize);
+  
+  if (x < 0 || x >= gridCols || y < 0 || y >= gridRows) return;
+  
+  if (!state.p1) {
+    state.p1 = { x, y };
+    document.getElementById('p1-display').textContent = '(' + x + ', ' + y + ')';
+    document.getElementById('canvas-status').textContent = 'Click to select P2';
+  } else if (!state.p2) {
+    state.p2 = { x, y };
+    document.getElementById('p2-display').textContent = '(' + x + ', ' + y + ')';
+    document.getElementById('canvas-status').textContent = 'Click Start to begin';
+  } else {
+    // Reset and set new P1
+    state.p1 = { x, y };
+    state.p2 = null;
+    state.pixels = [];
+    document.getElementById('p1-display').textContent = '(' + x + ', ' + y + ')';
+    document.getElementById('p2-display').textContent = 'Not Set';
+    document.getElementById('canvas-status').textContent = 'Click to select P2';
+  }
+});
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initParticles();
+});
+
+// === INITIALIZE ===
+initParticles();
+animate();
+render();
+</script>
+
+</body>
+</html>

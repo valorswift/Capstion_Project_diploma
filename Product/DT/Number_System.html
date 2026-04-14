@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Professional Number System Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+<style>
+:root {
+    --bg-dark: #0f172a;
+    --bg-card: #1e293b;
+    --primary: #22c55e;
+    --primary-hover: #16a34a;
+    --accent: #3b82f6;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border: #334155;
+    --glass: rgba(255, 255, 255, 0.05);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark);
+    background-image: radial-gradient(circle at top right, #1e1b4b 0%, transparent 40%);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Header --- */
+header {
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.back-btn {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    transition: 0.2s;
+}
+.back-btn:hover { background: var(--border); }
+
+h1 { font-size: 1.5rem; font-weight: 700; font-family: 'Fira Code', monospace; }
+
+/* --- Main Layout --- */
+main {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    padding: 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* --- Control Panel --- */
+.controls-panel {
+    flex: 1;
+    min-width: 300px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    height: fit-content;
+}
+
+.panel-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; color: var(--primary); }
+
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+label { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
+
+select, input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: white;
+    font-family: 'Fira Code', monospace;
+    font-size: 1rem;
+    outline: none;
+    transition: 0.2s;
+}
+
+select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1); }
+
+.convert-btn {
+    background: var(--primary);
+    color: #000;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+}
+.convert-btn:hover { background: var(--primary-hover); transform: translateY(-2px); }
+
+/* --- Visualization Panel --- */
+.viz-panel {
+    flex: 2;
+    min-width: 350px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
+}
+
+.viz-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border);
+}
+
+.method-badge {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* --- Tables --- */
+.table-container {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.95rem;
+}
+
+th, td {
+    padding: 12px 16px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+}
+
+th { background: rgba(0,0,0,0.2); color: var(--text-muted); font-weight: 600; position: sticky; top: 0; }
+tr:last-child td { border-bottom: none; }
+tr:hover { background: rgba(255,255,255,0.02); }
+
+/* --- Final Result --- */
+.final-result {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.result-label { color: var(--primary); font-size: 0.9rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; }
+.result-value { font-family: 'Fira Code', monospace; font-size: 2rem; color: white; font-weight: 700; margin-top: 5px; word-break: break-all; }
+
+/* --- Toast Notification --- */
+.toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: #ef4444; color: white; padding: 12px 24px; border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+    opacity: 0; pointer-events: none; transition: 0.3s; z-index: 1000;
+    display: flex; align-items: center; gap: 10px; font-weight: 600;
+}
+.toast.show { opacity: 1; top: 40px; }
+
+/* --- Responsive --- */
+@media (max-width: 800px) {
+    main { padding: 20px; }
+    .controls-panel, .viz-panel { min-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+    <header>
+        <button class="back-btn" onclick="window.history.back()">
+            <i class="ri-arrow-left-line"></i> DTE Visualizer
+        </button>
+        <h1>Number System Converter</h1>
+        <div style="width: 120px;"></div> <!-- Spacer for balance -->
+    </header>
+
+    <div id="toast" class="toast"><i class="ri-error-warning-line"></i> <span>Error Message</span></div>
+
+    <main>
+        <!-- CONTROLS -->
+        <section class="controls-panel">
+            <div class="panel-title"><i class="ri-equalizer-line"></i> Configuration</div>
+            
+            <div class="form-group">
+                <label>From System</label>
+                <select id="fromSelect">
+                    <option value="binary">Binary (Base 2)</option>
+                    <option value="decimal" selected>Decimal (Base 10)</option>
+                    <option value="octal">Octal (Base 8)</option>
+                    <option value="hex">Hexadecimal (Base 16)</option>
+                    <option value="bcd">BCD (Binary Coded Decimal)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>To System</label>
+                <select id="toSelect">
+                    <option value="binary">Binary (Base 2)</option>
+                    <option value="decimal">Decimal (Base 10)</option>
+                    <option value="octal">Octal (Base 8)</option>
+                    <option value="hex">Hexadecimal (Base 16)</option>
+                    <option value="bcd" selected>BCD (Binary Coded Decimal)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Enter Number</label>
+                <input type="text" id="inputNumber" placeholder="e.g. 1010 or 1A" autocomplete="off">
+            </div>
+
+            <button class="convert-btn" onclick="convert()">
+                <i class="ri-refresh-line"></i> Convert & Visualize
+            </button>
+        </section>
+
+        <!-- VISUALIZATION -->
+        <section class="viz-panel">
+            <div class="viz-header">
+                <h3>Calculation Steps</h3>
+                <div class="method-badge" id="methodBadge">Ready</div>
+            </div>
+
+            <div class="table-container">
+                <table id="stepsTable">
+                    <thead>
+                        <tr id="tableHeader">
+                            <th>Step</th>
+                            <th>Value 1</th>
+                            <th>Value 2</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stepsBody">
+                        <tr><td colspan="4" style="color:var(--text-muted);">Enter a number to see steps.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="final-result">
+                <div class="result-label" id="resultLabel">Final Result</div>
+                <div class="result-value" id="finalOutput">-</div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.querySelector('span').innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function convert() {
+            const from = document.getElementById('fromSelect').value;
+            const to = document.getElementById('toSelect').value;
+            let input = document.getElementById('inputNumber').value.trim().replace(/\s+/g, ''); // Remove spaces for validation
+            
+            const tableHeader = document.getElementById('tableHeader');
+            const stepsBody = document.getElementById('stepsBody');
+            const methodBadge = document.getElementById('methodBadge');
+            
+            stepsBody.innerHTML = '';
+            
+            if(!input) return showToast("Please enter a number.");
+
+            // --- 1. VALIDATION & INPUT -> DECIMAL ---
+            let decimalValue = 0;
+            let isValid = false;
+
+            try {
+                if (from === 'binary') {
+                    if (!/^[01]+$/.test(input)) throw new Error("Invalid Binary digits (0 or 1 only).");
+                    decimalValue = parseInt(input, 2);
+                    isValid = true;
+                } else if (from === 'octal') {
+                    if (!/^[0-7]+$/.test(input)) throw new Error("Invalid Octal digits (0-7 only).");
+                    decimalValue = parseInt(input, 8);
+                    isValid = true;
+                } else if (from === 'decimal') {
+                    if (!/^\d+$/.test(input)) throw new Error("Invalid Decimal digits (0-9 only).");
+                    decimalValue = parseInt(input, 10);
+                    isValid = true;
+                } else if (from === 'hex') {
+                    if (!/^[0-9a-fA-F]+$/.test(input)) throw new Error("Invalid Hex digits (0-9, A-F only).");
+                    decimalValue = parseInt(input, 16);
+                    isValid = true;
+                } else if (from === 'bcd') {
+                    // BCD Input must be groups of 4 bits (usually)
+                    // For simplicity in this tool, we assume user enters 4-bit groups or just 0s and 1s
+                    if (!/^[01]+$/.test(input)) throw new Error("BCD input must be binary (0s and 1s).");
+                    if (input.length % 4 !== 0) throw new Error("BCD input length must be a multiple of 4.");
+                    
+                    // Convert BCD to Decimal
+                    let decStr = "";
+                    for(let i=0; i<input.length; i+=4) {
+                        let nibble = input.substr(i, 4);
+                        let val = parseInt(nibble, 2);
+                        if(val > 9) throw new Error("Invalid BCD: Found a digit > 9 in a 4-bit group.");
+                        decStr += val;
+                    }
+                    decimalValue = parseInt(decStr, 10);
+                    isValid = true;
+                }
+            } catch (e) {
+                return showToast(e.message);
+            }
+
+            if (!isValid) return showToast("Invalid Input.");
+
+            // --- 2. GENERATE STEPS (LOGIC CORE) ---
+            
+            // Helper to render a row
+            const addRow = (c1, c2, c3, c4) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${c1}</td><td>${c2}</td><td>${c3}</td><td>${c4}</td>`;
+                stepsBody.appendChild(tr);
+            };
+
+            // Determine Conversion Path
+            // All conversions go: Input -> Decimal -> Target (except BCD which is special)
+            
+            let steps = [];
+
+            // PHASE 1: Input -> Decimal (Only if source is not Decimal)
+            if (from !== 'decimal') {
+                methodBadge.innerText = "Phase 1: Input to Decimal";
+                
+                if (from === 'bcd') {
+                    tableHeader.innerHTML = `<th>Group (4-bit)</th><th>Binary</th><th>Calculation</th><th>Decimal Digit</th>`;
+                    // Re-calc logic for display
+                    for(let i=0; i<input.length; i+=4) {
+                        let nibble = input.substr(i, 4);
+                        let val = parseInt(nibble, 2);
+                        addRow(i/4 + 1, nibble, `Bin to Dec`, val);
+                    }
+                } else {
+                    // Binary, Octal, Hex -> Decimal via Powers
+                    let base = from === 'binary' ? 2 : (from === 'octal' ? 8 : 16);
+                    tableHeader.innerHTML = `<th>Digit</th><th>Base</th><th>Power</th><th>Value (D × B^P)</th>`;
+                    
+                    let numStr = input.toUpperCase();
+                    for (let i = 0; i < numStr.length; i++) {
+                        let digit = numStr[i];
+                        let power = numStr.length - 1 - i;
+                        let val = parseInt(digit, base) * Math.pow(base, power);
+                        addRow(digit, base, `<sup>${power}</sup>`, val);
+                    }
+                    // Summation Row
+                    addRow('', '', '<strong>SUM</strong>', `<strong>${decimalValue}</strong>`);
+                }
+            }
+
+            // PHASE 2: Decimal -> Target
+            // If source was Decimal, this is Phase 1. If not, it's Phase 2.
+            if (from === 'decimal') methodBadge.innerText = "Conversion Method";
+            else if (from !== 'decimal') methodBadge.innerText = "Phase 2: Decimal to Target";
+
+            if (to === 'bcd') {
+                // Special Case: Decimal -> BCD
+                if (from !== 'decimal') {
+                    // Add a separator row if we had phase 1
+                    const sep = document.createElement('tr');
+                    sep.innerHTML = `<td colspan="4" style="text-align:center; padding:10px; color:var(--primary);">--- Converting Decimal (${decimalValue}) to BCD ---</td>`;
+                    stepsBody.appendChild(sep);
+                }
+                
+                tableHeader.innerHTML = `<th>Decimal Digit</th><th>Conversion</th><th>Binary (4-bit)</th><th>BCD Output</th>`;
+                
+                const digits = decimalValue.toString().split('');
+                let finalBCD = "";
+                digits.forEach((d, idx) => {
+                    let bin = parseInt(d).toString(2).padStart(4, '0');
+                    finalBCD += bin + " ";
+                    addRow(d, `${d} -> Bin`, bin, bin);
+                });
+                // Update decimalValue for the final display logic below
+                // We handle final output specifically for BCD at the end
+                
+            } else if (to !== 'decimal') {
+                // Decimal -> Binary/Octal/Hex (Successive Division)
+                if (from !== 'decimal') {
+                    const sep = document.createElement('tr');
+                    sep.innerHTML = `<td colspan="4" style="text-align:center; padding:10px; color:var(--primary);">--- Converting Decimal (${decimalValue}) to ${to.toUpperCase()} ---</td>`;
+                    stepsBody.appendChild(sep);
+                }
+
+                let base = to === 'binary' ? 2 : (to === 'octal' ? 8 : 16);
+                tableHeader.innerHTML = `<th>Dividend</th><th>Divisor</th><th>Quotient</th><th>Remainder</th>`;
+
+                let temp = decimalValue;
+                let results = []; // To store remainders in order
+
+                // Handle Zero Case specifically
+                if (temp === 0) {
+                    addRow(0, base, 0, 0);
+                    results.push(0);
+                } else {
+                    while (temp > 0) {
+                        let quotient = Math.floor(temp / base);
+                        let remainder = temp % base;
+                        
+                        // Format Remainder for Hex
+                        let remDisplay = remainder;
+                        if (base === 16 && remainder >= 10) {
+                            remDisplay = remainder.toString(16).toUpperCase() + ` (${remainder})`;
+                        }
+
+                        addRow(temp, base, quotient, remDisplay);
+                        results.push(remainder);
+                        temp = quotient;
+                    }
+                }
+                
+                // Add a row showing the final collection (Reading Remainder Bottom-Up)
+                const rev = [...results].reverse().map(r => r >= 10 ? r.toString(16).toUpperCase() : r).join('');
+                addRow('<strong>Result</strong>', '', 'Read Up ↑', `<strong>${rev}</strong>`);
+            } else {
+                // Decimal -> Decimal (Identity)
+                if (from !== 'decimal') {
+                     tableHeader.innerHTML = `<th>Operation</th><th>Input</th><th>Target</th><th>Result</th>`;
+                     addRow('Identity', decimalValue, 'Decimal', decimalValue);
+                } else {
+                    stepsBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Source and Target are the same.</td></tr>';
+                }
+            }
+
+            // --- 3. FINAL OUTPUT ---
+            let finalOutputStr = "";
+            
+            if (to === 'binary') finalOutputStr = decimalValue.toString(2);
+            else if (to === 'octal') finalOutputStr = decimalValue.toString(8);
+            else if (to === 'decimal') finalOutputStr = decimalValue.toString(10);
+            else if (to === 'hex') finalOutputStr = decimalValue.toString(16).toUpperCase();
+            else if (to === 'bcd') {
+                // Re-calculate BCD string cleanly
+                finalOutputStr = decimalValue.toString().split('').map(d => parseInt(d).toString(2).padStart(4,'0')).join(' ');
+            }
+
+            document.getElementById('finalOutput').innerText = finalOutputStr;
+            document.getElementById('resultLabel').innerText = `Result (${to.toUpperCase()})`;
+        }
+    </script>
+</body>
+</html>

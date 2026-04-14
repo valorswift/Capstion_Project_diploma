@@ -1,0 +1,3718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CircuitForge - Digital Circuit Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-hover: #30363d;
+            --accent-primary: #00d4ff;
+            --accent-secondary: #00ff88;
+            --accent-warning: #ff8c00;
+            --accent-error: #ff4757;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --high-signal: #00ff88;
+            --low-signal: #484f58;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            height: 50px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: #33ddff;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
+        }
+
+        .btn-icon {
+            padding: 8px;
+            min-width: 36px;
+            justify-content: center;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 50px - 60px);
+        }
+
+        /* Component Palette */
+        .palette {
+            width: 240px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .palette-section {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .palette-title {
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .palette-item {
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: grab;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .palette-item:hover {
+            background: var(--bg-hover);
+            border-left-color: var(--accent-primary);
+        }
+
+        .palette-item:active {
+            cursor: grabbing;
+        }
+
+        .component-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .component-info {
+            flex: 1;
+        }
+
+        .component-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .component-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* Workspace */
+        .workspace {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: 
+                radial-gradient(ellipse at center, #1a2332 0%, var(--bg-primary) 70%);
+        }
+
+        #circuitCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Properties Panel */
+        .properties {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .properties-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 14px;
+            background: var(--bg-tertiary);
+        }
+
+        .properties-content {
+            padding: 16px;
+        }
+
+        .property-group {
+            margin-bottom: 16px;
+        }
+
+        .property-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .property-value {
+            font-size: 14px;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .property-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .property-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .property-select {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .signal-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .signal-high {
+            background: var(--high-signal);
+            box-shadow: 0 0 10px var(--high-signal);
+        }
+
+        .signal-low {
+            background: var(--low-signal);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 60px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+        }
+
+        .simulation-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .speed-slider {
+            width: 120px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .status-info {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 280px;
+        }
+
+        .toast-info {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--accent-primary);
+        }
+
+        .toast-warning {
+            background: rgba(255, 140, 0, 0.1);
+            border: 1px solid var(--accent-warning);
+        }
+
+        .toast-error {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid var(--accent-error);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Modal */
+        .modal-overlay{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.75);
+backdrop-filter: blur(8px);
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:1000;
+opacity:0;
+pointer-events:none;
+transition:0.25s;
+}
+
+.modal-overlay.active{
+opacity:1;
+pointer-events:auto;
+}
+
+.modal{
+width:750px;
+max-width:92%;
+max-height:80vh;
+background:#111827;
+border-radius:14px;
+border:1px solid #1f2937;
+box-shadow:0 25px 60px rgba(0,0,0,0.6);
+display:flex;
+flex-direction:column;
+overflow:hidden;
+animation:modalPop 0.25s ease;
+}
+
+@keyframes modalPop{
+from{
+transform:scale(0.95);
+opacity:0;
+}
+to{
+transform:scale(1);
+opacity:1;
+}
+}
+
+.modal-header{
+padding:18px 22px;
+border-bottom:1px solid #1f2937;
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:#0f172a;
+}
+
+.modal-title{
+font-size:18px;
+font-weight:600;
+color:#f9fafb;
+letter-spacing:0.3px;
+}
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 24px;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-body{
+padding:16px;
+overflow-y:auto;
+max-height:60vh;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.modal-body::-webkit-scrollbar{
+width:6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb{
+background:#374151;
+border-radius:10px;
+}
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
+
+        .zoom-btn {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
+        }
+
+        .zoom-level {
+            padding: 0 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Grid Overlay */
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Dragging Ghost */
+        .drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            opacity: 0.8;
+        }
+
+        /* Hidden file input */
+        #fileInput {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .properties {
+                width: 240px;
+            }
+            .palette {
+                width: 200px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .properties {
+                display: none;
+            }
+        }
+
+        /* Tooltip */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            z-index: 100;
+            margin-bottom: 6px;
+        }
+
+        /* Component on canvas */
+        .wire-point {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            cursor: crosshair;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+
+        .wire-point:hover {
+            transform: translate(-50%, -50%) scale(1.5);
+            box-shadow: 0 0 10px var(--accent-primary);
+        }
+
+        .file-item{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:14px 16px;
+background:#1f2937;
+border-radius:10px;
+cursor:pointer;
+transition:all 0.2s ease;
+border:1px solid transparent;
+}
+
+.file-item:hover{
+background:#273244;
+border-color:#3b82f6;
+transform:translateY(-1px);
+box-shadow:0 4px 10px rgba(0,0,0,0.3);
+}
+
+.file-name{
+font-size:14px;
+font-weight:500;
+color:#e5e7eb;
+}
+
+.file-date{
+font-size:12px;
+color:#9ca3af;
+}
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">CircuitForge</div>
+        <div class="header-actions">
+            <button class="btn btn-secondary btn-icon" data-tooltip="Undo" onclick="undo()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 7v6h6M3 13c1.5-4.5 6-8 11-7 6 1 10 7 8 13"/>
+                </svg>
+            </button>
+            <button class="btn btn-secondary btn-icon" data-tooltip="Redo" onclick="redo()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 7v6h-6M21 13c-1.5-4.5-6-8-11-7-6 1-10 7-8 13"/>
+                </svg>
+            </button>
+            <button class="btn btn-secondary" data-tooltip="Save circuit" onclick="saveCircuit()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                </svg>
+                Save
+            </button>
+            <button class="btn btn-secondary" onclick="openFilesModal()">
+                Open Files
+                </button>
+                <!-- <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Load -->
+          
+            <input type="file" id="fileInput" accept=".json" onchange="loadCircuit(event)">
+            <button class="btn btn-secondary" data-tooltip="Export as image" onclick="exportAsImage()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                Export PNG
+            </button>
+            <button class="btn btn-secondary" data-tooltip="Clear workspace" onclick="clearCircuit()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                Clear
+            </button>
+            <!-- Primary tools -->
+            <button class="btn btn-secondary btn-icon" data-tooltip="Select (V)" onclick="setTool('select')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 3l7 18 2-7 7-2z"/>
+                </svg>
+            </button>
+            <button class="btn btn-secondary btn-icon" data-tooltip="Wire (W)" onclick="setTool('wire')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 7c4 0 4 10 8 10s4-10 8-10"/>
+                    <circle cx="4" cy="7" r="1.5"/>
+                    <circle cx="12" cy="17" r="1.5"/>
+                    <circle cx="20" cy="7" r="1.5"/>
+                </svg>
+            </button>
+            <button class="btn btn-secondary btn-icon" data-tooltip="Delete (D)" onclick="setTool('delete')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="19"/>
+                    <line x1="14" y1="11" x2="14" y2="19"/>
+                </svg>
+            </button>
+            <button class="btn btn-secondary" data-tooltip="Group (Ctrl+G)" onclick="groupSelectedComponents()">
+                Group
+            </button>
+            <button class="btn btn-secondary" data-tooltip="Ungroup (Ctrl+U)" onclick="ungroupSelectedComponents()">
+                Ungroup
+            </button>
+            <select class="property-select" style="width:auto; min-width: 140px;" onchange="loadExample(this.value); this.value='';">
+                <option value="">Examples…</option>
+                <option value="all_adders">All Adders</option>
+                <option value="all_subtractors">All Subtractors</option>
+                <option value="mux_demux">MUX / DEMUX</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Component Palette -->
+        <aside class="palette">
+            <div class="palette-section">
+                <div class="palette-title">Input Components</div>
+                <div class="palette-item" draggable="true" data-type="switch">
+                    <div class="component-icon">SW</div>
+                    <div class="component-info">
+                        <div class="component-name">Switch</div>
+                        <div class="component-desc">Toggle HIGH/LOW</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="clock">
+                    <div class="component-icon">CLK</div>
+                    <div class="component-info">
+                        <div class="component-name">Clock</div>
+                        <div class="component-desc">Auto-pulse generator</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="vcc">
+                    <div class="component-icon">VCC</div>
+                    <div class="component-info">
+                        <div class="component-name">VCC</div>
+                        <div class="component-desc">Constant HIGH</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="gnd">
+                    <div class="component-icon">GND</div>
+                    <div class="component-info">
+                        <div class="component-name">Ground</div>
+                        <div class="component-desc">Constant LOW</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="palette-section">
+                <div class="palette-title">Logic Gates</div>
+                <div class="palette-item" draggable="true" data-type="and">
+                    <div class="component-icon">AND</div>
+                    <div class="component-info">
+                        <div class="component-name">AND Gate</div>
+                        <div class="component-desc">Output HIGH if all HIGH</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="or">
+                    <div class="component-icon">OR</div>
+                    <div class="component-info">
+                        <div class="component-name">OR Gate</div>
+                        <div class="component-desc">Output HIGH if any HIGH</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="not">
+                    <div class="component-icon">NOT</div>
+                    <div class="component-info">
+                        <div class="component-name">NOT Gate</div>
+                        <div class="component-desc">Inverts signal</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="nand">
+                    <div class="component-icon">NAND</div>
+                    <div class="component-info">
+                        <div class="component-name">NAND Gate</div>
+                        <div class="component-desc">Inverted AND</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="nor">
+                    <div class="component-icon">NOR</div>
+                    <div class="component-info">
+                        <div class="component-name">NOR Gate</div>
+                        <div class="component-desc">Inverted OR</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="xor">
+                    <div class="component-icon">XOR</div>
+                    <div class="component-info">
+                        <div class="component-name">XOR Gate</div>
+                        <div class="component-desc">Exclusive OR</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="xnor">
+                    <div class="component-icon">XNOR</div>
+                    <div class="component-info">
+                        <div class="component-name">XNOR Gate</div>
+                        <div class="component-desc">Exclusive NOR</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="palette-section">
+                <div class="palette-title">Adders & Subtractors</div>
+                <div class="palette-item" draggable="true" data-type="halfadder">
+                    <div class="component-icon">HA</div>
+                    <div class="component-info">
+                        <div class="component-name">Half Adder</div>
+                        <div class="component-desc">A, B → Sum, Carry</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="fulladder">
+                    <div class="component-icon">FA</div>
+                    <div class="component-info">
+                        <div class="component-name">Full Adder</div>
+                        <div class="component-desc">A, B, Cin → Sum, Cout</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="halfsubtractor">
+                    <div class="component-icon">HS</div>
+                    <div class="component-info">
+                        <div class="component-name">Half Subtractor</div>
+                        <div class="component-desc">A, B → Diff, Borrow</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="fullsubtractor">
+                    <div class="component-icon">FS</div>
+                    <div class="component-info">
+                        <div class="component-name">Full Subtractor</div>
+                        <div class="component-desc">A, B, Bin → Diff, Bout</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="palette-section">
+                <div class="palette-title">Multiplexers</div>
+                <div class="palette-item" draggable="true" data-type="mux2">
+                    <div class="component-icon">MUX2</div>
+                    <div class="component-info">
+                        <div class="component-name">2:1 MUX</div>
+                        <div class="component-desc">Two inputs, one output</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="demux2">
+                    <div class="component-icon">DMX2</div>
+                    <div class="component-info">
+                        <div class="component-name">1:2 DEMUX</div>
+                        <div class="component-desc">One input, two outputs</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="palette-section">
+                <div class="palette-title">Output Components</div>
+                <div class="palette-item" draggable="true" data-type="led">
+                    <div class="component-icon">LED</div>
+                    <div class="component-info">
+                        <div class="component-name">LED</div>
+                        <div class="component-desc">Light indicator</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="buzzer">
+                    <div class="component-icon">BUZ</div>
+                    <div class="component-info">
+                        <div class="component-name">Buzzer</div>
+                        <div class="component-desc">Audio output</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="lamp">
+                    <div class="component-icon">LMP</div>
+                    <div class="component-info">
+                        <div class="component-name">Lamp</div>
+                        <div class="component-desc">Light bulb output</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="display">
+                    <div class="component-icon">7SG</div>
+                    <div class="component-info">
+                        <div class="component-name">7-Segment</div>
+                        <div class="component-desc">Numeric display</div>
+                    </div>
+                </div>
+                <div class="palette-item" draggable="true" data-type="probe">
+                    <div class="component-icon">PRB</div>
+                    <div class="component-info">
+                        <div class="component-name">Logic Probe</div>
+                        <div class="component-desc">Tiny HIGH/LOW indicator</div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Workspace -->
+        <main class="workspace" id="workspace">
+            <div class="grid-overlay"></div>
+            <canvas id="circuitCanvas"></canvas>
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoomOut()">-</button>
+                <span class="zoom-level" id="zoomLevel">100%</span>
+                <button class="zoom-btn" onclick="zoomIn()">+</button>
+                <button class="zoom-btn" onclick="resetZoom()">R</button>
+            </div>
+        </main>
+
+        <!-- Properties Panel -->
+        <aside class="properties">
+            <div class="properties-header">Component Properties</div>
+            <div class="properties-content" id="propertiesContent">
+                <p style="color: var(--text-secondary); font-size: 13px;">
+                    Select a component to view and edit its properties.
+                </p>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+        <div class="simulation-controls">
+            <div class="control-group">
+                <button class="btn btn-secondary btn-icon" onclick="toggleSimulation()" id="playPauseBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary btn-icon" onclick="stepSimulation()" data-tooltip="Single Step">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
+                        <line x1="19" y1="5" x2="19" y2="19"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="control-group">
+                <span class="control-label">Speed:</span>
+                <input type="range" class="speed-slider" id="speedSlider" min="1" max="10" value="5" oninput="setSimulationSpeed(this.value)">
+                <span class="status-value" id="speedValue">5x</span>
+            </div>
+        </div>
+        <div class="status-info">
+            <div class="status-item">
+                <span>Components:</span>
+                <span class="status-value" id="componentCount">0</span>
+            </div>
+            <div class="status-item">
+                <span>Wires:</span>
+                <span class="status-value" id="wireCount">0</span>
+            </div>
+            <div class="status-item">
+                <span>Errors:</span>
+                <span class="status-value" id="errorCount" style="color: var(--accent-error);">0</span>
+            </div>
+            <div class="status-item">
+                <span>Tool:</span>
+                <span class="status-value" id="currentTool">Select</span>
+            </div>
+        </div>
+    </footer>
+    <!-- Open files -->
+    <div class="modal-overlay" id="filesModal">
+        <div class="modal">
+          
+          <div class="modal-header">
+            <div class="modal-title">Saved Projects</div>
+            <button class="modal-close" onclick="closeFilesModal()">×</button>
+          </div>
+      
+          <div class="modal-body" id="filesList">
+      
+            <p style="color:var(--text-secondary);font-size:13px;">
+                No saved projects yet
+                </p>
+      
+          </div>
+      
+        </div>
+      </div>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ==================== CORE DATA STRUCTURES ====================
+        let savedProjects = [];
+        const GRID_SIZE = 20;
+        const PIN_RADIUS = 6;
+        const COMPONENT_WIDTH = 80;
+        const COMPONENT_HEIGHT = 60;
+        
+        let canvas, ctx;
+        let zoom = 1;
+        let panOffset = { x: 0, y: 0 };
+        let isPanning = false;
+        let lastMousePos = { x: 0, y: 0 };
+        
+        let components = [];
+        let wires = [];
+        let selectedComponent = null;
+        let selectedComponents = [];
+        let selectedWire = null;
+        let currentTool = 'select';
+        
+        let isSimulating = true;
+        let simulationSpeed = 5;
+        let lastSimTime = 0;
+        
+        // Wire drawing state
+        let isDrawingWire = false;
+        let wireStartPin = null;
+        let tempWireEnd = null;
+        
+        // Marquee selection state
+        let isSelecting = false;
+        let selectionStart = null;
+        let selectionEnd = null;
+        
+        // Palette drag/click state
+        let isPaletteDragging = false;
+        
+        // History for undo/redo
+        let history = [];
+        let historyIndex = -1;
+        const MAX_HISTORY = 50;
+        
+        // Audio context for buzzer
+        let audioCtx = null;
+        
+        // ==================== COMPONENT CLASS DEFINITIONS ====================
+        
+        class Component {
+            constructor(type, x, y) {
+                this.id = generateId();
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.width = COMPONENT_WIDTH;
+                this.height = COMPONENT_HEIGHT;
+                this.pins = [];
+                this.output = false;
+                this.label = '';
+                this.groupId = null;
+                this.setupPins();
+            }
+            
+            setupPins() {
+                // Override in subclasses
+            }
+            
+            getPinPosition(pinIndex) {
+                if (pinIndex < 0 || pinIndex >= this.pins.length) return null;
+                const pin = this.pins[pinIndex];
+                return {
+                    x: this.x + pin.offsetX,
+                    y: this.y + pin.offsetY,
+                    type: pin.type
+                };
+            }
+            
+            draw(ctx) {
+                // Override in subclasses
+            }
+            
+            simulate(inputs) {
+                // Override in subclasses
+                return false;
+            }
+            
+            containsPoint(px, py) {
+                return px >= this.x && px <= this.x + this.width &&
+                       py >= this.y && py <= this.y + this.height;
+            }
+            
+            getPinAtPoint(px, py) {
+                for (let i = 0; i < this.pins.length; i++) {
+                    const pos = this.getPinPosition(i);
+                    const dist = Math.sqrt((px - pos.x) ** 2 + (py - pos.y) ** 2);
+                    if (dist <= PIN_RADIUS * 1.5) {
+                        return { pinIndex: i, pinType: pos.type };
+                    }
+                }
+                return null;
+            }
+            
+            toJSON() {
+                return {
+                    id: this.id,
+                    type: this.type,
+                    x: this.x,
+                    y: this.y,
+                    output: this.output,
+                    label: this.label,
+                    groupId: this.groupId
+                };
+            }
+        }
+        
+        // Input Components
+        class SwitchComponent extends Component {
+            constructor(x, y) {
+                super('switch', x, y);
+                this.output = false;
+                this.label = 'SW';
+            }
+            
+            setupPins() {
+                this.pins = [{ offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height / 2, type: 'output', value: false }];
+            }
+            
+            draw(ctx) {
+                // Body
+                ctx.fillStyle = '#2d333b';
+                ctx.strokeStyle = this.output ? '#00ff88' : '#484f58';
+                ctx.lineWidth = 2;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 8);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Switch toggle
+                const toggleX = this.output ? this.x + this.width - 24 : this.x + 8;
+                ctx.fillStyle = this.output ? '#00ff88' : '#484f58';
+                roundRect(ctx, toggleX, this.y + 12, 16, this.height - 24, 4);
+                ctx.fill();
+                
+                // Label
+                ctx.fillStyle = '#f0f6fc';
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.output ? 'ON' : 'OFF', this.x + this.width / 2, this.y + this.height / 2 + 4);
+                
+                // Output pin
+                this.drawPin(ctx, 0);
+            }
+            
+            toggle() {
+                this.output = !this.output;
+                this.pins[0].value = this.output;
+                saveState();
+                simulate();
+            }
+            
+            simulate(inputs) {
+                return this.output;
+            }
+        }
+        
+        class ClockComponent extends Component {
+            constructor(x, y) {
+                super('clock', x, y);
+                this.output = false;
+                this.interval = 500;
+                this.lastToggle = 0;
+                this.label = 'CLK';
+            }
+            
+            setupPins() {
+                this.pins = [{ offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height / 2, type: 'output', value: false }];
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = '#2d333b';
+                ctx.strokeStyle = this.output ? '#00ff88' : '#00d4ff';
+                ctx.lineWidth = 2;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 8);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Clock symbol
+                ctx.strokeStyle = this.output ? '#00ff88' : '#00d4ff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x + 15, this.y + this.height / 2);
+                ctx.lineTo(this.x + 25, this.y + this.height / 2 - 12);
+                ctx.lineTo(this.x + 35, this.y + this.height / 2 + 12);
+                ctx.lineTo(this.x + 45, this.y + this.height / 2 - 12);
+                ctx.lineTo(this.x + 55, this.y + this.height / 2 + 12);
+                ctx.lineTo(this.x + 65, this.y + this.height / 2);
+                ctx.stroke();
+                
+                this.drawPin(ctx, 0);
+            }
+            
+            simulate(inputs) {
+                return this.output;
+            }
+            
+            update(time) {
+                if (time - this.lastToggle > this.interval / simulationSpeed) {
+                    this.output = !this.output;
+                    this.pins[0].value = this.output;
+                    this.lastToggle = time;
+                }
+            }
+        }
+        
+        class VCCComponent extends Component {
+            constructor(x, y) {
+                super('vcc', x, y);
+                this.output = true;
+                this.width = 50;
+                this.height = 40;
+                this.label = 'VCC';
+            }
+            
+            setupPins() {
+                this.pins = [{ offsetX: this.width / 2, offsetY: this.height + PIN_RADIUS + 2, type: 'output', value: true }];
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = '#00ff88';
+                ctx.strokeStyle = '#00ff88';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x + this.width, this.y + this.height - 10);
+                ctx.lineTo(this.x, this.y + this.height - 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#0d1117';
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('+', this.x + this.width / 2, this.y + this.height - 16);
+                
+                this.drawPin(ctx, 0);
+            }
+            
+            simulate(inputs) {
+                return true;
+            }
+        }
+        
+        class GNDComponent extends Component {
+            constructor(x, y) {
+                super('gnd', x, y);
+                this.output = false;
+                this.width = 50;
+                this.height = 40;
+                this.label = 'GND';
+            }
+            
+            setupPins() {
+                this.pins = [{ offsetX: this.width / 2, offsetY: this.height + PIN_RADIUS + 2, type: 'output', value: false }];
+            }
+            
+            draw(ctx) {
+                ctx.strokeStyle = '#ff8c00';
+                ctx.lineWidth = 3;
+                
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x + this.width / 2, this.y + 15);
+                ctx.stroke();
+                
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x + 10, this.y + 15);
+                ctx.lineTo(this.x + this.width - 10, this.y + 15);
+                ctx.moveTo(this.x + 15, this.y + 22);
+                ctx.lineTo(this.x + this.width - 15, this.y + 22);
+                ctx.moveTo(this.x + 20, this.y + 29);
+                ctx.lineTo(this.x + this.width - 20, this.y + 29);
+                ctx.stroke();
+                
+                this.drawPin(ctx, 0);
+            }
+            
+            simulate(inputs) {
+                return false;
+            }
+        }
+        
+        // Logic Gates
+        class LogicGate extends Component {
+            constructor(type, x, y) {
+                super(type, x, y);
+                this.width = 70;
+                this.height = 50;
+            }
+            
+            setupPins() {
+                if (this.type === 'not') {
+                    this.pins = [
+                        { offsetX: -PIN_RADIUS - 2, offsetY: this.height / 2, type: 'input', value: null },
+                        { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height / 2, type: 'output', value: false }
+                    ];
+                } else {
+                    this.pins = [
+                        { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.3, type: 'input', value: null },
+                        { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.7, type: 'input', value: null },
+                        { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height / 2, type: 'output', value: false }
+                    ];
+                }
+            }
+            
+            draw(ctx) {
+                const colors = {
+                    and: '#00d4ff',
+                    or: '#ff6b9d',
+                    not: '#ffcc00',
+                    nand: '#9966ff',
+                    nor: '#ff6633',
+                    xor: '#00ff88',
+                    xnor: '#ff8c00'
+                };
+                
+                const color = colors[this.type] || '#00d4ff';
+                const gateLabel = this.type.toUpperCase();
+                
+                ctx.fillStyle = '#1f2937';
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                
+                // Draw gate shape
+                ctx.beginPath();
+                if (this.type === 'and' || this.type === 'nand') {
+                    ctx.moveTo(this.x + 10, this.y);
+                    ctx.lineTo(this.x + this.width - 20, this.y);
+                    ctx.arc(this.x + this.width - 20, this.y + this.height / 2, this.height / 2, -Math.PI / 2, Math.PI / 2);
+                    ctx.lineTo(this.x + 10, this.y + this.height);
+                    ctx.closePath();
+                } else if (this.type === 'or' || this.type === 'nor') {
+                    ctx.moveTo(this.x + 5, this.y);
+                    ctx.quadraticCurveTo(this.x + this.width - 10, this.y, this.x + this.width - 5, this.y + this.height / 2);
+                    ctx.quadraticCurveTo(this.x + this.width - 10, this.y + this.height, this.x + 5, this.y + this.height);
+                    ctx.quadraticCurveTo(this.x + 20, this.y + this.height / 2, this.x + 5, this.y);
+                } else if (this.type === 'xor' || this.type === 'xnor') {
+                    ctx.moveTo(this.x + 15, this.y);
+                    ctx.quadraticCurveTo(this.x + this.width - 10, this.y, this.x + this.width - 5, this.y + this.height / 2);
+                    ctx.quadraticCurveTo(this.x + this.width - 10, this.y + this.height, this.x + 15, this.y + this.height);
+                    ctx.quadraticCurveTo(this.x + 30, this.y + this.height / 2, this.x + 15, this.y);
+                    ctx.moveTo(this.x + 5, this.y + this.height);
+                    ctx.quadraticCurveTo(this.x + 20, this.y + this.height / 2, this.x + 5, this.y);
+                } else if (this.type === 'not') {
+                    ctx.moveTo(this.x + 5, this.y);
+                    ctx.lineTo(this.x + this.width - 15, this.y + this.height / 2);
+                    ctx.lineTo(this.x + 5, this.y + this.height);
+                    ctx.closePath();
+                }
+                ctx.fill();
+                ctx.stroke();
+                
+                // Inversion bubble for NAND, NOR, XNOR, NOT
+                if (['nand', 'nor', 'xnor', 'not'].includes(this.type)) {
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width - 8, this.y + this.height / 2, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = this.output ? '#00ff88' : '#1f2937';
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                
+                // Label
+                ctx.fillStyle = color;
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(gateLabel, this.x + this.width / 2 - 5, this.y + this.height / 2 + 4);
+                
+                // Draw pins
+                for (let i = 0; i < this.pins.length; i++) {
+                    this.drawPin(ctx, i);
+                }
+            }
+            
+            simulate(inputs) {
+                const a = inputs[0] || false;
+                const b = inputs[1] || false;
+                
+                switch (this.type) {
+                    case 'and': return a && b;
+                    case 'or': return a || b;
+                    case 'not': return !a;
+                    case 'nand': return !(a && b);
+                    case 'nor': return !(a || b);
+                    case 'xor': return a !== b;
+                    case 'xnor': return a === b;
+                    default: return false;
+                }
+            }
+        }
+        
+        // Composite arithmetic components (adders/subtractors)
+        class HalfAdderComponent extends Component {
+            constructor(x, y) {
+                super('halfadder', x, y);
+                this.width = 90;
+                this.height = 60;
+                this.label = 'HA';
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.3, type: 'input', value: null },  // A
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.7, type: 'input', value: null },  // B
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.3, type: 'output', value: false }, // SUM
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.7, type: 'output', value: false }  // CARRY
+                ];
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = '#1f2937';
+                ctx.strokeStyle = '#00d4ff';
+                ctx.lineWidth = 2;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 10);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#00d4ff';
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('HALF', this.x + this.width / 2, this.y + this.height / 2 - 4);
+                ctx.fillText('ADDER', this.x + this.width / 2, this.y + this.height / 2 + 10);
+                
+                for (let i = 0; i < this.pins.length; i++) {
+                    this.drawPin(ctx, i);
+                }
+            }
+            
+            simulate(inputs) {
+                const a = !!inputs[0];
+                const b = !!inputs[1];
+                const sum = a !== b;
+                const carry = a && b;
+                this.pins[2].value = sum;
+                this.pins[3].value = carry;
+                this.output = sum;
+                return this.output;
+            }
+            
+            getOutputForPin(pinIndex) {
+                return this.pins[pinIndex] ? this.pins[pinIndex].value : false;
+            }
+        }
+        
+        function openFilesModal(){
+
+document.getElementById("filesModal").classList.add("active");
+
+loadProjects(); // fetch from DB
+
+}
+
+function closeFilesModal(){
+document.getElementById("filesModal").classList.remove("active");
+}
+
+async function openProject(id){
+
+    const res = await fetch("http://localhost:3000/load-circuit",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ id })
+    });
+    
+    const result = await res.json();
+    
+    restoreState(result.data);   // rebuild components correctly
+    
+    closeFilesModal();
+    
+    showToast("Project loaded");
+    
+    }
+        class FullAdderComponent extends Component {
+            constructor(x, y) {
+                super('fulladder', x, y);
+                this.width = 100;
+                this.height = 70;
+                this.label = 'FA';
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.25, type: 'input', value: null },  // A
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.5, type: 'input', value: null },   // B
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.75, type: 'input', value: null },  // Cin
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.35, type: 'output', value: false }, // SUM
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.7, type: 'output', value: false }   // Cout
+                ];
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = '#1f2937';
+                ctx.strokeStyle = '#00ff88';
+                ctx.lineWidth = 2;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 10);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#00ff88';
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('FULL', this.x + this.width / 2, this.y + this.height / 2 - 4);
+                ctx.fillText('ADDER', this.x + this.width / 2, this.y + this.height / 2 + 10);
+                
+                for (let i = 0; i < this.pins.length; i++) {
+                    this.drawPin(ctx, i);
+                }
+            }
+            
+            simulate(inputs) {
+                const a = !!inputs[0];
+                const b = !!inputs[1];
+                const cin = !!inputs[2];
+                const sum = a ^ b ^ cin;
+                const cout = (a && b) || (a && cin) || (b && cin);
+                this.pins[3].value = sum;
+                this.pins[4].value = cout;
+                this.output = sum;
+                return this.output;
+            }
+            
+            getOutputForPin(pinIndex) {
+                return this.pins[pinIndex] ? this.pins[pinIndex].value : false;
+            }
+        }
+        
+        class HalfSubtractorComponent extends Component {
+            constructor(x, y) {
+                super('halfsubtractor', x, y);
+                this.width = 100;
+                this.height = 60;
+                this.label = 'HS';
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.3, type: 'input', value: null },  // A
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.7, type: 'input', value: null },  // B
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.3, type: 'output', value: false }, // DIFF
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.7, type: 'output', value: false }  // BORROW
+                ];
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = '#1f2937';
+                ctx.strokeStyle = '#ff8c00';
+                ctx.lineWidth = 2;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 10);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ff8c00';
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('HALF', this.x + this.width / 2, this.y + this.height / 2 - 4);
+                ctx.fillText('SUB', this.x + this.width / 2, this.y + this.height / 2 + 10);
+                
+                for (let i = 0; i < this.pins.length; i++) {
+                    this.drawPin(ctx, i);
+                }
+            }
+            
+            simulate(inputs) {
+                const a = !!inputs[0];
+                const b = !!inputs[1];
+                const diff = a ^ b;
+                const borrow = !a && b;
+                this.pins[2].value = diff;
+                this.pins[3].value = borrow;
+                this.output = diff;
+                return this.output;
+            }
+            
+            getOutputForPin(pinIndex) {
+                return this.pins[pinIndex] ? this.pins[pinIndex].value : false;
+            }
+        }
+        
+        class FullSubtractorComponent extends Component {
+            constructor(x, y) {
+                super('fullsubtractor', x, y);
+                this.width = 110;
+                this.height = 70;
+                this.label = 'FS';
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.25, type: 'input', value: null },  // A
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.5, type: 'input', value: null },   // B
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.75, type: 'input', value: null },  // Bin
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.35, type: 'output', value: false }, // DIFF
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.7, type: 'output', value: false }   // Bout
+                ];
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = '#1f2937';
+                ctx.strokeStyle = '#ff4757';
+                ctx.lineWidth = 2;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 10);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ff4757';
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('FULL', this.x + this.width / 2, this.y + this.height / 2 - 4);
+                ctx.fillText('SUB', this.x + this.width / 2, this.y + this.height / 2 + 10);
+                
+                for (let i = 0; i < this.pins.length; i++) {
+                    this.drawPin(ctx, i);
+                }
+            }
+            
+            simulate(inputs) {
+                const a = !!inputs[0];
+                const b = !!inputs[1];
+                const bin = !!inputs[2];
+                const diff = a ^ b ^ bin;
+                const bout = (!a && (b || bin)) || (b && bin);
+                this.pins[3].value = diff;
+                this.pins[4].value = bout;
+                this.output = diff;
+                return this.output;
+            }
+            
+            getOutputForPin(pinIndex) {
+                return this.pins[pinIndex] ? this.pins[pinIndex].value : false;
+            }
+        }
+        
+        class Mux2Component extends Component {
+            constructor(x, y) {
+                super('mux2', x, y);
+                this.width = 80;
+                this.height = 70;
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.25, type: 'input', value: null }, // D0
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.55, type: 'input', value: null }, // D1
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.85, type: 'input', value: null }, // S
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.5, type: 'output', value: false } // Y
+                ];
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = '#1f2937';
+                ctx.strokeStyle = '#00bcd4';
+                ctx.lineWidth = 2;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 10);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#00bcd4';
+                ctx.font = 'bold 10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('2:1 MUX', this.x + this.width / 2, this.y + this.height / 2 + 3);
+                
+                // Pin labels
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('D0', this.x + 4, this.y + this.height * 0.25 + 3);
+                ctx.fillText('D1', this.x + 4, this.y + this.height * 0.55 + 3);
+                ctx.fillText('S', this.x + 4, this.y + this.height * 0.85 + 3);
+                ctx.textAlign = 'right';
+                ctx.fillText('Y', this.x + this.width - 4, this.y + this.height * 0.5 + 3);
+                
+                for (let i = 0; i < this.pins.length; i++) {
+                    this.drawPin(ctx, i);
+                }
+            }
+            
+            simulate(inputs) {
+                const d0 = !!inputs[0];
+                const d1 = !!inputs[1];
+                const s = !!inputs[2];
+                const y = (!s && d0) || (s && d1);
+                this.pins[3].value = y;
+                this.output = y;
+                return this.output;
+            }
+        }
+        
+        class Demux2Component extends Component {
+            constructor(x, y) {
+                super('demux2', x, y);
+                this.width = 80;
+                this.height = 70;
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.35, type: 'input', value: null }, // D
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height * 0.75, type: 'input', value: null }, // S
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.25, type: 'output', value: false }, // Y0
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: this.height * 0.65, type: 'output', value: false }  // Y1
+                ];
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = '#1f2937';
+                ctx.strokeStyle = '#ffb300';
+                ctx.lineWidth = 2;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 10);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ffb300';
+                ctx.font = 'bold 10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('1:2 DEMUX', this.x + this.width / 2, this.y + this.height / 2 + 3);
+                
+                // Pin labels
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('D', this.x + 4, this.y + this.height * 0.35 + 3);
+                ctx.fillText('S', this.x + 4, this.y + this.height * 0.75 + 3);
+                ctx.textAlign = 'right';
+                ctx.fillText('Y0', this.x + this.width - 4, this.y + this.height * 0.25 + 3);
+                ctx.fillText('Y1', this.x + this.width - 4, this.y + this.height * 0.65 + 3);
+                
+                for (let i = 0; i < this.pins.length; i++) {
+                    this.drawPin(ctx, i);
+                }
+            }
+            
+            simulate(inputs) {
+                const d = !!inputs[0];
+                const s = !!inputs[1];
+                const y0 = d && !s;
+                const y1 = d && s;
+                this.pins[2].value = y0;
+                this.pins[3].value = y1;
+                this.output = y0 || y1;
+                return this.output;
+            }
+            
+            getOutputForPin(pinIndex) {
+                return this.pins[pinIndex] ? this.pins[pinIndex].value : false;
+            }
+        }
+        
+        // Output Components
+        class LEDComponent extends Component {
+            constructor(x, y) {
+                super('led', x, y);
+                this.width = 40;
+                this.height = 40;
+                this.color = '#ff0000';
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height / 2, type: 'input', value: null }
+                ];
+            }
+            
+            draw(ctx) {
+                // LED body
+                const gradient = ctx.createRadialGradient(
+                    this.x + this.width / 2 + 5, this.y + this.height / 2, 0,
+                    this.x + this.width / 2 + 5, this.y + this.height / 2, 15
+                );
+                
+                if (this.output) {
+                    gradient.addColorStop(0, '#ffffff');
+                    gradient.addColorStop(0.3, this.color);
+                    gradient.addColorStop(1, this.darkenColor(this.color, 50));
+                    
+                    // Glow effect
+                    ctx.shadowColor = this.color;
+                    ctx.shadowBlur = 20;
+                } else {
+                    gradient.addColorStop(0, '#3d3d3d');
+                    gradient.addColorStop(1, '#1a1a1a');
+                    ctx.shadowBlur = 0;
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2 + 5, this.y + this.height / 2, 12, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                
+                // Border
+                ctx.strokeStyle = this.output ? this.color : '#484f58';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Pin
+                this.drawPin(ctx, 0);
+            }
+            
+            darkenColor(color, amount) {
+                const hex = color.replace('#', '');
+                const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - amount);
+                const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - amount);
+                const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - amount);
+                return `rgb(${r},${g},${b})`;
+            }
+            
+            simulate(inputs) {
+                this.output = inputs[0] || false;
+                return this.output;
+            }
+        }
+        
+        class BuzzerComponent extends Component {
+            constructor(x, y) {
+                super('buzzer', x, y);
+                this.width = 50;
+                this.height = 50;
+                this.frequency = 440;
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height / 2, type: 'input', value: null }
+                ];
+            }
+            
+            draw(ctx) {
+                // Buzzer body
+                ctx.fillStyle = '#2d333b';
+                ctx.strokeStyle = this.output ? '#00ff88' : '#484f58';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2 + 5, this.y + this.height / 2, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Inner circle
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2 + 5, this.y + this.height / 2, 10, 0, Math.PI * 2);
+                ctx.strokeStyle = this.output ? '#00ff88' : '#484f58';
+                ctx.stroke();
+                
+                // Sound waves
+                if (this.output) {
+                    ctx.strokeStyle = 'rgba(0, 255, 136, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2 + 5, this.y + this.height / 2, 25, -0.5, 0.5);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2 + 5, this.y + this.height / 2, 30, -0.5, 0.5);
+                    ctx.stroke();
+                }
+                
+                // Label
+                ctx.fillStyle = '#f0f6fc';
+                ctx.font = 'bold 8px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('BUZZ', this.x + this.width / 2 + 5, this.y + this.height / 2 + 3);
+                
+                this.drawPin(ctx, 0);
+            }
+            
+            simulate(inputs) {
+                const wasOn = this.output;
+                this.output = inputs[0] || false;
+                
+                if (this.output && !wasOn) {
+                    this.playSound();
+                } else if (!this.output && wasOn) {
+                    this.stopSound();
+                }
+                
+                return this.output;
+            }
+            
+            playSound() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.oscillator) return;
+                
+                this.oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                this.oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                this.oscillator.frequency.value = this.frequency;
+                gainNode.gain.value = 0.1;
+                
+                this.oscillator.start();
+            }
+            
+            stopSound() {
+                if (this.oscillator) {
+                    this.oscillator.stop();
+                    this.oscillator = null;
+                }
+            }
+        }
+        
+        class LampComponent extends Component {
+            constructor(x, y) {
+                super('lamp', x, y);
+                this.width = 50;
+                this.height = 60;
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: this.width / 2, offsetY: this.height + PIN_RADIUS + 2, type: 'input', value: null }
+                ];
+            }
+            
+            draw(ctx) {
+                // Bulb
+                const centerX = this.x + this.width / 2;
+                const centerY = this.y + 25;
+                
+                if (this.output) {
+                    // Glow
+                    const glowGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 35);
+                    glowGradient.addColorStop(0, 'rgba(255, 220, 100, 0.8)');
+                    glowGradient.addColorStop(0.5, 'rgba(255, 180, 50, 0.3)');
+                    glowGradient.addColorStop(1, 'rgba(255, 150, 0, 0)');
+                    ctx.fillStyle = glowGradient;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, 35, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Glass bulb
+                const gradient = ctx.createRadialGradient(centerX - 5, centerY - 5, 0, centerX, centerY, 20);
+                if (this.output) {
+                    gradient.addColorStop(0, '#ffffcc');
+                    gradient.addColorStop(0.5, '#ffcc66');
+                    gradient.addColorStop(1, '#ff9900');
+                } else {
+                    gradient.addColorStop(0, '#4d4d4d');
+                    gradient.addColorStop(1, '#2d2d2d');
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = this.output ? '#ffcc66' : '#484f58';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Base
+                ctx.fillStyle = '#666';
+                ctx.fillRect(centerX - 8, this.y + 42, 16, 12);
+                
+                // Screw lines
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX - 6, this.y + 44 + i * 4);
+                    ctx.lineTo(centerX + 6, this.y + 44 + i * 4);
+                    ctx.stroke();
+                }
+                
+                this.drawPin(ctx, 0);
+            }
+            
+            simulate(inputs) {
+                this.output = inputs[0] || false;
+                return this.output;
+            }
+        }
+        
+        class DisplayComponent extends Component {
+            constructor(x, y) {
+                super('display', x, y);
+                this.width = 80;
+                this.height = 100;
+                this.segments = [false, false, false, false, false, false, false];
+                this.digitValue = 0;
+            }
+            
+            setupPins() {
+                // 7 inputs for segments A-G
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: 20, type: 'input', value: null, segment: 'a' },
+                    { offsetX: -PIN_RADIUS - 2, offsetY: 35, type: 'input', value: null, segment: 'b' },
+                    { offsetX: -PIN_RADIUS - 2, offsetY: 50, type: 'input', value: null, segment: 'c' },
+                    { offsetX: -PIN_RADIUS - 2, offsetY: 65, type: 'input', value: null, segment: 'd' },
+                    { offsetX: -PIN_RADIUS - 2, offsetY: 80, type: 'input', value: null, segment: 'e' },
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: 35, type: 'input', value: null, segment: 'f' },
+                    { offsetX: this.width + PIN_RADIUS + 2, offsetY: 65, type: 'input', value: null, segment: 'g' }
+                ];
+            }
+            
+            draw(ctx) {
+                // Background
+                ctx.fillStyle = '#1a1a1a';
+                ctx.strokeStyle = '#484f58';
+                ctx.lineWidth = 2;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 8);
+                ctx.fill();
+                ctx.stroke();
+                
+                const cx = this.x + this.width / 2;
+                const segWidth = 20;
+                const segHeight = 6;
+                
+                // Segment positions
+                const segPos = [
+                    { x: cx, y: this.y + 25, horizontal: true },  // A
+                    { x: this.x + 55, y: this.y + 35, horizontal: false },  // B
+                    { x: this.x + 55, y: this.y + 65, horizontal: false },  // C
+                    { x: cx, y: this.y + 75, horizontal: true },  // D
+                    { x: this.x + 25, y: this.y + 65, horizontal: false },  // E
+                    { x: this.x + 25, y: this.y + 35, horizontal: false },  // F
+                    { x: cx, y: this.y + 50, horizontal: true }   // G
+                ];
+                
+                // Draw segments
+                segPos.forEach((pos, i) => {
+                    ctx.fillStyle = this.segments[i] ? '#ff3333' : '#331111';
+                    ctx.shadowColor = this.segments[i] ? '#ff3333' : 'transparent';
+                    ctx.shadowBlur = this.segments[i] ? 10 : 0;
+                    
+                    if (pos.horizontal) {
+                        roundRect(ctx, pos.x - segWidth / 2, pos.y - segHeight / 2, segWidth, segHeight, 2);
+                    } else {
+                        roundRect(ctx, pos.x - segHeight / 2, pos.y - 15, segHeight, 30, 2);
+                    }
+                    ctx.fill();
+                });
+                
+                ctx.shadowBlur = 0;
+                
+                // Draw pins
+                for (let i = 0; i < this.pins.length; i++) {
+                    this.drawPin(ctx, i);
+                }
+            }
+            
+            simulate(inputs) {
+                for (let i = 0; i < 7; i++) {
+                    this.segments[i] = inputs[i] || false;
+                }
+                return this.segments.some(s => s);
+            }
+        }
+        
+        class ProbeComponent extends Component {
+            constructor(x, y) {
+                super('probe', x, y);
+                this.width = 40;
+                this.height = 30;
+            }
+            
+            setupPins() {
+                this.pins = [
+                    { offsetX: -PIN_RADIUS - 2, offsetY: this.height / 2, type: 'input', value: null }
+                ];
+            }
+            
+            draw(ctx) {
+                const centerX = this.x + this.width - 10;
+                const centerY = this.y + this.height / 2;
+                
+                // Background tag
+                ctx.fillStyle = '#1f2937';
+                ctx.strokeStyle = '#30363d';
+                ctx.lineWidth = 1.5;
+                roundRect(ctx, this.x, this.y, this.width, this.height, 6);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Probe circle
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
+                ctx.fillStyle = this.output ? '#00ff88' : '#484f58';
+                ctx.fill();
+                
+                // Text 1/0
+                ctx.fillStyle = '#f0f6fc';
+                ctx.font = 'bold 10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.output ? '1' : '0', centerX, centerY + 3);
+                
+                // Label
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('PRB', this.x + 4, this.y + this.height / 2 + 3);
+                
+                this.drawPin(ctx, 0);
+            }
+            
+            simulate(inputs) {
+                this.output = !!inputs[0];
+                return this.output;
+            }
+        }
+        
+        // ==================== WIRE CLASS ====================
+        
+        class Wire {
+            constructor(startComp, startPin, endComp, endPin) {
+                this.id = generateId();
+                this.startComponent = startComp;
+                this.startPin = startPin;
+                this.endComponent = endComp;
+                this.endPin = endPin;
+                this.value = false;
+                this.points = [];
+                this.animationOffset = 0;
+            }
+            
+            draw(ctx) {
+                const startPos = this.startComponent.getPinPosition(this.startPin);
+                const endPos = this.endComponent.getPinPosition(this.endPin);
+                
+                if (!startPos || !endPos) return;
+                
+                ctx.strokeStyle = this.value ? '#00ff88' : '#484f58';
+                ctx.lineWidth = this.value ? 3 : 2;
+                
+                ctx.beginPath();
+                ctx.moveTo(startPos.x, startPos.y);
+                
+                // Bezier curve for nice wire routing
+                const midX = (startPos.x + endPos.x) / 2;
+                const ctrlOffset = Math.abs(endPos.x - startPos.x) / 3;
+                
+                ctx.bezierCurveTo(
+                    startPos.x + ctrlOffset, startPos.y,
+                    endPos.x - ctrlOffset, endPos.y,
+                    endPos.x, endPos.y
+                );
+                ctx.stroke();
+                
+                // Animated flow effect
+                if (this.value && isSimulating) {
+                    this.animationOffset += 0.1;
+                    ctx.setLineDash([8, 8]);
+                    ctx.lineDashOffset = -this.animationOffset * 20;
+                    ctx.strokeStyle = 'rgba(0, 255, 136, 0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+            
+            toJSON() {
+                return {
+                    id: this.id,
+                    startComponentId: this.startComponent.id,
+                    startPin: this.startPin,
+                    endComponentId: this.endComponent.id,
+                    endPin: this.endPin
+                };
+            }
+        }
+        
+        // ==================== HELPER FUNCTIONS ====================
+        
+        function generateId() {
+            return 'id_' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+        }
+        
+        Component.prototype.drawPin = function(ctx, pinIndex) {
+            const pos = this.getPinPosition(pinIndex);
+            if (!pos) return;
+            
+            const pin = this.pins[pinIndex];
+            const isConnected = checkPinConnected(this, pinIndex);
+            
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, PIN_RADIUS, 0, Math.PI * 2);
+            
+            if (pin.type === 'input') {
+                ctx.fillStyle = pin.value === true ? '#00ff88' : pin.value === false ? '#ff4757' : '#484f58';
+            } else {
+                ctx.fillStyle = this.output ? '#00ff88' : '#484f58';
+            }
+            
+            ctx.fill();
+            
+            if (isConnected) {
+                ctx.strokeStyle = '#00d4ff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        };
+        
+        function checkPinConnected(component, pinIndex) {
+            return wires.some(w => 
+                (w.startComponent === component && w.startPin === pinIndex) ||
+                (w.endComponent === component && w.endPin === pinIndex)
+            );
+        }
+        
+        // Get logical output value for a specific output pin
+        function getOutputValue(component, pinIndex) {
+            const pin = component.pins[pinIndex];
+            if (!pin || pin.type !== 'output') return false;
+            
+            // Components with multiple outputs can override this
+            if (typeof component.getOutputForPin === 'function') {
+                return !!component.getOutputForPin(pinIndex);
+            }
+            
+            return !!component.output;
+        }
+        
+        // ==================== CANVAS SETUP ====================
+        
+        function initCanvas() {
+            canvas = document.getElementById('circuitCanvas');
+            ctx = canvas.getContext('2d');
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Mouse events
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            // Ensure panning/dragging stops even if mouse is released outside canvas
+            window.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('wheel', handleWheel);
+            canvas.addEventListener('dblclick', handleDoubleClick);
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+            
+            // Drag and drop from palette
+            const paletteItems = document.querySelectorAll('.palette-item[draggable="true"]');
+            paletteItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', () => { isPaletteDragging = false; });
+            });
+            
+            const workspace = document.getElementById('workspace');
+            workspace.addEventListener('dragover', handleDragOver);
+            workspace.addEventListener('drop', handleDrop);
+            // Also allow dropping directly on the canvas area
+            canvas.addEventListener('dragover', handleDragOver);
+            canvas.addEventListener('drop', handleDrop);
+            
+            // Click-to-add from palette (for users who can't drag)
+            const palette = document.querySelector('.palette');
+            if (palette) {
+                palette.addEventListener('click', (e) => {
+                    const item = e.target.closest('.palette-item[draggable="true"]');
+                    if (!item || isPaletteDragging) return;
+                    const type = item.dataset.type;
+                    if (!type) return;
+                    
+                    // Place new component near center of current view
+                    const rect = canvas.getBoundingClientRect();
+                    const center = screenToWorld(rect.width / 2, rect.height / 2);
+                    createComponent(type, snapToGrid(center.x), snapToGrid(center.y));
+                });
+            }
+        }
+        
+        function resizeCanvas() {
+            const workspace = document.getElementById('workspace');
+            canvas.width = workspace.clientWidth;
+            canvas.height = workspace.clientHeight;
+            render();
+        }
+        
+        // ==================== RENDERING ====================
+        
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(panOffset.x, panOffset.y);
+            ctx.scale(zoom, zoom);
+            
+            // Draw wires
+            wires.forEach(wire => wire.draw(ctx));
+            
+            // Draw temporary wire while drawing
+            if (isDrawingWire && wireStartPin && tempWireEnd) {
+                ctx.strokeStyle = '#00d4ff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(wireStartPin.x, wireStartPin.y);
+                ctx.lineTo(tempWireEnd.x, tempWireEnd.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // Draw components
+            components.forEach(comp => {
+                comp.draw(ctx);
+                
+                // Selection highlight (single or multi)
+                if (selectedComponents.includes(comp)) {
+                    ctx.strokeStyle = '#00d4ff';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(comp.x - 5, comp.y - 5, comp.width + 10, comp.height + 10);
+                    ctx.setLineDash([]);
+                }
+            });
+            
+            // Draw marquee selection rectangle
+            if (isSelecting && selectionStart && selectionEnd) {
+                const x = Math.min(selectionStart.x, selectionEnd.x);
+                const y = Math.min(selectionStart.y, selectionEnd.y);
+                const w = Math.abs(selectionEnd.x - selectionStart.x);
+                const h = Math.abs(selectionEnd.y - selectionStart.y);
+                
+                ctx.strokeStyle = 'rgba(0, 212, 255, 0.8)';
+                ctx.fillStyle = 'rgba(0, 212, 255, 0.15)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 3]);
+                ctx.strokeRect(x, y, w, h);
+                ctx.setLineDash([]);
+                ctx.fillRect(x, y, w, h);
+            }
+            
+            ctx.restore();
+            
+            requestAnimationFrame(render);
+        }
+        
+        // ==================== MOUSE HANDLERS ====================
+        
+        let draggedComponent = null;
+        let draggedComponents = null;
+        let dragOffsets = [];
+        
+        function handleMouseDown(e) {
+            const pos = getCanvasPos(e);
+            const worldPos = screenToWorld(pos.x, pos.y);
+            
+            if (e.button === 1 || e.button === 2) {
+                // Middle or right click for panning
+                isPanning = true;
+                lastMousePos = pos;
+                canvas.style.cursor = 'grabbing';
+                return;
+            }
+            
+            if (currentTool === 'wire') {
+                // Check if clicking on a pin
+                const pinInfo = getPinAtPosition(worldPos.x, worldPos.y);
+                if (pinInfo) {
+                    isDrawingWire = true;
+                    wireStartPin = {
+                        component: pinInfo.component,
+                        pinIndex: pinInfo.pinIndex,
+                        x: pinInfo.x,
+                        y: pinInfo.y,
+                        type: pinInfo.pinType
+                    };
+                }
+            } else if (currentTool === 'delete') {
+                // Delete component or wire
+                const comp = getComponentAtPosition(worldPos.x, worldPos.y);
+                if (comp) {
+                    deleteComponent(comp);
+                } else {
+                    const wire = getWireAtPosition(worldPos.x, worldPos.y);
+                    if (wire) {
+                        deleteWire(wire);
+                    }
+                }
+            } else {
+                // Select tool (supports multi-select with Shift and marquee)
+                const comp = getComponentAtPosition(worldPos.x, worldPos.y);
+                
+                if (comp) {
+                    if (e.shiftKey) {
+                        // Toggle selection
+                        if (selectedComponents.includes(comp)) {
+                            selectedComponents = selectedComponents.filter(c => c !== comp);
+                        } else {
+                            selectedComponents.push(comp);
+                        }
+                    } else {
+                        // If component is part of a group, select whole group
+                        if (comp.groupId) {
+                            selectedComponents = components.filter(c => c.groupId === comp.groupId);
+                        } else {
+                            selectedComponents = [comp];
+                        }
+                    }
+                    
+                    selectedComponent = selectedComponents[selectedComponents.length - 1] || null;
+                    
+                    // Prepare drag for all selected components
+                    draggedComponent = selectedComponent;
+                    draggedComponents = [...selectedComponents];
+                    dragOffsets = draggedComponents.map(c => ({
+                        component: c,
+                        offsetX: worldPos.x - c.x,
+                        offsetY: worldPos.y - c.y
+                    }));
+                    updatePropertiesPanel();
+                } else {
+                    // Start marquee selection
+                    isSelecting = true;
+                    selectionStart = { x: worldPos.x, y: worldPos.y };
+                    selectionEnd = { x: worldPos.x, y: worldPos.y };
+                }
+            }
+        }
+        
+        function handleMouseMove(e) {
+    const pos = getCanvasPos(e);
+    const worldPos = screenToWorld(pos.x, pos.y);
+
+    // ✅ Only pan while RIGHT or MIDDLE button is actually being held
+    if (isPanning) {
+        // e.buttons → current pressed buttons (not the one that started it)
+        if (e.buttons & 2 || e.buttons & 4) {   // Right = 2, Middle = 4
+            panOffset.x += pos.x - lastMousePos.x;
+            panOffset.y += pos.y - lastMousePos.y;
+            lastMousePos = pos;
+        } else {
+            // Mouse released → immediately stop panning
+            isPanning = false;
+            canvas.style.cursor = 'default';
+        }
+        return;
+    }
+
+    if (draggedComponents && draggedComponents.length > 0) {
+        dragOffsets.forEach(d => {
+            d.component.x = snapToGrid(worldPos.x - d.offsetX);
+            d.component.y = snapToGrid(worldPos.y - d.offsetY);
+        });
+    }
+
+    if (isSelecting && selectionStart) {
+        selectionEnd = { x: worldPos.x, y: worldPos.y };
+    }
+
+    if (isDrawingWire) {
+        tempWireEnd = { x: worldPos.x, y: worldPos.y };
+    }
+
+    // Cursor updates
+    if (currentTool === 'wire') {
+        const pinInfo = getPinAtPosition(worldPos.x, worldPos.y);
+        canvas.style.cursor = pinInfo ? 'crosshair' : 'default';
+    } else if (currentTool === 'delete') {
+        const comp = getComponentAtPosition(worldPos.x, worldPos.y);
+        canvas.style.cursor = comp ? 'not-allowed' : 'default';
+    } else {
+        const comp = getComponentAtPosition(worldPos.x, worldPos.y);
+        canvas.style.cursor = comp ? 'move' : 'default';
+    }
+}
+        
+        function handleMouseUp(e) {
+            const pos = getCanvasPos(e);
+            const worldPos = screenToWorld(pos.x, pos.y);
+            
+            if (isPanning) {
+                isPanning = false;
+                canvas.style.cursor = 'default';
+                return;
+            }
+            
+            if (draggedComponents && draggedComponents.length > 0) {
+                saveState();
+                draggedComponent = null;
+                draggedComponents = null;
+                dragOffsets = [];
+            }
+            
+            if (isDrawingWire && wireStartPin) {
+                const pinInfo = getPinAtPosition(worldPos.x, worldPos.y);
+                
+                if (pinInfo && pinInfo.component !== wireStartPin.component) {
+                    // Create wire connection
+                    createWire(
+                        wireStartPin.component, wireStartPin.pinIndex,
+                        pinInfo.component, pinInfo.pinIndex
+                    );
+                }
+                
+                isDrawingWire = false;
+                wireStartPin = null;
+                tempWireEnd = null;
+            }
+            
+            if (isSelecting && selectionStart && selectionEnd) {
+                const x1 = Math.min(selectionStart.x, selectionEnd.x);
+                const y1 = Math.min(selectionStart.y, selectionEnd.y);
+                const x2 = Math.max(selectionStart.x, selectionEnd.x);
+                const y2 = Math.max(selectionStart.y, selectionEnd.y);
+                
+                selectedComponents = components.filter(c =>
+                    c.x >= x1 && (c.x + c.width) <= x2 &&
+                    c.y >= y1 && (c.y + c.height) <= y2
+                );
+                selectedComponent = selectedComponents[selectedComponents.length - 1] || null;
+                isSelecting = false;
+                selectionStart = null;
+                selectionEnd = null;
+                updatePropertiesPanel();
+            }
+        }
+        
+        function handleWheel(e) {
+            e.preventDefault();
+            
+            const pos = getCanvasPos(e);
+            const worldBeforeZoom = screenToWorld(pos.x, pos.y);
+            
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            zoom = Math.max(0.25, Math.min(3, zoom * zoomFactor));
+            
+            const worldAfterZoom = screenToWorld(pos.x, pos.y);
+            
+            panOffset.x += (worldAfterZoom.x - worldBeforeZoom.x) * zoom;
+            panOffset.y += (worldAfterZoom.y - worldBeforeZoom.y) * zoom;
+            
+            document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+        }
+        
+        function handleDoubleClick(e) {
+            const pos = getCanvasPos(e);
+            const worldPos = screenToWorld(pos.x, pos.y);
+            
+            const comp = getComponentAtPosition(worldPos.x, worldPos.y);
+            
+            if (comp && comp.type === 'switch') {
+                comp.toggle();
+            }
+        }
+        
+        // ==================== DRAG AND DROP ====================
+        
+        let dragType = null;
+        
+        function handleDragStart(e) {
+            const item = e.target.closest('.palette-item');
+            if (!item) return;
+            dragType = item.dataset.type;
+            isPaletteDragging = true;
+            // Needed for Firefox and some WebViews to enable drag events
+            try { e.dataTransfer.setData('text/plain', dragType); } catch (err) {}
+            e.dataTransfer.effectAllowed = 'copy';
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            
+            if (!dragType) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const pos = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+            const worldPos = screenToWorld(pos.x, pos.y);
+            
+            createComponent(dragType, snapToGrid(worldPos.x), snapToGrid(worldPos.y));
+            dragType = null;
+        }
+        
+        // ==================== COMPONENT CREATION ====================
+        
+        function createComponent(type, x, y) {
+            let comp;
+            
+            switch (type) {
+                case 'switch':
+                    comp = new SwitchComponent(x, y);
+                    break;
+                case 'clock':
+                    comp = new ClockComponent(x, y);
+                    break;
+                case 'vcc':
+                    comp = new VCCComponent(x, y);
+                    break;
+                case 'gnd':
+                    comp = new GNDComponent(x, y);
+                    break;
+                case 'and':
+                case 'or':
+                case 'not':
+                case 'nand':
+                case 'nor':
+                case 'xor':
+                case 'xnor':
+                    comp = new LogicGate(type, x, y);
+                    break;
+                case 'halfadder':
+                    comp = new HalfAdderComponent(x, y);
+                    break;
+                case 'fulladder':
+                    comp = new FullAdderComponent(x, y);
+                    break;
+                case 'halfsubtractor':
+                    comp = new HalfSubtractorComponent(x, y);
+                    break;
+                case 'fullsubtractor':
+                    comp = new FullSubtractorComponent(x, y);
+                    break;
+                case 'led':
+                    comp = new LEDComponent(x, y);
+                    break;
+                case 'buzzer':
+                    comp = new BuzzerComponent(x, y);
+                    break;
+                case 'lamp':
+                    comp = new LampComponent(x, y);
+                    break;
+                case 'display':
+                    comp = new DisplayComponent(x, y);
+                    break;
+                case 'probe':
+                    comp = new ProbeComponent(x, y);
+                    break;
+                case 'mux2':
+                    comp = new Mux2Component(x, y);
+                    break;
+                case 'demux2':
+                    comp = new Demux2Component(x, y);
+                    break;
+                default:
+                    return;
+            }
+            
+            components.push(comp);
+            saveState();
+            updateStatus();
+            showToast(`Added ${type.toUpperCase()} component`, 'info');
+        }
+        
+        function deleteComponent(comp) {
+            // Remove connected wires
+            wires = wires.filter(w => w.startComponent !== comp && w.endComponent !== comp);
+            
+            // Remove component
+            components = components.filter(c => c !== comp);
+            
+            if (selectedComponent === comp) {
+                selectedComponent = null;
+                updatePropertiesPanel();
+            }
+            
+            saveState();
+            updateStatus();
+            showToast('Component deleted', 'info');
+        }
+        
+        function deleteWire(wire) {
+            wires = wires.filter(w => w !== wire);
+            selectedWire = null;
+            saveState();
+            updateStatus();
+            showToast('Wire deleted', 'info');
+        }
+        
+        // ==================== WIRE CREATION ====================
+        
+        function createWire(startComp, startPin, endComp, endPin) {
+            // Validate connection
+            const startPinInfo = startComp.pins[startPin];
+            const endPinInfo = endComp.pins[endPin];
+            
+            if (!startPinInfo || !endPinInfo) {
+                showToast('Invalid pin selection', 'error');
+                return;
+            }
+            
+            // Check for same type connection
+            if (startPinInfo.type === endPinInfo.type && startPinInfo.type !== 'input') {
+                showToast('Cannot connect two outputs together', 'warning');
+                return;
+            }
+            
+            // Check for existing connection
+            const existing = wires.find(w =>
+                (w.startComponent === startComp && w.startPin === startPin &&
+                 w.endComponent === endComp && w.endPin === endPin) ||
+                (w.startComponent === endComp && w.startPin === endPin &&
+                 w.endComponent === startComp && w.endPin === startPin)
+            );
+            
+            if (existing) {
+                showToast('Wire already exists', 'warning');
+                return;
+            }
+            
+            // Ensure output -> input direction
+            let wire;
+            if (startPinInfo.type === 'output') {
+                wire = new Wire(startComp, startPin, endComp, endPin);
+            } else {
+                wire = new Wire(endComp, endPin, startComp, startPin);
+            }
+            
+            wires.push(wire);
+            saveState();
+            updateStatus();
+            showToast('Wire connected', 'info');
+            
+            simulate();
+        }
+        
+        // ==================== SIMULATION ====================
+        
+        function simulate() {
+            if (!isSimulating) return;
+            
+            // Reset all input pin values
+            components.forEach(comp => {
+                comp.pins.forEach(pin => {
+                    if (pin.type === 'input') {
+                        pin.value = null;
+                    }
+                });
+            });
+            
+            // Propagate values through wires
+            let changed = true;
+            let iterations = 0;
+            const maxIterations = 100;
+            
+            while (changed && iterations < maxIterations) {
+                changed = false;
+                iterations++;
+                
+                // Update wire values
+                wires.forEach(wire => {
+                    const startValue = getOutputValue(wire.startComponent, wire.startPin);
+                    if (wire.value !== startValue) {
+                        wire.value = startValue;
+                        changed = true;
+                    }
+                    
+                    // Set input pin value
+                    wire.endComponent.pins[wire.endPin].value = wire.value;
+                });
+                
+                // Simulate components
+                components.forEach(comp => {
+                    const inputs = comp.pins
+                        .filter(p => p.type === 'input')
+                        .map(p => p.value);
+                    
+                    const oldOutput = comp.output;
+                    comp.output = comp.simulate(inputs);
+                    
+                    if (oldOutput !== comp.output) {
+                        changed = true;
+                    }
+                });
+            }
+            
+            if (iterations >= maxIterations) {
+                showToast('Possible feedback loop detected', 'warning');
+            }
+            
+            // Check for floating inputs
+            components.forEach(comp => {
+                comp.pins.forEach((pin, idx) => {
+                    if (pin.type === 'input' && pin.value === null && !checkPinConnected(comp, idx)) {
+                        // Floating input - could warn user
+                    }
+                });
+            });
+        }
+        
+        function simulationLoop(timestamp) {
+            if (isSimulating) {
+                // Update clocks
+                components.forEach(comp => {
+                    if (comp.type === 'clock' && comp.update) {
+                        comp.update(timestamp);
+                    }
+                });
+                
+                simulate();
+            }
+            
+            requestAnimationFrame(simulationLoop);
+        }
+        
+        // ==================== TOOLS ====================
+        
+        function setTool(tool) {
+            currentTool = tool;
+            document.getElementById('currentTool').textContent = 
+                tool.charAt(0).toUpperCase() + tool.slice(1);
+            
+            canvas.style.cursor = tool === 'wire' ? 'crosshair' : 
+                                  tool === 'delete' ? 'not-allowed' : 'default';
+        }
+        
+        // ==================== UTILITY FUNCTIONS ====================
+        
+        function getCanvasPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+        
+        function screenToWorld(sx, sy) {
+            return {
+                x: (sx - panOffset.x) / zoom,
+                y: (sy - panOffset.y) / zoom
+            };
+        }
+        
+        function snapToGrid(val) {
+            return Math.round(val / GRID_SIZE) * GRID_SIZE;
+        }
+        
+        function getComponentAtPosition(x, y) {
+            // Check in reverse order (top elements first)
+            for (let i = components.length - 1; i >= 0; i--) {
+                if (components[i].containsPoint(x, y)) {
+                    return components[i];
+                }
+            }
+            return null;
+        }
+        
+        function getPinAtPosition(x, y) {
+            for (const comp of components) {
+                const pinInfo = comp.getPinAtPoint(x, y);
+                if (pinInfo) {
+                    const pos = comp.getPinPosition(pinInfo.pinIndex);
+                    return {
+                        component: comp,
+                        pinIndex: pinInfo.pinIndex,
+                        pinType: pinInfo.pinType,
+                        x: pos.x,
+                        y: pos.y
+                    };
+                }
+            }
+            return null;
+        }
+        
+        function getWireAtPosition(x, y) {
+            const threshold = 8 / zoom;
+            for (let i = wires.length - 1; i >= 0; i--) {
+                const wire = wires[i];
+                const startPos = wire.startComponent.getPinPosition(wire.startPin);
+                const endPos = wire.endComponent.getPinPosition(wire.endPin);
+                if (!startPos || !endPos) continue;
+                
+                // Distance from point to line segment
+                const dx = endPos.x - startPos.x;
+                const dy = endPos.y - startPos.y;
+                const lengthSq = dx * dx + dy * dy;
+                if (lengthSq === 0) continue;
+                let t = ((x - startPos.x) * dx + (y - startPos.y) * dy) / lengthSq;
+                t = Math.max(0, Math.min(1, t));
+                const projX = startPos.x + t * dx;
+                const projY = startPos.y + t * dy;
+                const dist = Math.hypot(x - projX, y - projY);
+                if (dist <= threshold) {
+                    return wire;
+                }
+            }
+            return null;
+        }
+        
+        // ==================== ZOOM CONTROLS ====================
+        
+        function zoomIn() {
+            zoom = Math.min(3, zoom * 1.2);
+            document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+        }
+        
+        function zoomOut() {
+            zoom = Math.max(0.25, zoom / 1.2);
+            document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+        }
+        
+        function resetZoom() {
+            zoom = 1;
+            panOffset = { x: 0, y: 0 };
+            document.getElementById('zoomLevel').textContent = '100%';
+        }
+        
+        // ==================== SIMULATION CONTROLS ====================
+        
+        function toggleSimulation() {
+            isSimulating = !isSimulating;
+            const btn = document.getElementById('playPauseBtn');
+            
+            if (isSimulating) {
+                btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>`;
+                showToast('Simulation running', 'info');
+            } else {
+                btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16"/>
+                    <rect x="14" y="4" width="4" height="16"/>
+                </svg>`;
+                showToast('Simulation paused', 'info');
+            }
+        }
+        
+        function stepSimulation() {
+            if (isSimulating) {
+                isSimulating = false;
+                document.getElementById('playPauseBtn').innerHTML = 
+                    `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="4" width="4" height="16"/>
+                        <rect x="14" y="4" width="4" height="16"/>
+                    </svg>`;
+            }
+            
+            // Single step simulation
+            simulate();
+            showToast('Single step executed', 'info');
+        }
+        
+        function setSimulationSpeed(value) {
+            simulationSpeed = parseInt(value);
+            document.getElementById('speedValue').textContent = value + 'x';
+        }
+        
+        // ==================== HISTORY (UNDO/REDO) ====================
+        
+        function saveState() {
+            // Remove future states if we're not at the end
+            if (historyIndex < history.length - 1) {
+                history = history.slice(0, historyIndex + 1);
+            }
+            
+            // Save current state
+            const state = {
+                components: components.map(c => c.toJSON()),
+                wires: wires.map(w => w.toJSON())
+            };
+            
+            history.push(state);
+            
+            // Limit history size
+            if (history.length > MAX_HISTORY) {
+                history.shift();
+            } else {
+                historyIndex++;
+            }
+        }
+        
+        function undo() {
+            if (historyIndex <= 0) {
+                showToast('Nothing to undo', 'warning');
+                return;
+            }
+            
+            historyIndex--;
+            restoreState(history[historyIndex]);
+            showToast('Undo', 'info');
+        }
+        
+        function redo() {
+            if (historyIndex >= history.length - 1) {
+                showToast('Nothing to redo', 'warning');
+                return;
+            }
+            
+            historyIndex++;
+            restoreState(history[historyIndex]);
+            showToast('Redo', 'info');
+        }
+        
+        function restoreState(state) {
+            // Clear current state
+            components = [];
+            wires = [];
+            
+            // Restore components
+            const compMap = {};
+            state.components.forEach(data => {
+                let comp;
+                switch (data.type) {
+                    case 'switch':
+                        comp = new SwitchComponent(data.x, data.y);
+                        break;
+                    case 'clock':
+                        comp = new ClockComponent(data.x, data.y);
+                        break;
+                    case 'vcc':
+                        comp = new VCCComponent(data.x, data.y);
+                        break;
+                    case 'gnd':
+                        comp = new GNDComponent(data.x, data.y);
+                        break;
+                    case 'and':
+                    case 'or':
+                    case 'not':
+                    case 'nand':
+                    case 'nor':
+                    case 'xor':
+                    case 'xnor':
+                        comp = new LogicGate(data.type, data.x, data.y);
+                        break;
+                    case 'led':
+                        comp = new LEDComponent(data.x, data.y);
+                        break;
+                    case 'buzzer':
+                        comp = new BuzzerComponent(data.x, data.y);
+                        break;
+                    case 'lamp':
+                        comp = new LampComponent(data.x, data.y);
+                        break;
+                    case 'display':
+                        comp = new DisplayComponent(data.x, data.y);
+                        break;
+                    case 'probe':
+                        comp = new ProbeComponent(data.x, data.y);
+                        break;
+                    case 'mux2':
+                        comp = new Mux2Component(data.x, data.y);
+                        break;
+                    case 'demux2':
+                        comp = new Demux2Component(data.x, data.y);
+                        break;
+                    case 'halfadder':
+                        comp = new HalfAdderComponent(data.x, data.y);
+                        break;
+                    case 'fulladder':
+                        comp = new FullAdderComponent(data.x, data.y);
+                        break;
+                    case 'halfsubtractor':
+                        comp = new HalfSubtractorComponent(data.x, data.y);
+                        break;
+                    case 'fullsubtractor':
+                        comp = new FullSubtractorComponent(data.x, data.y);
+                        break;
+                }
+                
+                if (comp) {
+                    comp.id = data.id;
+                    comp.output = data.output;
+                    comp.label = data.label || '';
+                    comp.groupId = data.groupId || null;
+                    components.push(comp);
+                    compMap[data.id] = comp;
+                }
+            });
+            
+            // Restore wires
+            state.wires.forEach(data => {
+                const startComp = compMap[data.startComponentId];
+                const endComp = compMap[data.endComponentId];
+                
+                if (startComp && endComp) {
+                    const wire = new Wire(startComp, data.startPin, endComp, data.endPin);
+                    wire.id = data.id;
+                    wires.push(wire);
+                }
+            });
+            
+            updateStatus();
+            simulate();
+        }
+        
+        // ==================== SAVE/LOAD ====================
+        
+        async function saveCircuit(){
+
+const email = localStorage.getItem("userEmail");
+const name = prompt("Enter project name");
+
+if(!name) return;
+
+const data = { components, wires };
+
+const res = await fetch("http://localhost:3000/save-circuit",{
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body: JSON.stringify({
+email,
+name,
+data
+})
+});
+
+const result = await res.json();
+
+if(result.success){
+showToast("Project saved");
+loadProjects();
+}else{
+showToast("Save failed");
+}
+
+}
+
+
+async function loadProjects(){
+
+    const email = localStorage.getItem("userEmail");
+    
+    const res = await fetch("http://localhost:3000/get-circuits",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ email })
+    });
+    
+    const result = await res.json();
+    
+    const container = document.getElementById("filesList");
+    
+    container.innerHTML = "";
+    
+    if(!result.circuits || result.circuits.length === 0){
+    
+    container.innerHTML = `<p style="color:var(--text-secondary);font-size:13px;">
+    No saved projects yet
+    </p>`;
+    
+    return;
+    }
+    
+    result.circuits.forEach(project => {
+    
+    container.innerHTML += `
+    <div class="file-item" onclick="openProject(${project.id})">
+    <div class="file-name">${project.name}</div>
+    <div class="file-date">${new Date(project.created_at).toLocaleDateString()}</div>
+    </div>
+    `;
+    
+    });
+    
+    }
+
+
+        
+        function loadCircuit(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const state = JSON.parse(e.target.result);
+                    
+                    if (state.components && state.wires) {
+                        restoreState(state);
+                        history = [state];
+                        historyIndex = 0;
+                        showToast('Circuit loaded successfully', 'info');
+                    } else {
+                        showToast('Invalid circuit file', 'error');
+                    }
+                } catch (err) {
+                    showToast('Error loading circuit: ' + err.message, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+        
+        function exportAsImage() {
+            // Create a temporary canvas for export
+            const exportCanvas = document.createElement('canvas');
+            const exportCtx = exportCanvas.getContext('2d');
+            
+            // Calculate bounds
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            
+            components.forEach(comp => {
+                minX = Math.min(minX, comp.x - 20);
+                minY = Math.min(minY, comp.y - 20);
+                maxX = Math.max(maxX, comp.x + comp.width + 20);
+                maxY = Math.max(maxY, comp.y + comp.height + 20);
+            });
+            
+            if (components.length === 0) {
+                showToast('No components to export', 'warning');
+                return;
+            }
+            
+            const padding = 40;
+            exportCanvas.width = maxX - minX + padding * 2;
+            exportCanvas.height = maxY - minY + padding * 2;
+            
+            // Fill background
+            exportCtx.fillStyle = '#0d1117';
+            exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+            
+            // Translate to fit
+            exportCtx.translate(-minX + padding, -minY + padding);
+            
+            // Draw wires
+            wires.forEach(wire => wire.draw(exportCtx));
+            
+            // Draw components
+            components.forEach(comp => comp.draw(exportCtx));
+            
+            // Download
+            const link = document.createElement('a');
+            link.download = 'circuit_' + Date.now() + '.png';
+            link.href = exportCanvas.toDataURL('image/png');
+            link.click();
+            
+            showToast('Image exported successfully', 'info');
+        }
+        
+        function clearCircuit() {
+            if (components.length === 0) {
+                showToast('Circuit is already empty', 'info');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to clear the circuit?')) {
+                components = [];
+                wires = [];
+                selectedComponent = null;
+                history = [];
+                historyIndex = -1;
+                updateStatus();
+                updatePropertiesPanel();
+                showToast('Circuit cleared', 'info');
+            }
+        }
+        
+        // ==================== UI UPDATES ====================
+        
+        function updateStatus() {
+            document.getElementById('componentCount').textContent = components.length;
+            document.getElementById('wireCount').textContent = wires.length;
+            
+            // Count errors (floating inputs)
+            let errors = 0;
+            components.forEach(comp => {
+                comp.pins.forEach((pin, idx) => {
+                    if (pin.type === 'input' && !checkPinConnected(comp, idx)) {
+                        errors++;
+                    }
+                });
+            });
+            document.getElementById('errorCount').textContent = errors;
+        }
+        
+        function updatePropertiesPanel() {
+            const content = document.getElementById('propertiesContent');
+            
+            if (!selectedComponent || selectedComponents.length === 0) {
+                content.innerHTML = `<p style="color: var(--text-secondary); font-size: 13px;">
+                    Select a component to view and edit its properties.
+                </p>`;
+                return;
+            }
+            
+            if (selectedComponents.length > 1) {
+                content.innerHTML = `
+                    <div class="property-group">
+                        <div class="property-label">Selection</div>
+                        <div class="property-value">${selectedComponents.length} components selected</div>
+                    </div>
+                    <div class="property-group">
+                        <div class="property-label">Grouping</div>
+                        <div class="property-value">
+                            Use <b>Shift+Click</b> to multi-select.<br>
+                            Press <b>Ctrl+G</b> or click Group to create a group,<br>
+                            and <b>Ctrl+U</b> or Ungroup to break it.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const comp = selectedComponent;
+            let html = `
+                <div class="property-group">
+                    <div class="property-label">Type</div>
+                    <div class="property-value">${comp.type.toUpperCase()}</div>
+                </div>
+                <div class="property-group">
+                    <div class="property-label">Position</div>
+                    <div class="property-value">X: ${Math.round(comp.x)}, Y: ${Math.round(comp.y)}</div>
+                </div>
+                <div class="property-group">
+                    <div class="property-label">Output State</div>
+                    <div class="property-value">
+                        <span class="signal-indicator ${comp.output ? 'signal-high' : 'signal-low'}"></span>
+                        ${comp.output ? 'HIGH' : 'LOW'}
+                    </div>
+                </div>
+            `;
+            
+            // Type-specific properties
+            if (comp.type === 'switch') {
+                html += `
+                    <div class="property-group">
+                        <div class="property-label">State</div>
+                        <button class="btn btn-primary" onclick="toggleSelectedSwitch()" style="width: 100%;">
+                            Toggle Switch
+                        </button>
+                    </div>
+                `;
+            } else if (comp.type === 'led') {
+                html += `
+                    <div class="property-group">
+                        <div class="property-label">LED Color</div>
+                        <select class="property-select" onchange="changeLEDColor(this.value)">
+                            <option value="#ff0000" ${comp.color === '#ff0000' ? 'selected' : ''}>Red</option>
+                            <option value="#00ff00" ${comp.color === '#00ff00' ? 'selected' : ''}>Green</option>
+                            <option value="#0000ff" ${comp.color === '#0000ff' ? 'selected' : ''}>Blue</option>
+                            <option value="#ffff00" ${comp.color === '#ffff00' ? 'selected' : ''}>Yellow</option>
+                            <option value="#ff00ff" ${comp.color === '#ff00ff' ? 'selected' : ''}>Magenta</option>
+                            <option value="#00ffff" ${comp.color === '#00ffff' ? 'selected' : ''}>Cyan</option>
+                        </select>
+                    </div>
+                `;
+            } else if (comp.type === 'clock') {
+                html += `
+                    <div class="property-group">
+                        <div class="property-label">Frequency (ms)</div>
+                        <input type="number" class="property-input" value="${comp.interval}" 
+                               onchange="changeClockInterval(this.value)" min="100" max="5000">
+                    </div>
+                `;
+            } else if (comp.type === 'buzzer') {
+                html += `
+                    <div class="property-group">
+                        <div class="property-label">Frequency (Hz)</div>
+                        <input type="number" class="property-input" value="${comp.frequency}" 
+                               onchange="changeBuzzerFrequency(this.value)" min="100" max="2000">
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div class="property-group">
+                    <button class="btn btn-secondary" onclick="deleteSelectedComponent()" style="width: 100%; color: var(--accent-error);">
+                        Delete Component
+                    </button>
+                </div>
+            `;
+            
+            content.innerHTML = html;
+        }
+        
+        function toggleSelectedSwitch() {
+            if (selectedComponent && selectedComponent.type === 'switch') {
+                selectedComponent.toggle();
+                updatePropertiesPanel();
+            }
+        }
+        
+        function changeLEDColor(color) {
+            if (selectedComponent && selectedComponent.type === 'led') {
+                selectedComponent.color = color;
+            }
+        }
+        
+        function changeClockInterval(value) {
+            if (selectedComponent && selectedComponent.type === 'clock') {
+                selectedComponent.interval = parseInt(value);
+            }
+        }
+        
+        function changeBuzzerFrequency(value) {
+            if (selectedComponent && selectedComponent.type === 'buzzer') {
+                selectedComponent.frequency = parseInt(value);
+            }
+        }
+        
+        function deleteSelectedComponent() {
+            if (selectedComponent) {
+                deleteComponent(selectedComponent);
+            }
+        }
+        
+        function groupSelectedComponents() {
+            if (selectedComponents.length < 2) {
+                showToast('Select at least two components to group', 'warning');
+                return;
+            }
+            const groupId = generateId();
+            selectedComponents.forEach(c => {
+                c.groupId = groupId;
+            });
+            showToast('Components grouped', 'info');
+        }
+        
+        function ungroupSelectedComponents() {
+            if (selectedComponents.length === 0) {
+                showToast('No components selected to ungroup', 'warning');
+                return;
+            }
+            selectedComponents.forEach(c => {
+                c.groupId = null;
+            });
+            showToast('Components ungrouped', 'info');
+        }
+        
+        // ==================== TOAST NOTIFICATIONS ====================
+        
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            const icon = type === 'error' ? '⚠' : type === 'warning' ? '⚡' : '✓';
+            toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // ==================== KEYBOARD SHORTCUTS ====================
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            
+            switch (e.key.toLowerCase()) {
+                case 'v':
+                case 's':
+                    if (!e.ctrlKey) setTool('select');
+                    break;
+                case 'w':
+                    setTool('wire');
+                    break;
+                case 'd':
+                case 'x':
+                    setTool('delete');
+                    break;
+                case 'delete':
+                case 'backspace':
+                    if (selectedComponents.length > 0) {
+                        selectedComponents.slice().forEach(c => deleteComponent(c));
+                        selectedComponents = [];
+                        selectedComponent = null;
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    toggleSimulation();
+                    break;
+                case 'z':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            redo();
+                        } else {
+                            undo();
+                        }
+                    }
+                    break;
+                case 'g':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        groupSelectedComponents();
+                    }
+                    break;
+                case 'u':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        ungroupSelectedComponents();
+                    }
+                    break;
+                case '+':
+                case '=':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        zoomIn();
+                    }
+                    break;
+                case '-':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        zoomOut();
+                    }
+                    break;
+            }
+        });
+        
+        // ==================== INITIALIZATION ====================
+        
+        function init() {
+            initCanvas();
+            render();
+            requestAnimationFrame(simulationLoop);
+            saveState();
+            
+            // Create demo circuit
+            createDemoCircuit();
+            
+            showToast('Welcome to CircuitForge! Drag components from the palette.', 'info');
+        }
+        
+        function createDemoCircuit() {
+            // Create a simple AND gate demo
+            const sw1 = new SwitchComponent(100, 80);
+            const sw2 = new SwitchComponent(100, 180);
+            const andGate = new LogicGate('and', 250, 110);
+            const led = new LEDComponent(400, 120);
+            
+            components.push(sw1, sw2, andGate, led);
+            
+            // Create wires
+            wires.push(new Wire(sw1, 0, andGate, 0));
+            wires.push(new Wire(sw2, 0, andGate, 1));
+            wires.push(new Wire(andGate, 2, led, 0));
+            
+            saveState();
+            updateStatus();
+            simulate();
+        }
+        
+        // ==================== EXAMPLES LOADER ====================
+        
+        function loadExample(key) {
+            if (!key) return;
+            switch (key) {
+                case 'all_adders':
+                    createExampleAllAdders();
+                    break;
+                case 'all_subtractors':
+                    createExampleAllSubtractors();
+                    break;
+                case 'mux_demux':
+                    createExampleMuxDemux();
+                    break;
+            }
+        }
+        
+        function baseExampleOffset() {
+            // Drop new examples a bit to the right/bottom of current content
+            if (components.length === 0) {
+                return { x: 80, y: 80 };
+            }
+            let maxX = 0, maxY = 0;
+            components.forEach(c => {
+                maxX = Math.max(maxX, c.x + c.width);
+                maxY = Math.max(maxY, c.y + c.height);
+            });
+            return { x: maxX + 80, y: 80 };
+        }
+        
+        function createExampleAllAdders() {
+            const offset = baseExampleOffset();
+            const swA = new SwitchComponent(offset.x, offset.y);
+            const swB = new SwitchComponent(offset.x, offset.y + 80);
+            const swCin = new SwitchComponent(offset.x, offset.y + 160);
+            const ha = new HalfAdderComponent(offset.x + 160, offset.y + 40);
+            const fa = new FullAdderComponent(offset.x + 320, offset.y + 40);
+            const ledSumHa = new LEDComponent(offset.x + 260, offset.y + 20);
+            const ledCarryHa = new LEDComponent(offset.x + 260, offset.y + 80);
+            const ledSumFa = new LEDComponent(offset.x + 420, offset.y + 20);
+            const ledCarryFa = new LEDComponent(offset.x + 420, offset.y + 80);
+            
+            components.push(swA, swB, swCin, ha, fa, ledSumHa, ledCarryHa, ledSumFa, ledCarryFa);
+            wires.push(
+                new Wire(swA, 0, ha, 0),
+                new Wire(swB, 0, ha, 1),
+                new Wire(ha, 2, ledSumHa, 0),
+                new Wire(ha, 3, ledCarryHa, 0),
+                new Wire(swA, 0, fa, 0),
+                new Wire(swB, 0, fa, 1),
+                new Wire(swCin, 0, fa, 2),
+                new Wire(fa, 3, ledSumFa, 0),
+                new Wire(fa, 4, ledCarryFa, 0)
+            );
+            saveState();
+            updateStatus();
+            simulate();
+            showToast('Added example: all adders', 'info');
+        }
+        
+        function createExampleAllSubtractors() {
+            const offset = baseExampleOffset();
+            const swA = new SwitchComponent(offset.x, offset.y);
+            const swB = new SwitchComponent(offset.x, offset.y + 80);
+            const swBin = new SwitchComponent(offset.x, offset.y + 160);
+            const hs = new HalfSubtractorComponent(offset.x + 160, offset.y + 40);
+            const fs = new FullSubtractorComponent(offset.x + 320, offset.y + 40);
+            const ledDiffHs = new LEDComponent(offset.x + 260, offset.y + 20);
+            const ledBorrowHs = new LEDComponent(offset.x + 260, offset.y + 80);
+            const ledDiffFs = new LEDComponent(offset.x + 420, offset.y + 20);
+            const ledBorrowFs = new LEDComponent(offset.x + 420, offset.y + 80);
+            
+            components.push(swA, swB, swBin, hs, fs, ledDiffHs, ledBorrowHs, ledDiffFs, ledBorrowFs);
+            wires.push(
+                new Wire(swA, 0, hs, 0),
+                new Wire(swB, 0, hs, 1),
+                new Wire(hs, 2, ledDiffHs, 0),
+                new Wire(hs, 3, ledBorrowHs, 0),
+                new Wire(swA, 0, fs, 0),
+                new Wire(swB, 0, fs, 1),
+                new Wire(swBin, 0, fs, 2),
+                new Wire(fs, 3, ledDiffFs, 0),
+                new Wire(fs, 4, ledBorrowFs, 0)
+            );
+            saveState();
+            updateStatus();
+            simulate();
+            showToast('Added example: all subtractors', 'info');
+        }
+        
+        function createExampleMuxDemux() {
+            const offset = baseExampleOffset();
+            const swD0 = new SwitchComponent(offset.x, offset.y);
+            const swD1 = new SwitchComponent(offset.x, offset.y + 80);
+            const swSel = new SwitchComponent(offset.x, offset.y + 160);
+            const mux = new Mux2Component(offset.x + 170, offset.y + 60);
+            const ledMuxOut = new LEDComponent(offset.x + 280, offset.y + 80);
+            
+            const swD = new SwitchComponent(offset.x + 420, offset.y + 40);
+            const swSel2 = new SwitchComponent(offset.x + 420, offset.y + 140);
+            const demux = new Demux2Component(offset.x + 590, offset.y + 60);
+            const ledY0 = new LEDComponent(offset.x + 700, offset.y + 40);
+            const ledY1 = new LEDComponent(offset.x + 700, offset.y + 120);
+            
+            components.push(
+                swD0, swD1, swSel, mux, ledMuxOut,
+                swD, swSel2, demux, ledY0, ledY1
+            );
+            wires.push(
+                new Wire(swD0, 0, mux, 0),
+                new Wire(swD1, 0, mux, 1),
+                new Wire(swSel, 0, mux, 2),
+                new Wire(mux, 3, ledMuxOut, 0),
+                
+                new Wire(swD, 0, demux, 0),
+                new Wire(swSel2, 0, demux, 1),
+                new Wire(demux, 2, ledY0, 0),
+                new Wire(demux, 3, ledY1, 0)
+            );
+            saveState();
+            updateStatus();
+            simulate();
+            showToast('Added example: MUX/DEMUX', 'info');
+        }
+
+        async function loadProjects(){
+
+const email = localStorage.getItem("userEmail");
+
+const res = await fetch("http://localhost:3000/get-circuits",{
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body: JSON.stringify({ email })
+});
+
+const result = await res.json();
+
+const container = document.getElementById("filesList");
+
+container.innerHTML = "";
+
+if(!result.circuits || result.circuits.length === 0){
+container.innerHTML = `<p style="color:var(--text-secondary)">No saved projects yet</p>`;
+return;
+}
+
+result.circuits.forEach(project=>{
+container.innerHTML += `
+<div class="file-item" onclick="openProject(${project.id})">
+<div class="file-name">${project.name}</div>
+<div class="file-date">${new Date(project.created_at).toLocaleDateString()}</div>
+</div>
+`;
+});
+
+}
+        
+        // Start the application
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

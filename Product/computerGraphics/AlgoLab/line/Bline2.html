@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bresenham Line Algorithm | Computer Graphics</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #05080c;
+  --bg-elevated: #0a1018;
+  --card: #0d1520;
+  --border: #1a2535;
+  --accent: #b464ff;
+  --accent-light: #d4a3ff;
+  --text: #e4e8ec;
+  --muted: #5a6a7a;
+  --cyan: #00d4ff;
+  --success: #00ffc8;
+  --orange: #ff6b4a;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 8, 12, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  padding: 80px 24px 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+.canvas-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.canvas-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.canvas-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.canvas-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+.canvas-body {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.canvas-body canvas {
+  border-radius: 8px;
+  cursor: crosshair;
+}
+
+.hover-coords {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  background: rgba(5, 8, 12, 0.9);
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.controls-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: #c474ff;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-success {
+  background: var(--success);
+  color: var(--bg);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--orange);
+  border: 1px solid var(--orange);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.speed-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.speed-slider {
+  width: 100px;
+  height: 4px;
+  -webkit-appearance: none;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+
+.speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.speed-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  min-width: 45px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: calc(100vh - 104px);
+  position: sticky;
+  top: 80px;
+  overflow-y: auto;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.panel-body {
+  padding: 16px;
+}
+
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(180, 100, 255, 0.1);
+  border: 1px solid rgba(180, 100, 255, 0.2);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.step-indicator .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.step-indicator .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.coordinate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.coord-box {
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.coord-box .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+
+.coord-box .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.coord-box.p1 .value { color: var(--cyan); }
+.coord-box.p2 .value { color: var(--accent); }
+
+.algorithm-values {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.algo-value {
+  padding: 8px;
+  background: rgba(180, 100, 255, 0.05);
+  border: 1px solid rgba(180, 100, 255, 0.1);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.algo-value .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.algo-value .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.decision-panel {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.decision-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.decision-row .label {
+  color: var(--muted);
+}
+
+.decision-row .value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.decision-row .value.cyan { color: var(--cyan); }
+.decision-row .value.purple { color: var(--accent); }
+.decision-row .value.green { color: var(--success); }
+
+.candidate-visual {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.candidate-box {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  transition: all 0.2s ease;
+}
+
+.candidate-box.east {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: var(--cyan);
+}
+
+.candidate-box.northeast {
+  background: rgba(180, 100, 255, 0.1);
+  border: 1px solid rgba(180, 100, 255, 0.3);
+  color: var(--accent);
+}
+
+.candidate-box.selected {
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(0, 255, 200, 0.3);
+  border-color: var(--success);
+  background: rgba(0, 255, 200, 0.15);
+  color: var(--success);
+}
+
+.candidate-box .coord {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.explanation-panel {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.explanation-panel strong {
+  color: var(--text);
+}
+
+.explanation-panel .condition {
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.explanation-panel .result {
+  color: var(--success);
+}
+
+.table-container {
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-body {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 250px;
+}
+
+.calc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+}
+
+.calc-table th {
+  padding: 8px 10px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  font-size: 9px;
+}
+
+.calc-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.calc-table tr.current {
+  background: rgba(180, 100, 255, 0.1);
+}
+
+.calc-table tr.current td {
+  color: var(--accent);
+}
+
+.calc-table tr.completed td {
+  color: var(--success);
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.legend-color.p1 { background: var(--cyan); }
+.legend-color.p2 { background: var(--accent); }
+.legend-color.east { background: rgba(0, 212, 255, 0.5); }
+.legend-color.ne { background: rgba(180, 100, 255, 0.5); }
+.legend-color.plotted { background: var(--success); }
+
+@media (max-width: 1200px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 12px 16px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .main-layout {
+    padding: 70px 16px 16px;
+  }
+  
+  .controls-panel {
+    justify-content: center;
+  }
+  
+  .speed-control {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Scrollbar styling */
+.table-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.table-body::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.table-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#05080c" stroke-width="2.5">
+          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">CG Lab</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="algorithm_lab.html">Algorithms</a>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="line_algorithms.html">Line</a>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Bresenham Algorithm</span>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <!-- Canvas Section -->
+    <div class="canvas-section">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">PIXEL_GRID</span>
+          <span class="canvas-info" id="canvas-info">Drag points or click to set</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="main-canvas" width="560" height="480"></canvas>
+          <div class="hover-coords" id="hover-coords">Mouse: (-, -)</div>
+        </div>
+        <div class="controls-panel">
+          <button class="btn btn-primary" id="btn-start" onclick="startSimulation()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            Start
+          </button>
+          <button class="btn btn-secondary" id="btn-next" onclick="nextStep()" disabled>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            Next
+          </button>
+          <button class="btn btn-success" id="btn-auto" onclick="toggleAutoRun()" disabled>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 4h4v16H6zM14 4h4v16h-4z"/>
+            </svg>
+            Auto
+          </button>
+          <button class="btn btn-danger" id="btn-reset" onclick="resetSimulation()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 4v6h6M23 20v-6h-6"/>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+            </svg>
+            Reset
+          </button>
+          <div class="speed-control">
+            <span class="speed-label">Speed</span>
+            <input type="range" class="speed-slider" id="speed-slider" min="50" max="1000" value="300" oninput="updateSpeed()">
+            <span class="speed-value" id="speed-value">300ms</span>
+          </div>
+        </div>
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color p1"></div>
+            <span>P1 (Start)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color p2"></div>
+            <span>P2 (End)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color east"></div>
+            <span>East Candidate</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color ne"></div>
+            <span>NE Candidate</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color plotted"></div>
+            <span>Plotted</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <!-- Status Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">STATUS</span>
+        </div>
+        <div class="panel-body">
+          <div class="step-indicator">
+            <span class="label">Step</span>
+            <span class="value" id="step-display">0</span>
+          </div>
+          
+          <div class="coordinate-grid">
+            <div class="coord-box p1">
+              <div class="label">Start P1</div>
+              <div class="value" id="p1-display">Not Set</div>
+            </div>
+            <div class="coord-box p2">
+              <div class="label">End P2</div>
+              <div class="value" id="p2-display">Not Set</div>
+            </div>
+          </div>
+          
+          <div class="algorithm-values">
+            <div class="algo-value">
+              <div class="label">dx</div>
+              <div class="value" id="val-dx">-</div>
+            </div>
+            <div class="algo-value">
+              <div class="label">dy</div>
+              <div class="value" id="val-dy">-</div>
+            </div>
+            <div class="algo-value">
+              <div class="label">Steps</div>
+              <div class="value" id="val-steps">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Decision Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">DECISION PANEL</span>
+        </div>
+        <div class="panel-body">
+          <div class="decision-panel" id="decision-panel">
+            <div class="decision-row">
+              <span class="label">Current Pixel</span>
+              <span class="value" id="current-pixel">(-, -)</span>
+            </div>
+            <div class="decision-row">
+              <span class="label">Error (e)</span>
+              <span class="value" id="error-value">-</span>
+            </div>
+            <div class="decision-row">
+              <span class="label">2e</span>
+              <span class="value" id="2e-value">-</span>
+            </div>
+            <div class="decision-row">
+              <span class="label">Decision</span>
+              <span class="value" id="decision-type">-</span>
+            </div>
+          </div>
+          
+          <div class="candidate-visual" id="candidate-visual">
+            <div class="candidate-box east" id="candidate-east">
+              <div class="coord" id="east-coord">(-, -)</div>
+              <div>East</div>
+            </div>
+            <div class="candidate-box northeast" id="candidate-ne">
+              <div class="coord" id="ne-coord">(-, -)</div>
+              <div>NE</div>
+            </div>
+          </div>
+          
+          <div class="explanation-panel" id="explanation-panel">
+            <div id="explanation-text">
+              Select two points on the grid to begin. Drag points to reposition them. Click <strong>Start</strong> to run the algorithm.
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Calculation Table -->
+      <div class="panel table-container">
+        <div class="panel-header">
+          <span class="panel-title">CALCULATION TABLE</span>
+        </div>
+        <div class="table-body">
+          <table class="calc-table">
+            <thead>
+              <tr>
+                <th>Step</th>
+                <th>X</th>
+                <th>Y</th>
+                <th>Error</th>
+                <th>Decision</th>
+              </tr>
+            </thead>
+            <tbody id="calc-table-body">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--muted); padding: 20px;">
+                  No data yet
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const particles = [];
+const particleCount = 20;
+
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.08,
+      vy: (Math.random() - 0.5) * 0.08,
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.08 + 0.02
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#05080c';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  bgCtx.strokeStyle = 'rgba(180, 100, 255, 0.012)';
+  bgCtx.lineWidth = 1;
+  
+  const gridSize = 60;
+  for (let x = 0; x < bgWidth; x += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(x, 0);
+    bgCtx.lineTo(x, bgHeight);
+    bgCtx.stroke();
+  }
+  for (let y = 0; y < bgHeight; y += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, y);
+    bgCtx.lineTo(bgWidth, y);
+    bgCtx.stroke();
+  }
+  
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    if (p.x < 0) p.x = bgWidth;
+    if (p.x > bgWidth) p.x = 0;
+    if (p.y < 0) p.y = bgHeight;
+    if (p.y > bgHeight) p.y = 0;
+    
+    bgCtx.fillStyle = 'rgba(180, 100, 255, ' + p.opacity + ')';
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 80);
+  gradient.addColorStop(0, 'rgba(180, 100, 255, 0.02)');
+  gradient.addColorStop(1, 'rgba(180, 100, 255, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === MAIN CANVAS ===
+const mainCanvas = document.getElementById('main-canvas');
+const ctx = mainCanvas.getContext('2d');
+const pixelSize = 16;
+const gridCols = Math.floor(mainCanvas.width / pixelSize);
+const gridRows = Math.floor(mainCanvas.height / pixelSize);
+
+// Pre-rendered grid layer
+const gridCanvas = document.createElement('canvas');
+gridCanvas.width = mainCanvas.width;
+gridCanvas.height = mainCanvas.height;
+const gridCtx = gridCanvas.getContext('2d');
+
+// State
+let state = {
+  p1: null,
+  p2: null,
+  dx: 0,
+  dy: 0,
+  sx: 1,
+  sy: 1,
+  err: 0,
+  currentX: 0,
+  currentY: 0,
+  currentStep: 0,
+  totalSteps: 0,
+  pixels: [],
+  isRunning: false,
+  isComplete: false,
+  isAutoRunning: false,
+  autoInterval: null,
+  speed: 300,
+  dragging: null,
+  hoverX: -1,
+  hoverY: -1
+};
+
+// Pre-render grid (performance optimization)
+function preRenderGrid() {
+  gridCtx.fillStyle = '#080c10';
+  gridCtx.fillRect(0, 0, gridCanvas.width, gridCanvas.height);
+  
+  gridCtx.strokeStyle = 'rgba(180, 100, 255, 0.08)';
+  gridCtx.lineWidth = 1;
+  
+  for (let x = 0; x <= gridCols; x++) {
+    gridCtx.beginPath();
+    gridCtx.moveTo(x * pixelSize, 0);
+    gridCtx.lineTo(x * pixelSize, gridCanvas.height);
+    gridCtx.stroke();
+  }
+  
+  for (let y = 0; y <= gridRows; y++) {
+    gridCtx.beginPath();
+    gridCtx.moveTo(0, y * pixelSize);
+    gridCtx.lineTo(gridCanvas.width, y * pixelSize);
+    gridCtx.stroke();
+  }
+  
+  // Axis labels
+  gridCtx.fillStyle = 'rgba(180, 100, 255, 0.25)';
+  gridCtx.font = '8px JetBrains Mono';
+  gridCtx.textAlign = 'center';
+  
+  for (let x = 0; x < gridCols; x += 5) {
+    gridCtx.fillText(x.toString(), x * pixelSize + pixelSize / 2, gridCanvas.height - 3);
+  }
+  
+  gridCtx.textAlign = 'left';
+  for (let y = 0; y < gridRows; y += 5) {
+    gridCtx.fillText(y.toString(), 3, y * pixelSize + pixelSize / 2 + 3);
+  }
+}
+
+function render() {
+  // Draw pre-rendered grid
+  ctx.drawImage(gridCanvas, 0, 0);
+  
+  // Hover highlight
+  if (state.hoverX >= 0 && state.hoverY >= 0 && !state.isRunning) {
+    ctx.fillStyle = 'rgba(180, 100, 255, 0.1)';
+    ctx.fillRect(state.hoverX * pixelSize, state.hoverY * pixelSize, pixelSize, pixelSize);
+  }
+  
+  // Draw candidate pixels
+  if (state.isRunning && !state.isComplete && state.pixels.length > 0) {
+    const lastPixel = state.pixels[state.pixels.length - 1];
+    const nextX = lastPixel.x + state.sx;
+    const nextY = lastPixel.y;
+    const nextYNE = lastPixel.y + state.sy;
+    
+    // East candidate
+    if (nextX >= 0 && nextX < gridCols) {
+      ctx.fillStyle = 'rgba(0, 212, 255, 0.25)';
+      ctx.fillRect(nextX * pixelSize + 2, lastPixel.y * pixelSize + 2, pixelSize - 4, pixelSize - 4);
+    }
+    
+    // NE candidate
+    if (nextX >= 0 && nextX < gridCols && nextYNE >= 0 && nextYNE < gridRows) {
+      ctx.fillStyle = 'rgba(180, 100, 255, 0.25)';
+      ctx.fillRect(nextX * pixelSize + 2, nextYNE * pixelSize + 2, pixelSize - 4, pixelSize - 4);
+    }
+  }
+  
+  // Draw plotted pixels
+  state.pixels.forEach((pixel, index) => {
+    const isLast = index === state.pixels.length - 1;
+    const alpha = isLast ? 0.95 : 0.5 + (index / state.pixels.length) * 0.3;
+    
+    if (isLast && state.isRunning && !state.isComplete) {
+      const gradient = ctx.createRadialGradient(
+        pixel.x * pixelSize + pixelSize / 2,
+        pixel.y * pixelSize + pixelSize / 2,
+        0,
+        pixel.x * pixelSize + pixelSize / 2,
+        pixel.y * pixelSize + pixelSize / 2,
+        pixelSize * 1.2
+      );
+      gradient.addColorStop(0, 'rgba(0, 255, 200, 0.4)');
+      gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(
+        pixel.x * pixelSize - pixelSize / 2,
+        pixel.y * pixelSize - pixelSize / 2,
+        pixelSize * 2,
+        pixelSize * 2
+      );
+    }
+    
+    ctx.fillStyle = 'rgba(0, 255, 200, ' + alpha + ')';
+    ctx.fillRect(pixel.x * pixelSize + 2, pixel.y * pixelSize + 2, pixelSize - 4, pixelSize - 4);
+  });
+  
+  // Draw P1
+  if (state.p1) {
+    const gradient = ctx.createRadialGradient(
+      state.p1.x * pixelSize + pixelSize / 2,
+      state.p1.y * pixelSize + pixelSize / 2,
+      0,
+      state.p1.x * pixelSize + pixelSize / 2,
+      state.p1.y * pixelSize + pixelSize / 2,
+      pixelSize * 1.5
+    );
+    gradient.addColorStop(0, 'rgba(0, 212, 255, 0.4)');
+    gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(
+      state.p1.x * pixelSize - pixelSize,
+      state.p1.y * pixelSize - pixelSize,
+      pixelSize * 3,
+      pixelSize * 3
+    );
+    
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.3)';
+    ctx.fillRect(state.p1.x * pixelSize + 1, state.p1.y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+    
+    ctx.fillStyle = '#00d4ff';
+    ctx.beginPath();
+    ctx.arc(state.p1.x * pixelSize + pixelSize / 2, state.p1.y * pixelSize + pixelSize / 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#00d4ff';
+    ctx.font = 'bold 9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('P1', state.p1.x * pixelSize + pixelSize / 2, state.p1.y * pixelSize - 6);
+  }
+  
+  // Draw P2
+  if (state.p2) {
+    const gradient = ctx.createRadialGradient(
+      state.p2.x * pixelSize + pixelSize / 2,
+      state.p2.y * pixelSize + pixelSize / 2,
+      0,
+      state.p2.x * pixelSize + pixelSize / 2,
+      state.p2.y * pixelSize + pixelSize / 2,
+      pixelSize * 1.5
+    );
+    gradient.addColorStop(0, 'rgba(180, 100, 255, 0.4)');
+    gradient.addColorStop(1, 'rgba(180, 100, 255, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(
+      state.p2.x * pixelSize - pixelSize,
+      state.p2.y * pixelSize - pixelSize,
+      pixelSize * 3,
+      pixelSize * 3
+    );
+    
+    ctx.fillStyle = 'rgba(180, 100, 255, 0.3)';
+    ctx.fillRect(state.p2.x * pixelSize + 1, state.p2.y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+    
+    ctx.fillStyle = '#b464ff';
+    ctx.beginPath();
+    ctx.arc(state.p2.x * pixelSize + pixelSize / 2, state.p2.y * pixelSize + pixelSize / 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#b464ff';
+    ctx.font = 'bold 9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('P2', state.p2.x * pixelSize + pixelSize / 2, state.p2.y * pixelSize - 6);
+  }
+  
+  // Draw ideal line (dashed)
+  if (state.p1 && state.p2) {
+    ctx.strokeStyle = 'rgba(180, 100, 255, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(state.p1.x * pixelSize + pixelSize / 2, state.p1.y * pixelSize + pixelSize / 2);
+    ctx.lineTo(state.p2.x * pixelSize + pixelSize / 2, state.p2.y * pixelSize + pixelSize / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  
+  requestAnimationFrame(render);
+}
+
+function calculateBresenham() {
+  if (!state.p1 || !state.p2) return;
+  
+  state.dx = Math.abs(state.p2.x - state.p1.x);
+  state.dy = Math.abs(state.p2.y - state.p1.y);
+  state.sx = state.p1.x < state.p2.x ? 1 : -1;
+  state.sy = state.p1.y < state.p2.y ? 1 : -1;
+  state.err = state.dx - state.dy;
+  state.currentX = state.p1.x;
+  state.currentY = state.p1.y;
+  state.currentStep = 0;
+  state.pixels = [{ x: state.p1.x, y: state.p1.y, err: state.err }];
+  state.isComplete = false;
+  
+  // Calculate total steps
+  state.totalSteps = Math.max(state.dx, state.dy);
+  
+  // Update displays
+  document.getElementById('val-dx').textContent = state.dx;
+  document.getElementById('val-dy').textContent = state.dy;
+  document.getElementById('val-steps').textContent = state.totalSteps;
+}
+
+function startSimulation() {
+  if (!state.p1 || !state.p2) {
+    document.getElementById('canvas-info').textContent = 'Select two points first';
+    return;
+  }
+  
+  calculateBresenham();
+  state.isRunning = true;
+  
+  document.getElementById('btn-next').disabled = false;
+  document.getElementById('btn-auto').disabled = false;
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('canvas-info').textContent = 'Simulation running...';
+  
+  // Clear table
+  document.getElementById('calc-table-body').innerHTML = '';
+  
+  // Add initial row
+  addTableRow(0, state.p1.x, state.p1.y, state.err, 'Start');
+  
+  updateDecisionPanel();
+}
+
+function nextStep() {
+  if (!state.isRunning || state.isComplete) return;
+  
+  if (state.currentX === state.p2.x && state.currentY === state.p2.y) {
+    completeSimulation();
+    return;
+  }
+  
+  const e2 = 2 * state.err;
+  let decision = '';
+  let movedX = false;
+  let movedY = false;
+  
+  // Store previous position for candidate display
+  const prevX = state.currentX;
+  const prevY = state.currentY;
+  
+  if (e2 > -state.dy) {
+    state.err -= state.dy;
+    state.currentX += state.sx;
+    movedX = true;
+    decision += state.sx > 0 ? 'E' : 'W';
+  }
+  
+  if (e2 < state.dx) {
+    state.err += state.dx;
+    state.currentY += state.sy;
+    movedY = true;
+    if (decision) {
+      decision = state.sy > 0 ? 'NE' : 'SE';
+      if (state.sx < 0) decision = state.sy > 0 ? 'NW' : 'SW';
+    } else {
+      decision = state.sy > 0 ? 'N' : 'S';
+    }
+  }
+  
+  state.currentStep++;
+  state.pixels.push({ x: state.currentX, y: state.currentY, err: state.err, decision: decision });
+  
+  // Update displays
+  document.getElementById('step-display').textContent = state.currentStep;
+  
+  addTableRow(state.currentStep, state.currentX, state.currentY, state.err, decision);
+  
+  updateDecisionPanel();
+  
+  document.getElementById('canvas-info').textContent = 
+    'Step ' + state.currentStep + '/' + state.totalSteps + ' - Decision: ' + decision;
+  
+  // Check if complete
+  if (state.currentX === state.p2.x && state.currentY === state.p2.y) {
+    completeSimulation();
+  }
+}
+
+function completeSimulation() {
+  state.isComplete = true;
+  state.isRunning = false;
+  
+  if (state.isAutoRunning) {
+    toggleAutoRun();
+  }
+  
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('btn-auto').disabled = true;
+  document.getElementById('canvas-info').textContent = 'Complete - ' + state.pixels.length + ' pixels plotted';
+  
+  document.getElementById('explanation-text').innerHTML = 
+    '<strong style="color: #00ffc8;">Algorithm Complete!</strong><br><br>' +
+    'Total pixels plotted: <strong>' + state.pixels.length + '</strong><br>' +
+    'The line from (' + state.p1.x + ', ' + state.p1.y + ') to (' + state.p2.x + ', ' + state.p2.y + ') has been successfully drawn using only integer arithmetic.';
+  
+  // Clear candidate highlights
+  document.getElementById('candidate-east').classList.remove('selected');
+  document.getElementById('candidate-ne').classList.remove('selected');
+}
+
+function updateDecisionPanel() {
+  const lastPixel = state.pixels[state.pixels.length - 1];
+  
+  document.getElementById('current-pixel').textContent = '(' + lastPixel.x + ', ' + lastPixel.y + ')';
+  document.getElementById('error-value').textContent = lastPixel.err;
+  
+  const e2 = 2 * lastPixel.err;
+  document.getElementById('2e-value').textContent = e2;
+  
+  // Update candidates
+  const eastX = lastPixel.x + state.sx;
+  const eastY = lastPixel.y;
+  const neX = lastPixel.x + state.sx;
+  const neY = lastPixel.y + state.sy;
+  
+  document.getElementById('east-coord').textContent = '(' + eastX + ', ' + eastY + ')';
+  document.getElementById('ne-coord').textContent = '(' + neX + ', ' + neY + ')';
+  
+  // Determine decision
+  let decision = '';
+  let explanation = '';
+  
+  if (e2 > -state.dy && e2 < state.dx) {
+    decision = state.sy > 0 ? 'NE' : (state.sy < 0 ? 'SE' : 'E');
+    explanation = 'Since <span class="condition">2e > -dy AND 2e < dx</span>, move diagonally to <span class="result">' + decision + '</span>';
+    document.getElementById('candidate-ne').classList.add('selected');
+    document.getElementById('candidate-east').classList.remove('selected');
+  } else if (e2 > -state.dy) {
+    decision = state.sx > 0 ? 'E' : 'W';
+    explanation = 'Since <span class="condition">2e > -dy</span>, move horizontally to <span class="result">' + decision + '</span>';
+    document.getElementById('candidate-east').classList.add('selected');
+    document.getElementById('candidate-ne').classList.remove('selected');
+  } else if (e2 < state.dx) {
+    decision = state.sy > 0 ? 'N' : 'S';
+    explanation = 'Since <span class="condition">2e < dx</span>, move vertically to <span class="result">' + decision + '</span>';
+    document.getElementById('candidate-ne').classList.add('selected');
+    document.getElementById('candidate-east').classList.remove('selected');
+  } else {
+    decision = 'Start';
+    explanation = 'Initial pixel plotted. Click Next Step to begin the algorithm.';
+    document.getElementById('candidate-east').classList.remove('selected');
+    document.getElementById('candidate-ne').classList.remove('selected');
+  }
+  
+  document.getElementById('decision-type').textContent = decision;
+  
+  if (state.currentStep > 0) {
+    document.getElementById('explanation-text').innerHTML = 
+      '<strong>Step ' + state.currentStep + '</strong><br><br>' +
+      'Current pixel: <strong>(' + lastPixel.x + ', ' + lastPixel.y + ')</strong><br>' +
+      'Error value: <strong>' + lastPixel.err + '</strong><br><br>' +
+      explanation + ' at (' + state.currentX + ', ' + state.currentY + ')';
+  }
+}
+
+function addTableRow(step, x, y, err, decision) {
+  const tbody = document.getElementById('calc-table-body');
+  
+  // Remove "no data" row if exists
+  if (tbody.children.length === 1 && tbody.children[0].children.length === 1) {
+    tbody.innerHTML = '';
+  }
+  
+  const row = document.createElement('tr');
+  row.id = 'row-' + step;
+  row.className = 'current';
+  
+  row.innerHTML = 
+    '<td>' + step + '</td>' +
+    '<td>' + x + '</td>' +
+    '<td>' + y + '</td>' +
+    '<td>' + err + '</td>' +
+    '<td>' + decision + '</td>';
+  
+  // Mark previous rows as completed
+  tbody.querySelectorAll('tr').forEach(r => {
+    r.classList.remove('current');
+    r.classList.add('completed');
+  });
+  
+  tbody.appendChild(row);
+  
+  // Scroll to bottom
+  const tableBody = document.querySelector('.table-body');
+  if (tableBody) {
+    tableBody.scrollTop = tableBody.scrollHeight;
+  }
+}
+
+function toggleAutoRun() {
+  if (state.isAutoRunning) {
+    state.isAutoRunning = false;
+    if (state.autoInterval) {
+      clearInterval(state.autoInterval);
+      state.autoInterval = null;
+    }
+    document.getElementById('btn-auto').innerHTML = 
+      '<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg> Auto';
+    document.getElementById('btn-next').disabled = state.isComplete;
+  } else {
+    state.isAutoRunning = true;
+    document.getElementById('btn-auto').innerHTML = 
+      '<svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Pause';
+    document.getElementById('btn-next').disabled = true;
+    
+    state.autoInterval = setInterval(function() {
+      if (!state.isComplete) {
+        nextStep();
+      } else {
+        toggleAutoRun();
+      }
+    }, state.speed);
+  }
+}
+
+function updateSpeed() {
+  state.speed = parseInt(document.getElementById('speed-slider').value);
+  document.getElementById('speed-value').textContent = state.speed + 'ms';
+  
+  // Restart interval if auto-running
+  if (state.isAutoRunning) {
+    clearInterval(state.autoInterval);
+    state.autoInterval = setInterval(function() {
+      if (!state.isComplete) {
+        nextStep();
+      } else {
+        toggleAutoRun();
+      }
+    }, state.speed);
+  }
+}
+
+function resetSimulation() {
+  if (state.isAutoRunning) {
+    toggleAutoRun();
+  }
+  
+  state.p1 = null;
+  state.p2 = null;
+  state.dx = 0;
+  state.dy = 0;
+  state.sx = 1;
+  state.sy = 1;
+  state.err = 0;
+  state.currentX = 0;
+  state.currentY = 0;
+  state.currentStep = 0;
+  state.totalSteps = 0;
+  state.pixels = [];
+  state.isRunning = false;
+  state.isComplete = false;
+  
+  document.getElementById('p1-display').textContent = 'Not Set';
+  document.getElementById('p2-display').textContent = 'Not Set';
+  document.getElementById('val-dx').textContent = '-';
+  document.getElementById('val-dy').textContent = '-';
+  document.getElementById('val-steps').textContent = '-';
+  document.getElementById('step-display').textContent = '0';
+  document.getElementById('current-pixel').textContent = '(-, -)';
+  document.getElementById('error-value').textContent = '-';
+  document.getElementById('2e-value').textContent = '-';
+  document.getElementById('decision-type').textContent = '-';
+  document.getElementById('east-coord').textContent = '(-, -)';
+  document.getElementById('ne-coord').textContent = '(-, -)';
+  document.getElementById('canvas-info').textContent = 'Drag points or click to set';
+  
+  document.getElementById('candidate-east').classList.remove('selected');
+  document.getElementById('candidate-ne').classList.remove('selected');
+  
+  document.getElementById('explanation-text').innerHTML = 
+    'Select two points on the grid to begin. Drag points to reposition them. Click <strong>Start</strong> to run the algorithm.';
+  
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('btn-auto').disabled = true;
+  
+  document.getElementById('calc-table-body').innerHTML = 
+    '<tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 20px;">No data yet</td></tr>';
+}
+
+// Mouse event handlers
+function getGridPos(e) {
+  const rect = mainCanvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / pixelSize);
+  const y = Math.floor((e.clientY - rect.top) / pixelSize);
+  return { x: Math.max(0, Math.min(gridCols - 1, x)), y: Math.max(0, Math.min(gridRows - 1, y)) };
+}
+
+function isNearPoint(gridX, gridY, point) {
+  if (!point) return false;
+  return Math.abs(gridX - point.x) <= 1 && Math.abs(gridY - point.y) <= 1;
+}
+
+mainCanvas.addEventListener('mousedown', function(e) {
+  if (state.isRunning) return;
+  
+  const pos = getGridPos(e);
+  
+  // Check if clicking near existing points
+  if (isNearPoint(pos.x, pos.y, state.p1)) {
+    state.dragging = 'p1';
+  } else if (isNearPoint(pos.x, pos.y, state.p2)) {
+    state.dragging = 'p2';
+  } else if (!state.p1) {
+    state.p1 = { x: pos.x, y: pos.y };
+    document.getElementById('p1-display').textContent = '(' + pos.x + ', ' + pos.y + ')';
+  } else if (!state.p2) {
+    state.p2 = { x: pos.x, y: pos.y };
+    document.getElementById('p2-display').textContent = '(' + pos.x + ', ' + pos.y + ')';
+  } else {
+    // Both set, move nearest
+    const distP1 = Math.sqrt(Math.pow(pos.x - state.p1.x, 2) + Math.pow(pos.y - state.p1.y, 2));
+    const distP2 = Math.sqrt(Math.pow(pos.x - state.p2.x, 2) + Math.pow(pos.y - state.p2.y, 2));
+    
+    if (distP1 < distP2) {
+      state.dragging = 'p1';
+    } else {
+      state.dragging = 'p2';
+    }
+  }
+});
+
+mainCanvas.addEventListener('mousemove', function(e) {
+  const pos = getGridPos(e);
+  state.hoverX = pos.x;
+  state.hoverY = pos.y;
+  
+  document.getElementById('hover-coords').textContent = 'Mouse: (' + pos.x + ', ' + pos.y + ')';
+  
+  // Handle dragging
+  if (state.dragging && !state.isRunning) {
+    if (state.dragging === 'p1') {
+      state.p1 = { x: pos.x, y: pos.y };
+      document.getElementById('p1-display').textContent = '(' + pos.x + ', ' + pos.y + ')';
+    } else if (state.dragging === 'p2') {
+      state.p2 = { x: pos.x, y: pos.y };
+      document.getElementById('p2-display').textContent = '(' + pos.x + ', ' + pos.y + ')';
+    }
+  }
+  
+  // Change cursor for draggable points
+  if (!state.isRunning) {
+    if (isNearPoint(pos.x, pos.y, state.p1) || isNearPoint(pos.x, pos.y, state.p2)) {
+      mainCanvas.style.cursor = 'grab';
+    } else {
+      mainCanvas.style.cursor = 'crosshair';
+    }
+  }
+});
+
+mainCanvas.addEventListener('mouseup', function() {
+  state.dragging = null;
+});
+
+mainCanvas.addEventListener('mouseleave', function() {
+  state.hoverX = -1;
+  state.hoverY = -1;
+  state.dragging = null;
+});
+
+// Window events
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initParticles();
+});
+
+// Initialize
+initParticles();
+animate();
+preRenderGrid();
+render();
+</script>
+
+</body>
+</html>

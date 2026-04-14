@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Structures | PROTO A</title>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  <style>
+    /* --- Core Theme Variables (Consistent with Main Dashboard) --- */
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+      
+      --bg-body: #0a0a0f;
+      --bg-card: #16161f;
+      --bg-elevated: #1c1c28;
+      --text-main: #f1f5f9;
+      --text-muted: #64748b;
+      --text-dim: #475569;
+      --border: #1e1e2e;
+      --border-light: #2a2a3e;
+      
+      --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.15);
+      --shadow-card: 0 10px 30px rgba(0,0,0,0.4);
+      --radius-lg: 20px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Tech Grid Background */
+    body::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: 
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+      mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+    }
+
+    /* --- Navigation --- */
+    .topbar {
+      height: 64px; width: 100%;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 24px; position: sticky; top: 0;
+      background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+    
+    .nav-btn {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      padding: 8px 16px; border-radius: 8px;
+      color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.9rem; font-weight: 500;
+      transition: var(--transition);
+    }
+    .nav-btn:hover { color: var(--text-main); border-color: var(--border-light); }
+    
+    .icon-btn {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; transition: var(--transition);
+    }
+    .icon-btn:hover { background: var(--bg-elevated); color: var(--text-main); }
+
+    /* --- Main Layout --- */
+    .container {
+      max-width: 1200px; margin: 0 auto;
+      padding: 60px 24px;
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; z-index: 1;
+    }
+
+    .hero-text {
+      text-align: center; margin-bottom: 60px;
+    }
+    
+    .hero-badge {
+      display: inline-block; padding: 6px 14px;
+      background: var(--primary-light); color: var(--primary);
+      border-radius: 20px; font-size: 0.75rem;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    
+    .hero-title {
+      font-size: 3.5rem; font-weight: 800; letter-spacing: -1px;
+      margin-bottom: 16px; background: var(--primary-gradient);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-sub {
+      font-size: 1.1rem; color: var(--text-muted); max-width: 500px; margin: 0 auto;
+    }
+
+    /* --- Cards Grid --- */
+    .cards-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 30px; width: 100%;
+    }
+
+    /* --- Selection Card --- */
+    .select-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+      display: flex; flex-direction: column;
+      cursor: pointer; transition: var(--transition);
+      box-shadow: var(--shadow-card); position: relative;
+    }
+
+    .select-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--primary);
+      box-shadow: var(--shadow-glow);
+    }
+
+    /* Preview Area */
+    .card-preview {
+      height: 220px; background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+
+    /* Linear Animation: Array Bars */
+    .linear-viz {
+      display: flex; align-items: flex-end; gap: 6px; height: 100px;
+    }
+    .l-bar {
+      width: 12px; background: var(--primary); border-radius: 4px;
+      animation: linearPop 2s ease-in-out infinite;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+    }
+    .l-bar:nth-child(1) { height: 40px; animation-delay: 0.1s; }
+    .l-bar:nth-child(2) { height: 70px; animation-delay: 0.2s; }
+    .l-bar:nth-child(3) { height: 50px; animation-delay: 0.3s; }
+    .l-bar:nth-child(4) { height: 90px; animation-delay: 0.4s; }
+    .l-bar:nth-child(5) { height: 60px; animation-delay: 0.5s; }
+    .l-bar:nth-child(6) { height: 80px; animation-delay: 0.6s; }
+    @keyframes linearPop {
+      0%, 100% { transform: scaleY(1) translateY(0); opacity: 0.7; }
+      50% { transform: scaleY(1.2) translateY(-5px); opacity: 1; }
+    }
+
+    /* Non-Linear Animation: Graph/Tree */
+    .nonlinear-viz { position: relative; width: 140px; height: 120px; }
+    .node {
+      position: absolute; width: 18px; height: 18px;
+      background: var(--primary); border-radius: 50%;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+      animation: nodePulse 2.5s ease-in-out infinite;
+    }
+    /* Tree Layout */
+    .node.root { top: 0; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
+    .node.l { top: 40px; left: 15px; animation-delay: 0.3s; }
+    .node.r { top: 40px; right: 15px; animation-delay: 0.3s; }
+    .node.ll { top: 80px; left: 0; width: 14px; height: 14px; animation-delay: 0.6s; }
+    .node.lr { top: 80px; left: 35px; width: 14px; height: 14px; animation-delay: 0.6s; }
+    .node.rr { top: 80px; right: 0; width: 14px; height: 14px; animation-delay: 0.6s; }
+    
+    /* Connecting Lines */
+    .nonlinear-viz::before, .nonlinear-viz::after {
+      content: ''; position: absolute; background: var(--border-light);
+      height: 2px; border-radius: 1px;
+    }
+    /* Root to Children */
+    .nonlinear-viz::before {
+      width: 80px; top: 20px; left: 30px;
+    }
+    /* Children to Grandchildren */
+    .nonlinear-viz::after {
+      width: 120px; top: 75px; left: 10px;
+    }
+
+    @keyframes nodePulse {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+    .node.root { animation-name: nodePulseRoot; }
+    @keyframes nodePulseRoot {
+      0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
+      50% { transform: translateX(-50%) scale(1.2); opacity: 1; }
+    }
+
+    /* Live Badge */
+    .preview-badge {
+      position: absolute; top: 12px; right: 12px;
+      padding: 4px 10px; background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px); border-radius: 4px;
+      font-size: 0.65rem; font-weight: 700; color: #10b981;
+      text-transform: uppercase; display: flex; align-items: center; gap: 4px;
+    }
+    .preview-badge::before {
+      content: ''; width: 6px; height: 6px; background: #10b981;
+      border-radius: 50%; animation: pulse 1.5s infinite;
+    }
+
+    /* Content Area */
+    .card-content { padding: 24px; flex: 1; display: flex; flex-direction: column; }
+    
+    .card-tag {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--primary); font-weight: 700; margin-bottom: 8px;
+    }
+    
+    .card-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; }
+    .card-desc {
+      font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;
+      margin-bottom: 24px; flex: 1;
+    }
+
+    .card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 16px; border-top: 1px solid var(--border);
+    }
+    
+    .btn-explore {
+      background: var(--bg-elevated); border: none; padding: 8px 16px;
+      border-radius: 6px; color: var(--text-main); font-weight: 600;
+      display: flex; align-items: center; gap: 6px; font-size: 0.85rem;
+      cursor: pointer; transition: var(--transition);
+    }
+    .btn-explore i { transition: transform 0.2s; }
+    .select-card:hover .btn-explore { background: var(--primary); color: white; }
+    .select-card:hover .btn-explore i { transform: translateX(3px); }
+
+    .meta-info { font-size: 0.75rem; color: var(--text-dim); }
+
+    @media(max-width: 768px) {
+      .hero-title { font-size: 2.2rem; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="topbar">
+    <button class="nav-btn" onclick="window.location.href='../index.html'">
+      <i class="ri-arrow-left-line"></i> Back to Lab
+    </button>
+    
+    <button class="icon-btn" id="themeBtn" aria-label="Change Theme">
+      <i class="ri-palette-line"></i>
+    </button>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+    <div class="hero-text">
+      <div class="hero-badge">Module Selection</div>
+      <h1 class="hero-title">Data Structures</h1>
+      <p class="hero-sub">Select a structural paradigm to explore interactive visualizations and algorithmic behaviors.</p>
+    </div>
+
+    <div class="cards-grid">
+      
+      <!-- Linear Card -->
+      <div class="select-card" onclick="navigate('linear.html')">
+        <div class="card-preview">
+          <div class="linear-viz">
+            <div class="l-bar"></div><div class="l-bar"></div><div class="l-bar"></div>
+            <div class="l-bar"></div><div class="l-bar"></div><div class="l-bar"></div>
+          </div>
+          <div class="preview-badge">Interactive</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag">Sequential Storage</span>
+          <h2 class="card-title">Linear Structures</h2>
+          <p class="card-desc">
+            Explore data organized sequentially where elements are attached one after another. 
+            Includes Arrays, Linked Lists, Stacks, and Queues.
+          </p>
+          <div class="card-footer">
+            <span class="meta-info">4 Visualizations</span>
+            <button class="btn-explore">
+              Enter Lab <i class="ri-arrow-right-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Non-Linear Card -->
+      <div class="select-card" onclick="navigate('nonlinear.html')">
+        <div class="card-preview">
+          <div class="nonlinear-viz">
+            <div class="node root"></div>
+            <div class="node l"></div><div class="node r"></div>
+            <div class="node ll"></div><div class="node lr"></div>
+            <div class="node rr"></div>
+          </div>
+          <div class="preview-badge">Interactive</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag">Hierarchical Storage</span>
+          <h2 class="card-title">Non-Linear Structures</h2>
+          <p class="card-desc">
+            Visualize complex relationships where data elements are connected hierarchically. 
+            Includes Trees, Graphs, and Heaps.
+          </p>
+          <div class="card-footer">
+            <span class="meta-info">3 Visualizations</span>
+            <button class="btn-explore">
+              Enter Lab <i class="ri-arrow-right-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Simple Theme Cycle for Demo purposes
+    const themes = ['indigo', 'cyan', 'violet', 'green'];
+    let currentTheme = 0;
+
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      currentTheme = (currentTheme + 1) % themes.length;
+      const color = themes[currentTheme];
+      document.body.setAttribute('data-theme-color', color);
+      
+      // Update CSS variables dynamically for demo simplicity
+      // In production, this would be handled by the CSS :root logic
+      const colors = {
+        indigo: { p: '#6366f1', pl: 'rgba(99, 102, 241, 0.15)' },
+        cyan: { p: '#06b6d4', pl: 'rgba(6, 182, 212, 0.15)' },
+        violet: { p: '#8b5cf6', pl: 'rgba(139, 92, 246, 0.15)' },
+        green: { p: '#10b981', pl: 'rgba(16, 185, 129, 0.15)' }
+      };
+      
+      document.documentElement.style.setProperty('--primary', colors[color].p);
+      document.documentElement.style.setProperty('--primary-light', colors[color].pl);
+      document.documentElement.style.setProperty('--primary-gradient', `linear-gradient(135deg, ${colors[color].p}, #8b5cf6)`);
+    });
+
+    function navigate(url) {
+      window.location.href = url;
+    }
+  </script>
+</body>
+</html>

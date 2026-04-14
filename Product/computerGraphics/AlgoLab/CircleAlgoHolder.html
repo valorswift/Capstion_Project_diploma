@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circle Algorithms | Computer Graphics</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #05080c;
+  --bg-elevated: #0a1018;
+  --card: #0d1520;
+  --border: #1a2535;
+  --accent: #00ffc8;
+  --accent-alt: #ff6b4a;
+  --text: #e4e8ec;
+  --muted: #5a6a7a;
+  --cyan-blue: #00d4ff;
+  --warm-gold: #ffa94d;
+  --violet: #b464ff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 8, 12, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent-alt), var(--warm-gold));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent-alt);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent-alt);
+}
+
+.hero {
+  min-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent-alt);
+  background: rgba(255, 107, 74, 0.1);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 107, 74, 0.2);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent-alt);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.main-title {
+  font-size: clamp(36px, 7vw, 56px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  color: var(--text);
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 550px;
+  line-height: 1.8;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 28px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  display: block;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-alt), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(255, 107, 74, 0.3);
+  box-shadow: 
+    0 20px 60px -20px rgba(255, 107, 74, 0.15),
+    0 0 0 1px rgba(255, 107, 74, 0.1);
+}
+
+.card-preview {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: #080c10;
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.card-preview-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent-alt);
+  background: rgba(5, 8, 12, 0.85);
+  padding: 6px 10px;
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+  z-index: 1;
+}
+
+.card-content {
+  padding: 28px;
+}
+
+.card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.tag-symmetry { 
+  background: linear-gradient(135deg, rgba(255, 107, 74, 0.15), rgba(255, 169, 77, 0.15)); 
+  color: var(--accent-alt); 
+}
+.tag-bresenham { 
+  background: linear-gradient(135deg, rgba(180, 100, 255, 0.15), rgba(0, 212, 255, 0.15)); 
+  color: var(--violet); 
+}
+.tag-midpoint { 
+  background: linear-gradient(135deg, rgba(0, 255, 200, 0.15), rgba(0, 212, 255, 0.15)); 
+  color: var(--accent); 
+}
+
+.card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 24px 0;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--accent-alt);
+  color: var(--bg);
+  transition: all 0.3s ease;
+}
+
+.card:hover .card-btn {
+  background: #ff7d5a;
+  transform: translateX(4px);
+}
+
+.card-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.card:hover .card-btn svg {
+  transform: translateX(4px);
+}
+
+.card-meta {
+  text-align: right;
+}
+
+.card-meta-difficulty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.difficulty-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.difficulty-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.difficulty-dots span.active {
+  background: var(--accent-alt);
+}
+
+.symmetry-section {
+  margin-top: 80px;
+  padding: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.symmetry-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.symmetry-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 12px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.symmetry-item {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: rgba(255, 107, 74, 0.1);
+  border: 1px solid rgba(255, 107, 74, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--accent-alt);
+  transition: all 0.3s ease;
+}
+
+.symmetry-item:hover {
+  background: rgba(255, 107, 74, 0.2);
+  transform: scale(1.05);
+}
+
+.symmetry-item.highlight {
+  background: rgba(255, 107, 74, 0.25);
+  border-color: var(--accent-alt);
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 40vh;
+  }
+  
+  .card-preview {
+    height: 160px;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .symmetry-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="AlgoLabHolder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#05080c" stroke-width="2.5">
+          <circle cx="12" cy="12" r="8"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">CG Lab</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="algorithm_lab.html">Algorithms</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Circle Algorithms</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Curved Primitives</div>
+    <h1 class="main-title">Circle Algorithms</h1>
+    <p class="subtitle">
+      // Explore efficient circle generation using symmetry properties<br>
+      // and decision parameter algorithms for pixel-perfect curves.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <div class="grid">
+      
+      <!-- Circle Symmetry -->
+      <a href="circle/BasicsOFCircle.html" class="card">
+        <div class="card-preview">
+          <canvas id="preview-symmetry"></canvas>
+          <div class="card-preview-overlay">8-WAY</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-symmetry">Symmetry</span>
+          <h3>Circle Symmetry</h3>
+          <p>
+            Exploit 8-way symmetry to generate complete circles from a single octant. 
+            Understand how one computed point produces eight reflected pixels.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Start Learning
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-difficulty">
+                <span>Beginner</span>
+                <div class="difficulty-dots">
+                  <span class="active"></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- Bresenham Circle -->
+      <a href="circle/Bcircle.html" class="card">
+        <div class="card-preview">
+          <canvas id="preview-bresenham"></canvas>
+          <div class="card-preview-overlay">INTEGER</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-bresenham">Bresenham</span>
+          <h3>Bresenham Circle Algorithm</h3>
+          <p>
+            Integer-only circle generation using decision parameters. 
+            Eliminate floating-point operations for maximum efficiency.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Open Lab
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-difficulty">
+                <span>Intermediate</span>
+                <div class="difficulty-dots">
+                  <span class="active"></span>
+                  <span class="active"></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- Midpoint Circle -->
+      <a href="circle/MidPointCircle.html" class="card">
+        <div class="card-preview">
+          <canvas id="preview-midpoint"></canvas>
+          <div class="card-preview-overlay">DECISION</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-midpoint">Midpoint</span>
+          <h3>Midpoint Circle Algorithm</h3>
+          <p>
+            Use midpoint decision criteria to select between candidate pixels. 
+            The most widely taught and implemented circle algorithm.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Open Lab
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-difficulty">
+                <span>Advanced</span>
+                <div class="difficulty-dots">
+                  <span class="active"></span>
+                  <span class="active"></span>
+                  <span class="active"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+
+    <div class="symmetry-section">
+      <h3 class="symmetry-title">8-Way Symmetry Transformations</h3>
+      <div class="symmetry-grid">
+        <div class="symmetry-item highlight">(x, y)</div>
+        <div class="symmetry-item">(y, x)</div>
+        <div class="symmetry-item">(-y, x)</div>
+        <div class="symmetry-item">(-x, y)</div>
+        <div class="symmetry-item">(-x, -y)</div>
+        <div class="symmetry-item">(-y, -x)</div>
+        <div class="symmetry-item">(y, -x)</div>
+        <div class="symmetry-item">(x, -y)</div>
+      </div>
+      <p style="text-align: center; margin-top: 24px; font-size: 13px; color: var(--muted); font-family: 'JetBrains Mono', monospace;">
+        // One computed point in octant 0 generates 7 reflected points
+      </p>
+    </div>
+    
+  </section>
+
+  <footer>
+    <p>// Circle generation algorithms for raster displays</p>
+  </footer>
+  
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+bgCanvas.width = width;
+bgCanvas.height = height;
+
+let mouseX = width / 2;
+let mouseY = height / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const particles = [];
+const particleCount = 35;
+
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.2 + 0.05
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#05080c';
+  bgCtx.fillRect(0, 0, width, height);
+  
+  const time = Date.now() * 0.001;
+  
+  // Concentric circles
+  bgCtx.strokeStyle = 'rgba(255, 107, 74, 0.03)';
+  bgCtx.lineWidth = 1;
+  
+  const cx = width / 2;
+  const cy = height / 2;
+  
+  for (let r = 50; r < Math.max(width, height); r += 80) {
+    const pulse = Math.sin(time + r * 0.01) * 5;
+    bgCtx.beginPath();
+    bgCtx.arc(cx, cy, r + pulse, 0, Math.PI * 2);
+    bgCtx.stroke();
+  }
+  
+  // Radial lines
+  bgCtx.strokeStyle = 'rgba(255, 107, 74, 0.02)';
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2 + time * 0.1;
+    bgCtx.beginPath();
+    bgCtx.moveTo(cx, cy);
+    bgCtx.lineTo(
+      cx + Math.cos(angle) * Math.max(width, height),
+      cy + Math.sin(angle) * Math.max(width, height)
+    );
+    bgCtx.stroke();
+  }
+  
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    if (p.x < 0) p.x = width;
+    if (p.x > width) p.x = 0;
+    if (p.y < 0) p.y = height;
+    if (p.y > height) p.y = 0;
+    
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 120) {
+      p.x -= dx * 0.006;
+      p.y -= dy * 0.006;
+    }
+    
+    bgCtx.fillStyle = 'rgba(255, 107, 74, ' + p.opacity + ')';
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  // Mouse glow
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 150);
+  gradient.addColorStop(0, 'rgba(255, 107, 74, 0.04)');
+  gradient.addColorStop(1, 'rgba(255, 107, 74, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, width, height);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.1;
+  mouseY += (targetMouseY - mouseY) * 0.1;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === PREVIEW CANVASES ===
+function initPreviewSymmetry() {
+  const canvas = document.getElementById('preview-symmetry');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const pixelSize = 6;
+  let t = 0;
+  let activeOctant = 0;
+  let lastSwitch = 0;
+  
+  function draw() {
+    t += 0.016;
+    
+    if (t - lastSwitch > 0.4) {
+      activeOctant = (activeOctant + 1) % 9;
+      lastSwitch = t;
+    }
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const radius = Math.min(canvas.width, canvas.height) * 0.35;
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(255, 107, 74, 0.05)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += pixelSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += pixelSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+    
+    // Center cross
+    ctx.strokeStyle = 'rgba(255, 107, 74, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(canvas.width, cy);
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, canvas.height);
+    ctx.stroke();
+    
+    // Draw octant lines
+    ctx.strokeStyle = 'rgba(255, 107, 74, 0.1)';
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(angle) * radius * 1.3, cy + Math.sin(angle) * radius * 1.3);
+      ctx.stroke();
+    }
+    
+    // Octant labels
+    ctx.fillStyle = 'rgba(255, 107, 74, 0.4)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + Math.PI / 8;
+      const labelR = radius * 1.15;
+      ctx.fillText(String(i), cx + Math.cos(angle) * labelR, cy + Math.sin(angle) * labelR + 4);
+    }
+    
+    // Draw circle points with symmetry
+    const numPoints = 20;
+    for (let i = 0; i < numPoints; i++) {
+      const angle = (i / numPoints) * (Math.PI / 4);
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      
+      // 8-way symmetry points
+      const points = [
+        { x: cx + x, y: cy - y, octant: 0 },
+        { x: cx + y, y: cy - x, octant: 1 },
+        { x: cx + y, y: cy + x, octant: 2 },
+        { x: cx + x, y: cy + y, octant: 3 },
+        { x: cx - x, y: cy + y, octant: 4 },
+        { x: cx - y, y: cy + x, octant: 5 },
+        { x: cx - y, y: cy - x, octant: 6 },
+        { x: cx - x, y: cy - y, octant: 7 }
+      ];
+      
+      points.forEach(p => {
+        const isActive = activeOctant < 8 && p.octant === activeOctant;
+        const isOriginal = activeOctant === 8 && p.octant === 0;
+        
+        const wave = Math.sin(t * 3 + i * 0.3) * 0.2 + 0.8;
+        const alpha = isActive || isOriginal ? wave * 0.9 : 0.25;
+        const size = isActive || isOriginal ? pixelSize - 1 : pixelSize - 3;
+        
+        ctx.fillStyle = 'rgba(255, 107, 74, ' + alpha + ')';
+        ctx.fillRect(
+          Math.floor(p.x / pixelSize) * pixelSize + (pixelSize - size) / 2,
+          Math.floor(p.y / pixelSize) * pixelSize + (pixelSize - size) / 2,
+          size,
+          size
+        );
+      });
+    }
+    
+    // Current octant indicator
+    if (activeOctant < 8) {
+      ctx.fillStyle = 'rgba(255, 107, 74, 0.7)';
+      ctx.font = '11px JetBrains Mono';
+      ctx.textAlign = 'left';
+      ctx.fillText('OCTANT ' + activeOctant, 12, 20);
+    } else {
+      ctx.fillStyle = 'rgba(255, 107, 74, 0.7)';
+      ctx.font = '11px JetBrains Mono';
+      ctx.textAlign = 'left';
+      ctx.fillText('ALL ACTIVE', 12, 20);
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewBresenham() {
+  const canvas = document.getElementById('preview-bresenham');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const pixelSize = 5;
+  let t = 0;
+  let buildProgress = 0;
+  let isBuilding = true;
+  
+  function bresenhamCircle(radius) {
+    const points = [];
+    let x = 0;
+    let y = radius;
+    let d = 3 - 2 * radius;
+    
+    while (x <= y) {
+      points.push({ x, y, d });
+      if (d < 0) {
+        d = d + 4 * x + 6;
+      } else {
+        d = d + 4 * (x - y) + 10;
+        y--;
+      }
+      x++;
+    }
+    return points;
+  }
+  
+  function draw() {
+    t += 0.02;
+    
+    if (isBuilding) {
+      buildProgress += 0.5;
+    }
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const cols = Math.floor(canvas.width / pixelSize);
+    const rows = Math.floor(canvas.height / pixelSize);
+    const cx = Math.floor(cols / 2);
+    const cy = Math.floor(rows / 2);
+    const radius = Math.floor(Math.min(cols, rows) / 2) - 6;
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(180, 100, 255, 0.04)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= cols; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * pixelSize, 0);
+      ctx.lineTo(x * pixelSize, canvas.height);
+      ctx.stroke();
+    }
+    
+    // Center
+    ctx.fillStyle = 'rgba(180, 100, 255, 0.3)';
+    ctx.fillRect(cx * pixelSize, cy * pixelSize, pixelSize, pixelSize);
+    
+    // Get circle points
+    const octantPoints = bresenhamCircle(radius);
+    const visiblePoints = Math.min(Math.floor(buildProgress), octantPoints.length);
+    
+    // Draw points with 8-way symmetry
+    for (let i = 0; i < octantPoints.length; i++) {
+      const p = octantPoints[i];
+      const symPoints = [
+        { x: cx + p.x, y: cy - p.y },
+        { x: cx + p.y, y: cy - p.x },
+        { x: cx + p.y, y: cy + p.x },
+        { x: cx + p.x, y: cy + p.y },
+        { x: cx - p.x, y: cy + p.y },
+        { x: cx - p.y, y: cy + p.x },
+        { x: cx - p.y, y: cy - p.x },
+        { x: cx - p.x, y: cy - p.y }
+      ];
+      
+      const alpha = i < visiblePoints ? 0.8 : 0.1;
+      const wave = Math.sin(t * 2 + i * 0.2) * 0.15 + 0.85;
+      
+      symPoints.forEach(sp => {
+        const gradient = ctx.createRadialGradient(
+          sp.x * pixelSize + pixelSize / 2,
+          sp.y * pixelSize + pixelSize / 2,
+          0,
+          sp.x * pixelSize + pixelSize / 2,
+          sp.y * pixelSize + pixelSize / 2,
+          pixelSize
+        );
+        gradient.addColorStop(0, 'rgba(180, 100, 255, ' + (alpha * wave) + ')');
+        gradient.addColorStop(1, 'rgba(0, 212, 255, ' + (alpha * wave * 0.5) + ')');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(sp.x * pixelSize + 1, sp.y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+      });
+    }
+    
+    // Show decision parameter
+    if (visiblePoints > 0 && visiblePoints <= octantPoints.length) {
+      const currentP = octantPoints[Math.min(visiblePoints - 1, octantPoints.length - 1)];
+      ctx.fillStyle = 'rgba(180, 100, 255, 0.7)';
+      ctx.font = '10px JetBrains Mono';
+      ctx.textAlign = 'left';
+      ctx.fillText('d = ' + currentP.d, 10, 20);
+      ctx.fillText('x = ' + currentP.x + ', y = ' + currentP.y, 10, 34);
+    }
+    
+    // Reset animation
+    if (buildProgress > octantPoints.length + 20) {
+      buildProgress = 0;
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewMidpoint() {
+  const canvas = document.getElementById('preview-midpoint');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const pixelSize = 5;
+  let t = 0;
+  
+  function midpointCircle(radius) {
+    const points = [];
+    let x = 0;
+    let y = radius;
+    let p = 1 - radius;
+    
+    while (x <= y) {
+      points.push({ x, y, p });
+      x++;
+      if (p < 0) {
+        p = p + 2 * x + 1;
+      } else {
+        y--;
+        p = p + 2 * (x - y) + 1;
+      }
+    }
+    return points;
+  }
+  
+  function draw() {
+    t += 0.025;
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const cols = Math.floor(canvas.width / pixelSize);
+    const rows = Math.floor(canvas.height / pixelSize);
+    const cx = Math.floor(cols / 2);
+    const cy = Math.floor(rows / 2);
+    const radius = Math.floor(Math.min(cols, rows) / 2) - 6;
+    
+    // Animated radius
+    const animRadius = Math.floor(radius + Math.sin(t) * 4);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.04)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= cols; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * pixelSize, 0);
+      ctx.lineTo(x * pixelSize, canvas.height);
+      ctx.stroke();
+    }
+    
+    // Ideal circle outline
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx * pixelSize + pixelSize / 2, cy * pixelSize + pixelSize / 2, animRadius * pixelSize, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Center
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.4)';
+    ctx.beginPath();
+    ctx.arc(cx * pixelSize + pixelSize / 2, cy * pixelSize + pixelSize / 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Get circle points
+    const octantPoints = midpointCircle(Math.max(1, animRadius));
+    
+    // Draw midpoint indicator
+    const firstP = octantPoints[0];
+    if (firstP) {
+      const midX = cx + firstP.x + 0.5;
+      const midY = cy - firstP.y - 0.5;
+      
+      ctx.fillStyle = 'rgba(255, 169, 77, 0.6)';
+      ctx.beginPath();
+      ctx.arc(midX * pixelSize, midY * pixelSize, 3, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.strokeStyle = 'rgba(255, 169, 77, 0.3)';
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(cx * pixelSize + pixelSize / 2, cy * pixelSize + pixelSize / 2);
+      ctx.lineTo(midX * pixelSize, midY * pixelSize);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    // Draw points with 8-way symmetry
+    octantPoints.forEach((p, i) => {
+      const symPoints = [
+        { x: cx + p.x, y: cy - p.y },
+        { x: cx + p.y, y: cy - p.x },
+        { x: cx + p.y, y: cy + p.x },
+        { x: cx + p.x, y: cy + p.y },
+        { x: cx - p.x, y: cy + p.y },
+        { x: cx - p.y, y: cy + p.x },
+        { x: cx - p.y, y: cy - p.x },
+        { x: cx - p.x, y: cy - p.y }
+      ];
+      
+      const wave = Math.sin(t * 3 + i * 0.15) * 0.2 + 0.8;
+      
+      symPoints.forEach(sp => {
+        const gradient = ctx.createRadialGradient(
+          sp.x * pixelSize + pixelSize / 2,
+          sp.y * pixelSize + pixelSize / 2,
+          0,
+          sp.x * pixelSize + pixelSize / 2,
+          sp.y * pixelSize + pixelSize / 2,
+          pixelSize
+        );
+        gradient.addColorStop(0, 'rgba(0, 255, 200, ' + wave + ')');
+        gradient.addColorStop(1, 'rgba(0, 212, 255, ' + (wave * 0.6) + ')');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(sp.x * pixelSize + 1, sp.y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+      });
+    });
+    
+    // Decision parameter display
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.7)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText('p = 1 - r', 10, 20);
+    ctx.fillText('r = ' + animRadius, 10, 34);
+    
+    // Pixel count
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.5)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(octantPoints.length * 8 + ' PIXELS', canvas.width - 10, 20);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  bgCanvas.width = width;
+  bgCanvas.height = height;
+  initParticles();
+  
+  initPreviewSymmetry();
+  initPreviewBresenham();
+  initPreviewMidpoint();
+});
+
+// === INITIALIZE ===
+initParticles();
+animate();
+
+requestAnimationFrame(function() {
+  initPreviewSymmetry();
+  initPreviewBresenham();
+  initPreviewMidpoint();
+});
+</script>
+
+</body>
+</html>

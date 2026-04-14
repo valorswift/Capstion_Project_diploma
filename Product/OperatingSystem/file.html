@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileSystem Lab - Interactive Learning Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        fs: {
+                            bg: '#080b10',
+                            surface: '#0d1117',
+                            card: '#161b22',
+                            border: '#21262d',
+                            muted: '#484f58',
+                            text: '#c9d1d9',
+                            accent: '#58a6ff',
+                            file: '#3b82f6',
+                            dir: '#f59e0b',
+                            free: '#21262d',
+                            frag: '#ef4444',
+                            success: '#3fb950',
+                            read: '#a855f7',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            background: #080b10; 
+            color: #c9d1d9; 
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        
+        /* Glass Panel */
+        .glass-panel {
+            background: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(33, 38, 45, 0.9);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+        
+        /* Disk Block */
+        .disk-block {
+            width: 18px;
+            height: 18px;
+            border: 1px solid rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .disk-block:hover {
+            transform: scale(1.4);
+            z-index: 20;
+            border-color: white;
+        }
+        
+        .disk-block.highlight {
+            animation: blockPulse 1s ease-in-out infinite;
+        }
+        
+        .disk-block.reading {
+            animation: blockRead 0.5s ease-in-out;
+        }
+        
+        @keyframes blockPulse {
+            0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+            50% { box-shadow: 0 0 12px 2px currentColor; }
+        }
+        
+        @keyframes blockRead {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); background: #a855f7; }
+            100% { transform: scale(1); }
+        }
+        
+        /* Connection Lines */
+        .connection-line {
+            stroke-dasharray: 5, 5;
+            animation: dashFlow 1s linear infinite;
+        }
+        
+        @keyframes dashFlow {
+            to { stroke-dashoffset: -10; }
+        }
+        
+        /* Tree Item */
+        .tree-item {
+            transition: all 0.2s;
+        }
+        
+        .tree-item:hover {
+            background: rgba(88, 166, 255, 0.1);
+        }
+        
+        .tree-item.selected {
+            background: rgba(88, 166, 255, 0.15);
+            border-left: 2px solid #58a6ff;
+        }
+        
+        /* Terminal */
+        .terminal-input {
+            background: transparent;
+            caret-color: #3fb950;
+        }
+        
+        .terminal-cursor {
+            animation: cursorBlink 1s step-end infinite;
+        }
+        
+        @keyframes cursorBlink {
+            50% { opacity: 0; }
+        }
+        
+        /* Learning Panel */
+        .learning-step {
+            animation: stepSlide 0.3s ease-out;
+        }
+        
+        @keyframes stepSlide {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* Progress Bar */
+        .progress-fill {
+            transition: width 0.5s ease-out;
+        }
+        
+        /* Block Allocation Animation */
+        .block-alloc {
+            animation: blockAlloc 0.4s ease-out;
+        }
+        
+        @keyframes blockAlloc {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Defrag Animation */
+        .block-defrag {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Seek Indicator */
+        .seek-indicator {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #a855f7;
+            border-radius: 4px;
+            pointer-events: none;
+            transition: all 0.3s ease-out;
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: #161b22;
+            border: 1px solid #30363d;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 100;
+            white-space: nowrap;
+        }
+        
+        /* Reduced Motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex">
+
+    <!-- ==========================================
+         LEFT PANEL - Terminal & Learning
+         ========================================== -->
+    <aside class="w-[380px] flex flex-col border-r border-fs-border bg-fs-surface z-20">
+        
+        <!-- Logo Header -->
+        <div class="p-5 border-b border-fs-border">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-fs-file to-fs-dir flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-display font-bold text-white text-lg">FileSystem Lab</h1>
+                        <p class="text-[10px] text-fs-muted">Interactive Learning Platform</p>
+                    </div>
+                </div>
+                
+                <!-- Learning Mode Toggle -->
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <span class="text-[10px] text-fs-muted">Learn</span>
+                    <button id="learn-toggle" onclick="toggleLearning()" class="w-10 h-5 rounded-full bg-fs-card border border-fs-border relative transition-colors">
+                        <span class="absolute w-4 h-4 rounded-full bg-fs-accent top-0.5 left-0.5 transition-transform"></span>
+                    </button>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Terminal Section -->
+        <div class="flex-shrink-0 p-4 border-b border-fs-border">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-semibold text-fs-muted uppercase tracking-wider">Terminal</h3>
+                <span id="current-path" class="text-[10px] font-mono text-fs-accent">/</span>
+            </div>
+            
+            <!-- Terminal Output -->
+            <div id="terminal-output" class="h-32 bg-black/60 rounded-lg border border-fs-border p-3 overflow-y-auto font-mono text-xs text-fs-success mb-2">
+                <div class="text-fs-muted">FileSystem Lab v2.0</div>
+                <div class="text-fs-muted">Type 'help' for available commands.</div>
+            </div>
+            
+            <!-- Terminal Input -->
+            <div class="flex items-center bg-black/60 rounded-lg border border-fs-border px-3">
+                <span class="text-fs-success text-xs font-mono font-semibold">$</span>
+                <input type="text" id="terminal-input" 
+                    class="flex-1 bg-transparent text-xs text-white p-2 outline-none terminal-input font-mono ml-2" 
+                    placeholder="Enter command..." 
+                    onkeydown="handleCommand(event)"
+                    autocomplete="off">
+            </div>
+        </div>
+        
+        <!-- Learning Panel -->
+        <div id="learning-panel" class="flex-1 flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-fs-border flex items-center justify-between">
+                <h3 class="text-xs font-semibold text-fs-muted uppercase tracking-wider">Learning Panel</h3>
+                <span id="learning-status" class="text-[10px] px-2 py-0.5 rounded bg-fs-accent/20 text-fs-accent">Active</span>
+            </div>
+            
+            <div id="learning-content" class="flex-1 overflow-y-auto p-4">
+                <div class="text-center text-fs-muted text-sm mt-8">
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    <p>Perform an action to see<br>detailed explanations</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="p-4 border-t border-fs-border space-y-2">
+            <button onclick="runDefrag()" class="w-full px-3 py-2.5 bg-fs-file/20 text-xs rounded-lg text-fs-file border border-fs-file/30 hover:bg-fs-file/30 transition-all flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Defragment Disk
+            </button>
+            <button onclick="formatDisk()" class="w-full px-3 py-2.5 bg-fs-frag/20 text-xs rounded-lg text-fs-frag border border-fs-frag/30 hover:bg-fs-frag/30 transition-all flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                Format Disk
+            </button>
+        </div>
+    </aside>
+
+    <!-- ==========================================
+         MAIN CONTENT
+         ========================================== -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        
+        <!-- Top Stats Bar -->
+        <header class="h-16 glass-panel border-b border-fs-border flex items-center px-6 justify-between z-10">
+            <div>
+                <h2 class="font-display font-semibold text-white">Storage Engine</h2>
+                <p class="text-[10px] text-fs-muted">256 Blocks | 4KB per block | 1MB Total</p>
+            </div>
+            
+            <!-- Stats Grid -->
+            <div class="flex gap-6">
+                <div class="text-center">
+                    <div class="text-xl font-bold text-white font-mono" id="stat-used">0%</div>
+                    <div class="text-[9px] text-fs-muted uppercase tracking-wider">Used</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xl font-bold text-fs-frag font-mono" id="stat-frag">0%</div>
+                    <div class="text-[9px] text-fs-muted uppercase tracking-wider">Fragmented</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xl font-bold text-fs-dir font-mono" id="stat-dirs">0</div>
+                    <div class="text-[9px] text-fs-muted uppercase tracking-wider">Dirs</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xl font-bold text-fs-file font-mono" id="stat-files">0</div>
+                    <div class="text-[9px] text-fs-muted uppercase tracking-wider">Files</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xl font-bold text-fs-success font-mono" id="stat-inodes">1</div>
+                    <div class="text-[9px] text-fs-muted uppercase tracking-wider">Inodes</div>
+                </div>
+            </div>
+            
+            <!-- Disk Timeline Slider -->
+            <div class="flex items-center gap-3">
+                <span class="text-[10px] text-fs-muted">Timeline</span>
+                <input type="range" id="timeline-slider" min="0" max="100" value="100" 
+                    class="w-32 h-1 bg-fs-border rounded-lg appearance-none cursor-pointer"
+                    onchange="handleTimeline(this.value)">
+                <span id="timeline-label" class="text-[10px] text-fs-accent font-mono">Now</span>
+            </div>
+        </header>
+
+        <!-- Main Visualization Grid -->
+        <div class="flex-1 grid grid-cols-12 overflow-hidden">
+            
+            <!-- Directory Tree -->
+            <div class="col-span-3 border-r border-fs-border flex flex-col overflow-hidden bg-fs-surface/50">
+                <div class="p-3 border-b border-fs-border flex justify-between items-center">
+                    <h3 class="text-[10px] font-semibold text-fs-muted uppercase tracking-wider">Directory Tree</h3>
+                    <span class="text-[9px] text-fs-muted">Logical View</span>
+                </div>
+                <div id="directory-tree" class="flex-1 overflow-y-auto p-2 font-mono text-xs">
+                    <!-- Tree generated by JS -->
+                </div>
+            </div>
+
+            <!-- Disk Visualization -->
+            <div class="col-span-6 flex flex-col overflow-hidden bg-fs-bg relative">
+                <div class="p-3 border-b border-fs-border flex justify-between items-center">
+                    <h3 class="text-[10px] font-semibold text-fs-muted uppercase tracking-wider">Disk Block Map</h3>
+                    <div class="flex items-center gap-4">
+                        <span class="text-[9px] text-fs-muted">Physical Storage</span>
+                        <div class="flex gap-3 text-[9px]">
+                            <span class="flex items-center gap-1"><div class="w-3 h-3 bg-fs-free rounded"></div> Free</span>
+                            <span class="flex items-center gap-1"><div class="w-3 h-3 bg-fs-file rounded"></div> File</span>
+                            <span class="flex items-center gap-1"><div class="w-3 h-3 bg-fs-dir rounded"></div> Dir</span>
+                            <span class="flex items-center gap-1"><div class="w-3 h-3 bg-fs-frag rounded"></div> Frag</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex-1 p-4 flex flex-col items-center justify-center overflow-auto">
+                    <div class="relative">
+                        <div id="disk-grid" class="grid grid-cols-16 gap-0.5 p-3 bg-fs-card rounded-xl border border-fs-border">
+                            <!-- Grid generated by JS -->
+                        </div>
+                        <!-- Seek Indicator -->
+                        <div id="seek-indicator" class="seek-indicator hidden"></div>
+                    </div>
+                    
+                    <!-- Block Info Tooltip -->
+                    <div id="block-tooltip" class="tooltip hidden"></div>
+                </div>
+                
+                <!-- Reading Progress -->
+                <div id="read-progress" class="hidden p-3 border-t border-fs-border bg-fs-card/50">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-fs-muted">Reading file...</span>
+                        <span id="read-block" class="font-mono text-fs-read">Block 0</span>
+                    </div>
+                    <div class="w-full h-1 bg-fs-border rounded mt-2 overflow-hidden">
+                        <div id="read-progress-bar" class="h-full bg-fs-read progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inode Inspector -->
+            <div class="col-span-3 border-l border-fs-border flex flex-col overflow-hidden bg-fs-surface/50">
+                <div class="p-3 border-b border-fs-border flex justify-between items-center">
+                    <h3 class="text-[10px] font-semibold text-fs-muted uppercase tracking-wider">Inode Inspector</h3>
+                    <span class="text-[9px] text-fs-muted">Metadata View</span>
+                </div>
+                <div id="inode-view" class="flex-1 overflow-y-auto p-4 text-xs">
+                    <div class="text-fs-muted text-center mt-10">
+                        <svg class="w-10 h-10 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <p>Select a file to inspect<br>its inode structure</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==========================================
+         JAVASCRIPT ENGINE
+         ========================================== -->
+    <script>
+        // ==========================================
+        // CONSTANTS & STATE
+        // ==========================================
+        const TOTAL_BLOCKS = 256;
+        const BLOCK_SIZE = 4; // KB
+        const MAX_INODES = 64;
+        
+        // State
+        let diskBlocks = [];
+        let fileSystem = null;
+        let inodes = {};
+        let nextInodeId = 1;
+        let currentPath = '/';
+        let selectedInode = null;
+        let learningMode = true;
+        let diskHistory = [];
+        let historyIndex = -1;
+        let isAnimating = false;
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        function init() {
+            // Initialize disk blocks
+            diskBlocks = Array.from({ length: TOTAL_BLOCKS }, (_, i) => ({
+                type: 'free',
+                inodeId: null,
+                filePart: 0
+            }));
+            
+            // Initialize root directory
+            fileSystem = {
+                name: '/',
+                type: 'dir',
+                inodeId: 0,
+                children: [],
+                blocks: []
+            };
+            
+            // Create root inode
+            inodes[0] = createInode('dir', 0);
+            
+            // Allocate root directory block
+            allocateBlocks(1, 0, 'dir');
+            
+            // Save initial state
+            saveHistory();
+            
+            renderAll();
+            logTerm('File system initialized. 1MB disk mounted at /');
+            showLearning('init', { totalBlocks: TOTAL_BLOCKS, blockSize: BLOCK_SIZE });
+        }
+
+        // ==========================================
+        // INODE MANAGEMENT
+        // ==========================================
+        function createInode(type, size) {
+            const now = new Date();
+            return {
+                id: nextInodeId++,
+                type: type,
+                mode: type === 'dir' ? 'drwxr-xr-x' : '-rw-r--r--',
+                size: size,
+                blocks: [],
+                atime: now,
+                mtime: now,
+                ctime: now,
+                links: 1
+            };
+        }
+
+        // ==========================================
+        // BLOCK ALLOCATION
+        // ==========================================
+        function findFreeBlocks(count, strategy = 'first') {
+            const freeIndices = [];
+            
+            for (let i = 0; i < TOTAL_BLOCKS; i++) {
+                if (diskBlocks[i].type === 'free') {
+                    freeIndices.push(i);
+                }
+            }
+            
+            if (freeIndices.length < count) return null;
+            
+            if (strategy === 'first') {
+                // First-fit: can cause fragmentation
+                return freeIndices.slice(0, count);
+            } else if (strategy === 'contiguous') {
+                // Try to find contiguous blocks
+                let run = 1;
+                for (let i = 1; i < freeIndices.length; i++) {
+                    if (freeIndices[i] === freeIndices[i-1] + 1) {
+                        run++;
+                        if (run >= count) {
+                            const start = i - count + 1;
+                            return freeIndices.slice(start, start + count);
+                        }
+                    } else {
+                        run = 1;
+                    }
+                }
+                // Fallback to first-fit
+                return freeIndices.slice(0, count);
+            }
+            
+            return freeIndices.slice(0, count);
+        }
+
+        function allocateBlocks(count, inodeId, type, startIdx = null) {
+            let blocks;
+            
+            if (startIdx !== null) {
+                blocks = [];
+                for (let i = startIdx; i < startIdx + count; i++) {
+                    if (diskBlocks[i].type !== 'free') return null;
+                    blocks.push(i);
+                }
+            } else {
+                blocks = findFreeBlocks(count);
+            }
+            
+            if (!blocks) return null;
+            
+            blocks.forEach((idx, i) => {
+                diskBlocks[idx] = {
+                    type: type,
+                    inodeId: inodeId,
+                    filePart: i
+                };
+            });
+            
+            return blocks;
+        }
+
+        function freeBlocks(inodeId) {
+            const freed = [];
+            diskBlocks.forEach((block, idx) => {
+                if (block.inodeId === inodeId) {
+                    diskBlocks[idx] = { type: 'free', inodeId: null, filePart: 0 };
+                    freed.push(idx);
+                }
+            });
+            return freed;
+        }
+
+        // ==========================================
+        // FILE SYSTEM OPERATIONS
+        // ==========================================
+        function createEntry(name, type, parentPath = '/') {
+            if (isAnimating) return;
+            
+            const parent = navigateTo(parentPath);
+            if (!parent) {
+                logTerm(`Error: Directory not found`);
+                return null;
+            }
+            
+            // Check for duplicate
+            if (parent.children.find(c => c.name === name)) {
+                logTerm(`Error: '${name}' already exists`);
+                return null;
+            }
+            
+            // Determine size
+            const blockCount = type === 'dir' ? 1 : Math.floor(Math.random() * 8) + 1;
+            
+            // Find blocks (simulate fragmentation)
+            const blocks = allocateBlocks(blockCount, nextInodeId, type);
+            
+            if (!blocks) {
+                logTerm(`Error: Disk full. Cannot create '${name}'`);
+                return null;
+            }
+            
+            // Create inode
+            const inode = createInode(type, blockCount * BLOCK_SIZE);
+            inode.blocks = blocks;
+            inodes[inode.id] = inode;
+            
+            // Create entry
+            const entry = {
+                name: name,
+                type: type,
+                inodeId: inode.id,
+                children: type === 'dir' ? [] : null,
+                blocks: blocks
+            };
+            
+            parent.children.push(entry);
+            
+            logTerm(`Created ${type} '${name}' (inode: ${inode.id}, blocks: ${blocks.length})`);
+            
+            // Animate allocation
+            animateBlockAllocation(blocks, type);
+            
+            // Show learning
+            showLearning('create', { name, type, inode: inode, blocks });
+            
+            saveHistory();
+            renderAll();
+            
+            return entry;
+        }
+
+        function deleteEntry(name, path = '/') {
+            if (isAnimating) return;
+            
+            const parent = navigateTo(path);
+            if (!parent) {
+                logTerm(`Error: Directory not found`);
+                return;
+            }
+            
+            const idx = parent.children.findIndex(c => c.name === name);
+            if (idx === -1) {
+                logTerm(`Error: '${name}' not found`);
+                return;
+            }
+            
+            const entry = parent.children[idx];
+            
+            // Cannot delete non-empty directory
+            if (entry.type === 'dir' && entry.children && entry.children.length > 0) {
+                logTerm(`Error: Directory not empty`);
+                return;
+            }
+            
+            // Free blocks
+            const freedBlocks = freeBlocks(entry.inodeId);
+            
+            // Remove inode
+            delete inodes[entry.inodeId];
+            
+            // Remove from parent
+            parent.children.splice(idx, 1);
+            
+            logTerm(`Deleted '${name}' (freed ${freedBlocks.length} blocks)`);
+            showLearning('delete', { name, type: entry.type, freedBlocks });
+            
+            saveHistory();
+            renderAll();
+        }
+
+        function navigateTo(path) {
+            if (path === '/') return fileSystem;
+            
+            const parts = path.split('/').filter(p => p);
+            let current = fileSystem;
+            
+            for (const part of parts) {
+                const child = current.children?.find(c => c.name === part && c.type === 'dir');
+                if (!child) return null;
+                current = child;
+            }
+            
+            return current;
+        }
+
+        // ==========================================
+        // DEFRAGMENTATION
+        // ==========================================
+        async function runDefrag() {
+            if (isAnimating) return;
+            
+            const usedBlocks = diskBlocks.filter(b => b.type !== 'free').length;
+            if (usedBlocks === 0) {
+                logTerm('Nothing to defragment');
+                return;
+            }
+            
+            isAnimating = true;
+            logTerm('Starting defragmentation...');
+            showLearning('defrag-start', {});
+            
+            // Collect all used blocks by inode
+            const inodeOrder = Object.keys(inodes).map(Number).sort((a, b) => a - b);
+            
+            // Clear disk
+            diskBlocks = diskBlocks.map(() => ({ type: 'free', inodeId: null, filePart: 0 }));
+            
+            // Rewrite contiguously
+            let currentBlock = 0;
+            
+            for (const inodeId of inodeOrder) {
+                const inode = inodes[inodeId];
+                const newBlocks = [];
+                
+                for (let i = 0; i < inode.blocks.length; i++) {
+                    diskBlocks[currentBlock] = {
+                        type: inode.type === 'dir' ? 'dir' : 'data',
+                        inodeId: inodeId,
+                        filePart: i
+                    };
+                    newBlocks.push(currentBlock);
+                    currentBlock++;
+                }
+                
+                inode.blocks = newBlocks;
+                updateEntryBlocks(inodeId, newBlocks);
+                
+                // Animate progress
+                await sleep(100);
+                renderDisk();
+            }
+            
+            isAnimating = false;
+            logTerm('Defragmentation complete. All files are now contiguous.');
+            showLearning('defrag-end', {});
+            
+            saveHistory();
+            renderAll();
+        }
+
+        function updateEntryBlocks(inodeId, newBlocks) {
+            function search(node) {
+                if (node.inodeId === inodeId) {
+                    node.blocks = newBlocks;
+                    return true;
+                }
+                if (node.children) {
+                    node.children.forEach(c => search(c));
+                }
+            }
+            search(fileSystem);
+        }
+
+        // ==========================================
+        // FILE READING SIMULATION
+        // ==========================================
+        async function simulateRead(inodeId) {
+            const inode = inodes[inodeId];
+            if (!inode || inode.type === 'dir') return;
+            
+            isAnimating = true;
+            const readProgress = document.getElementById('read-progress');
+            const readBar = document.getElementById('read-progress-bar');
+            const readBlock = document.getElementById('read-block');
+            
+            readProgress.classList.remove('hidden');
+            
+            showLearning('read-start', { inode, blocks: inode.blocks });
+            
+            for (let i = 0; i < inode.blocks.length; i++) {
+                const blockIdx = inode.blocks[i];
+                
+                // Update progress
+                const pct = ((i + 1) / inode.blocks.length) * 100;
+                readBar.style.width = `${pct}%`;
+                readBlock.textContent = `Block ${blockIdx}`;
+                
+                // Highlight block
+                highlightBlock(blockIdx, true);
+                
+                // Show seek animation
+                animateSeek(blockIdx);
+                
+                // Calculate seek distance
+                const prevBlock = i > 0 ? inode.blocks[i - 1] : -1;
+                const seekDistance = Math.abs(blockIdx - prevBlock);
+                
+                showLearning('read-block', { blockIdx, seekDistance, isFragmented: seekDistance > 1 });
+                
+                await sleep(400);
+                highlightBlock(blockIdx, false);
+            }
+            
+            readProgress.classList.add('hidden');
+            isAnimating = false;
+            
+            showLearning('read-end', { inode });
+            renderDisk();
+        }
+
+        function highlightBlock(idx, active) {
+            const blocks = document.querySelectorAll('.disk-block');
+            if (blocks[idx]) {
+                if (active) {
+                    blocks[idx].classList.add('reading');
+                } else {
+                    blocks[idx].classList.remove('reading');
+                }
+            }
+        }
+
+        function animateSeek(targetIdx) {
+            const grid = document.getElementById('disk-grid');
+            const indicator = document.getElementById('seek-indicator');
+            const blocks = document.querySelectorAll('.disk-block');
+            
+            if (!blocks[targetIdx]) return;
+            
+            const targetRect = blocks[targetIdx].getBoundingClientRect();
+            const gridRect = grid.getBoundingClientRect();
+            
+            indicator.classList.remove('hidden');
+            indicator.style.left = `${targetRect.left - gridRect.left - 3}px`;
+            indicator.style.top = `${targetRect.top - gridRect.top - 3}px`;
+            
+            setTimeout(() => indicator.classList.add('hidden'), 300);
+        }
+
+        // ==========================================
+        // ANIMATIONS
+        // ==========================================
+        function animateBlockAllocation(blocks, type) {
+            const color = type === 'dir' ? 'bg-fs-dir' : 'bg-fs-file';
+            
+            setTimeout(() => {
+                blocks.forEach((idx, i) => {
+                    const blockEls = document.querySelectorAll('.disk-block');
+                    if (blockEls[idx]) {
+                        blockEls[idx].classList.add('block-alloc');
+                        setTimeout(() => blockEls[idx].classList.remove('block-alloc'), 400);
+                    }
+                });
+            }, 50);
+        }
+
+        // ==========================================
+        // HISTORY / TIMELINE
+        // ==========================================
+        function saveHistory() {
+            const state = {
+                diskBlocks: JSON.parse(JSON.stringify(diskBlocks)),
+                fileSystem: JSON.parse(JSON.stringify(fileSystem)),
+                inodes: JSON.parse(JSON.stringify(inodes)),
+                nextInodeId: nextInodeId
+            };
+            
+            // Trim future history if we're not at the end
+            if (historyIndex < diskHistory.length - 1) {
+                diskHistory = diskHistory.slice(0, historyIndex + 1);
+            }
+            
+            diskHistory.push(state);
+            historyIndex = diskHistory.length - 1;
+            
+            updateTimelineSlider();
+        }
+
+        function handleTimeline(value) {
+            if (diskHistory.length === 0) return;
+            
+            const idx = Math.floor((value / 100) * (diskHistory.length - 1));
+            
+            if (idx !== historyIndex && idx >= 0 && idx < diskHistory.length) {
+                historyIndex = idx;
+                const state = diskHistory[idx];
+                
+                diskBlocks = JSON.parse(JSON.stringify(state.diskBlocks));
+                fileSystem = JSON.parse(JSON.stringify(state.fileSystem));
+                inodes = JSON.parse(JSON.stringify(state.inodes));
+                nextInodeId = state.nextInodeId;
+                
+                renderAll();
+                
+                document.getElementById('timeline-label').textContent = 
+                    idx === diskHistory.length - 1 ? 'Now' : `State ${idx + 1}`;
+            }
+        }
+
+        function updateTimelineSlider() {
+            const slider = document.getElementById('timeline-slider');
+            slider.max = 100;
+            slider.value = 100;
+            document.getElementById('timeline-label').textContent = 'Now';
+        }
+
+        // ==========================================
+        // LEARNING PANEL
+        // ==========================================
+        function showLearning(action, data) {
+            if (!learningMode) return;
+            
+            const panel = document.getElementById('learning-content');
+            let html = '';
+            
+            switch (action) {
+                case 'init':
+                    html = `
+                        <div class="learning-step space-y-3">
+                            <div class="flex items-center gap-2 text-fs-accent mb-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="font-semibold">File System Initialized</span>
+                            </div>
+                            <div class="bg-fs-card/50 rounded-lg p-3 border border-fs-border">
+                                <p class="text-fs-text text-xs leading-relaxed">
+                                    A file system organizes data on storage devices. It manages how files are stored, retrieved, and organized.
+                                </p>
+                            </div>
+                            <div class="space-y-2 text-xs">
+                                <div class="flex justify-between py-1 border-b border-fs-border/50">
+                                    <span class="text-fs-muted">Total Blocks</span>
+                                    <span class="font-mono text-white">${data.totalBlocks}</span>
+                                </div>
+                                <div class="flex justify-between py-1">
+                                    <span class="text-fs-muted">Block Size</span>
+                                    <span class="font-mono text-white">${data.blockSize}KB</span>
+                                </div>
+                            </div>
+                            <div class="bg-fs-accent/10 border border-fs-accent/30 rounded-lg p-2 mt-3">
+                                <p class="text-fs-accent text-[10px]">
+                                    Each block can store 4KB of data. The root directory (/) is automatically created.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'create':
+                    const isFrag = checkFragmentation(data.blocks);
+                    html = `
+                        <div class="learning-step space-y-3">
+                            <div class="flex items-center gap-2 text-fs-success mb-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                <span class="font-semibold">${data.type === 'dir' ? 'Directory' : 'File'} Created</span>
+                            </div>
+                            
+                            <div class="bg-fs-card/50 rounded-lg p-3 border border-fs-border">
+                                <p class="text-fs-text text-xs leading-relaxed mb-2">
+                                    When you create a <strong>${data.type}</strong>, the system:
+                                </p>
+                                <ol class="text-xs text-fs-muted space-y-1 list-decimal list-inside">
+                                    <li>Allocates a new inode</li>
+                                    <li>Finds free disk blocks</li>
+                                    <li>Links blocks to inode</li>
+                                    <li>Updates directory entry</li>
+                                </ol>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="text-[10px] text-fs-muted uppercase tracking-wider">Inode #${data.inode.id}</div>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="bg-fs-card/30 p-2 rounded">
+                                        <div class="text-fs-muted text-[10px]">Type</div>
+                                        <div class="font-mono text-white">${data.inode.type}</div>
+                                    </div>
+                                    <div class="bg-fs-card/30 p-2 rounded">
+                                        <div class="text-fs-muted text-[10px]">Size</div>
+                                        <div class="font-mono text-white">${data.inode.size}KB</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-fs-card/50 rounded-lg p-3 border border-fs-border">
+                                <div class="text-[10px] text-fs-muted mb-2">Allocated Blocks</div>
+                                <div class="flex flex-wrap gap-1">
+                                    ${data.blocks.map(b => `<span class="px-1.5 py-0.5 ${data.type === 'dir' ? 'bg-fs-dir/20 text-fs-dir' : 'bg-fs-file/20 text-fs-file'} rounded text-[10px] font-mono">${b}</span>`).join('')}
+                                </div>
+                            </div>
+                            
+                            ${isFrag ? `
+                                <div class="bg-fs-frag/10 border border-fs-frag/30 rounded-lg p-2">
+                                    <p class="text-fs-frag text-[10px]">
+                                        Warning: Blocks are not contiguous. This file is fragmented and may cause slower read times.
+                                    </p>
+                                </div>
+                            ` : `
+                                <div class="bg-fs-success/10 border border-fs-success/30 rounded-lg p-2">
+                                    <p class="text-fs-success text-[10px]">
+                                        Blocks are contiguous. This file will have optimal read performance.
+                                    </p>
+                                </div>
+                            `}
+                            
+                            <div class="bg-fs-accent/10 border border-fs-accent/30 rounded-lg p-2">
+                                <p class="text-fs-accent text-[10px]">
+                                    <strong>Inode</strong> = Index Node. It stores metadata about a file, including which disk blocks contain the file's data.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'delete':
+                    html = `
+                        <div class="learning-step space-y-3">
+                            <div class="flex items-center gap-2 text-fs-frag mb-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                <span class="font-semibold">Entry Deleted</span>
+                            </div>
+                            
+                            <div class="bg-fs-card/50 rounded-lg p-3 border border-fs-border">
+                                <p class="text-fs-text text-xs leading-relaxed">
+                                    Deleting a file removes its directory entry and marks its blocks as free, but the actual data remains until overwritten.
+                                </p>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="text-[10px] text-fs-muted uppercase tracking-wider">Freed Blocks</div>
+                                <div class="flex flex-wrap gap-1">
+                                    ${data.freedBlocks.map(b => `<span class="px-1.5 py-0.5 bg-fs-free text-fs-muted rounded text-[10px] font-mono">${b}</span>`).join('')}
+                                </div>
+                            </div>
+                            
+                            <div class="bg-fs-accent/10 border border-fs-accent/30 rounded-lg p-2">
+                                <p class="text-fs-accent text-[10px]">
+                                    The inode is also freed and can be reused for new files. In Unix-like systems, unlinking a file removes it when no hard links remain.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'defrag-start':
+                    html = `
+                        <div class="learning-step space-y-3">
+                            <div class="flex items-center gap-2 text-fs-file mb-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                <span class="font-semibold">Defragmentation Started</span>
+                            </div>
+                            
+                            <div class="bg-fs-card/50 rounded-lg p-3 border border-fs-border">
+                                <p class="text-fs-text text-xs leading-relaxed">
+                                    Defragmentation reorganizes files so their blocks are contiguous. This reduces disk seek time and improves read performance.
+                                </p>
+                            </div>
+                            
+                            <div class="bg-fs-accent/10 border border-fs-accent/30 rounded-lg p-2">
+                                <p class="text-fs-accent text-[10px]">
+                                    <strong>Why fragmentation happens:</strong> As files are created and deleted, free space becomes scattered. New files may use non-contiguous blocks.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'defrag-end':
+                    html = `
+                        <div class="learning-step space-y-3">
+                            <div class="flex items-center gap-2 text-fs-success mb-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="font-semibold">Defragmentation Complete</span>
+                            </div>
+                            
+                            <div class="bg-fs-success/10 border border-fs-success/30 rounded-lg p-3">
+                                <p class="text-fs-success text-xs leading-relaxed">
+                                    All files are now stored with contiguous blocks. This means:
+                                </p>
+                                <ul class="text-xs text-fs-muted mt-2 space-y-1 list-disc list-inside">
+                                    <li>Faster sequential reads</li>
+                                    <li>Less disk head movement</li>
+                                    <li>Improved overall performance</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-fs-accent/10 border border-fs-accent/30 rounded-lg p-2">
+                                <p class="text-fs-accent text-[10px]">
+                                    SSDs don't benefit from defragmentation due to lack of moving parts. In fact, defrag can reduce SSD lifespan.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'read-start':
+                    html = `
+                        <div class="learning-step space-y-3">
+                            <div class="flex items-center gap-2 text-fs-read mb-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                <span class="font-semibold">Reading File</span>
+                            </div>
+                            
+                            <div class="bg-fs-card/50 rounded-lg p-3 border border-fs-border">
+                                <p class="text-fs-text text-xs leading-relaxed">
+                                    When reading a file, the system follows this chain:
+                                </p>
+                                <div class="mt-2 flex items-center justify-center gap-2 text-[10px]">
+                                    <span class="px-2 py-1 bg-fs-file/20 text-fs-file rounded">Filename</span>
+                                    <span class="text-fs-muted">→</span>
+                                    <span class="px-2 py-1 bg-fs-accent/20 text-fs-accent rounded">Inode</span>
+                                    <span class="text-fs-muted">→</span>
+                                    <span class="px-2 py-1 bg-fs-dir/20 text-fs-dir rounded">Blocks</span>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="text-[10px] text-fs-muted uppercase tracking-wider">Blocks to Read (${data.blocks.length})</div>
+                                <div class="flex flex-wrap gap-1">
+                                    ${data.blocks.map(b => `<span class="px-1.5 py-0.5 bg-fs-read/20 text-fs-read rounded text-[10px] font-mono">${b}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'read-block':
+                    if (data.isFragmented) {
+                        html = `
+                            <div class="learning-step space-y-2">
+                                <div class="bg-fs-frag/10 border border-fs-frag/30 rounded-lg p-2">
+                                    <p class="text-fs-frag text-[10px]">
+                                        <strong>Seek: ${data.seekDistance} blocks</strong><br>
+                                        Disk head must jump from one location to another. This is slower than sequential reading.
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html = `
+                            <div class="learning-step space-y-2">
+                                <div class="bg-fs-success/10 border border-fs-success/30 rounded-lg p-2">
+                                    <p class="text-fs-success text-[10px]">
+                                        <strong>Sequential read</strong><br>
+                                        Block ${data.blockIdx} is adjacent to the previous block. Optimal performance!
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    break;
+                    
+                case 'read-end':
+                    html = `
+                        <div class="learning-step space-y-3">
+                            <div class="flex items-center gap-2 text-fs-success mb-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="font-semibold">Read Complete</span>
+                            </div>
+                            
+                            <div class="bg-fs-success/10 border border-fs-success/30 rounded-lg p-3">
+                                <p class="text-fs-success text-xs">
+                                    File data has been read from all ${data.inode.blocks.length} blocks.
+                                </p>
+                            </div>
+                            
+                            <div class="bg-fs-accent/10 border border-fs-accent/30 rounded-lg p-2">
+                                <p class="text-fs-accent text-[10px]">
+                                    The file's data blocks are now in memory (page cache) for faster future access.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            if (html) {
+                panel.innerHTML = html;
+            }
+        }
+
+        function checkFragmentation(blocks) {
+            for (let i = 1; i < blocks.length; i++) {
+                if (blocks[i] !== blocks[i-1] + 1) return true;
+            }
+            return false;
+        }
+
+        function toggleLearning() {
+            learningMode = !learningMode;
+            const toggle = document.getElementById('learn-toggle');
+            const indicator = toggle.querySelector('span');
+            const status = document.getElementById('learning-status');
+            
+            if (learningMode) {
+                indicator.style.transform = 'translateX(20px)';
+                toggle.classList.add('bg-fs-accent/30');
+                status.textContent = 'Active';
+                status.className = 'text-[10px] px-2 py-0.5 rounded bg-fs-accent/20 text-fs-accent';
+            } else {
+                indicator.style.transform = 'translateX(0)';
+                toggle.classList.remove('bg-fs-accent/30');
+                status.textContent = 'Off';
+                status.className = 'text-[10px] px-2 py-0.5 rounded bg-fs-card text-fs-muted';
+            }
+        }
+
+        // ==========================================
+        // TERMINAL COMMANDS
+        // ==========================================
+        function handleCommand(e) {
+            if (e.key !== 'Enter') return;
+            
+            const input = e.target.value.trim();
+            e.target.value = '';
+            
+            if (!input) return;
+            
+            const parts = input.split(/\s+/);
+            const cmd = parts[0].toLowerCase();
+            const args = parts.slice(1);
+            
+            logTerm(`<span class="text-fs-muted">$</span> <span class="text-white">${input}</span>`);
+            
+            switch (cmd) {
+                case 'help':
+                    logTerm('<span class="text-fs-accent">Available commands:</span>');
+                    logTerm('  <span class="text-fs-file">mkdir</span> [name]  - Create directory');
+                    logTerm('  <span class="text-fs-file">touch</span> [name]  - Create file');
+                    logTerm('  <span class="text-fs-file">rm</span> [name]    - Delete file/dir');
+                    logTerm('  <span class="text-fs-file">ls</span>           - List directory');
+                    logTerm('  <span class="text-fs-file">cd</span> [path]    - Change directory');
+                    logTerm('  <span class="text-fs-file">pwd</span>          - Print working dir');
+                    logTerm('  <span class="text-fs-file">stat</span> [name]  - Show file info');
+                    logTerm('  <span class="text-fs-file">clear</span>        - Clear terminal');
+                    break;
+                    
+                case 'ls':
+                    const dir = navigateTo(currentPath);
+                    if (!dir || !dir.children) {
+                        logTerm('<span class="text-fs-frag">Error: Cannot list</span>');
+                    } else if (dir.children.length === 0) {
+                        logTerm('<span class="text-fs-muted">(empty)</span>');
+                    } else {
+                        const items = dir.children.map(c => {
+                            const color = c.type === 'dir' ? 'text-fs-dir' : 'text-fs-file';
+                            const icon = c.type === 'dir' ? 'd' : '-';
+                            return `<span class="${color}">${icon} ${c.name}</span>`;
+                        }).join('  ');
+                        logTerm(items);
+                    }
+                    break;
+                    
+                case 'mkdir':
+                    if (!args[0]) {
+                        logTerm('<span class="text-fs-frag">Usage: mkdir [name]</span>');
+                    } else {
+                        createEntry(args[0], 'dir', currentPath);
+                    }
+                    break;
+                    
+                case 'touch':
+                    if (!args[0]) {
+                        logTerm('<span class="text-fs-frag">Usage: touch [name]</span>');
+                    } else {
+                        createEntry(args[0], 'file', currentPath);
+                    }
+                    break;
+                    
+                case 'rm':
+                    if (!args[0]) {
+                        logTerm('<span class="text-fs-frag">Usage: rm [name]</span>');
+                    } else {
+                        deleteEntry(args[0], currentPath);
+                    }
+                    break;
+                    
+                case 'cd':
+                    if (!args[0] || args[0] === '/') {
+                        currentPath = '/';
+                    } else if (args[0] === '..') {
+                        const parts = currentPath.split('/').filter(p => p);
+                        parts.pop();
+                        currentPath = '/' + parts.join('/');
+                        if (currentPath !== '/') currentPath += '/';
+                    } else {
+                        const newPath = currentPath === '/' ? `/${args[0]}` : `${currentPath}${args[0]}`;
+                        const target = navigateTo(newPath);
+                        if (target && target.type === 'dir') {
+                            currentPath = newPath + '/';
+                        } else {
+                            logTerm(`<span class="text-fs-frag">Error: Directory not found</span>`);
+                        }
+                    }
+                    document.getElementById('current-path').textContent = currentPath;
+                    break;
+                    
+                case 'pwd':
+                    logTerm(`<span class="text-fs-accent">${currentPath}</span>`);
+                    break;
+                    
+                case 'stat':
+                    if (!args[0]) {
+                        logTerm('<span class="text-fs-frag">Usage: stat [name]</span>');
+                    } else {
+                        const dir = navigateTo(currentPath);
+                        const entry = dir?.children?.find(c => c.name === args[0]);
+                        if (entry) {
+                            const inode = inodes[entry.inodeId];
+                            logTerm(`<span class="text-fs-accent">File: ${entry.name}</span>`);
+                            logTerm(`  Inode: ${inode.id}`);
+                            logTerm(`  Type: ${inode.type}`);
+                            logTerm(`  Size: ${inode.size}KB`);
+                            logTerm(`  Blocks: ${inode.blocks.join(', ')}`);
+                            logTerm(`  Mode: ${inode.mode}`);
+                        } else {
+                            logTerm(`<span class="text-fs-frag">Error: File not found</span>`);
+                        }
+                    }
+                    break;
+                    
+                case 'clear':
+                    document.getElementById('terminal-output').innerHTML = '';
+                    break;
+                    
+                default:
+                    logTerm(`<span class="text-fs-frag">Command not found: ${cmd}</span>`);
+            }
+        }
+
+        function logTerm(msg) {
+            const el = document.getElementById('terminal-output');
+            el.innerHTML += `<div class="leading-relaxed">${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        // ==========================================
+        // RENDERING
+        // ==========================================
+        function renderAll() {
+            renderTree();
+            renderDisk();
+            renderStats();
+            if (selectedInode !== null) {
+                renderInode(selectedInode);
+            }
+        }
+
+        function renderTree() {
+            const container = document.getElementById('directory-tree');
+            container.innerHTML = '';
+            
+            function renderItem(node, depth = 0, path = '/') {
+                const div = document.createElement('div');
+                div.className = `tree-item py-1.5 px-2 rounded flex items-center gap-2 ${selectedInode === node.inodeId ? 'selected' : ''}`;
+                div.style.paddingLeft = `${depth * 12 + 8}px`;
+                
+                const isDir = node.type === 'dir';
+                const icon = isDir
+                    ? `<svg class="w-3.5 h-3.5 text-fs-dir flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`
+                    : `<svg class="w-3.5 h-3.5 text-fs-file flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
+                
+                const nameColor = isDir ? 'text-fs-dir' : 'text-fs-text';
+                div.innerHTML = `${icon}<span class="${nameColor} truncate">${node.name}</span>`;
+                
+                div.onclick = (e) => {
+                    e.stopPropagation();
+                    selectedInode = node.inodeId;
+                    renderInode(node.inodeId);
+                    renderTree();
+                    
+                    // Highlight blocks
+                    highlightInodeBlocks(node.inodeId);
+                    
+                    // Simulate read for files
+                    if (node.type === 'file') {
+                        simulateRead(node.inodeId);
+                    }
+                };
+                
+                container.appendChild(div);
+                
+                if (node.children) {
+                    node.children
+                        .sort((a, b) => {
+                            if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+                            return a.name.localeCompare(b.name);
+                        })
+                        .forEach(child => renderItem(child, depth + 1, path + node.name + '/'));
+                }
+            }
+            
+            renderItem(fileSystem);
+        }
+
+        function highlightInodeBlocks(inodeId) {
+            // Remove all highlights
+            document.querySelectorAll('.disk-block.highlight').forEach(el => {
+                el.classList.remove('highlight');
+            });
+            
+            // Add highlights for this inode's blocks
+            const inode = inodes[inodeId];
+            if (inode) {
+                inode.blocks.forEach(idx => {
+                    const blocks = document.querySelectorAll('.disk-block');
+                    if (blocks[idx]) {
+                        blocks[idx].classList.add('highlight');
+                    }
+                });
+            }
+        }
+
+        function renderDisk() {
+            const grid = document.getElementById('disk-grid');
+            grid.innerHTML = '';
+            
+            // Calculate fragmentation per inode
+            const fragMap = {};
+            Object.values(inodes).forEach(inode => {
+                fragMap[inode.id] = checkFragmentation(inode.blocks);
+            });
+            
+            diskBlocks.forEach((block, idx) => {
+                const div = document.createElement('div');
+                
+                let bgClass = 'bg-fs-free';
+                let isFrag = false;
+                
+                if (block.type === 'data') {
+                    bgClass = 'bg-fs-file';
+                    isFrag = fragMap[block.inodeId];
+                } else if (block.type === 'dir') {
+                    bgClass = 'bg-fs-dir';
+                }
+                
+                if (isFrag && block.type === 'data') {
+                    bgClass = 'bg-fs-frag';
+                }
+                
+                // Highlight if selected
+                const highlightClass = selectedInode === block.inodeId ? 'highlight' : '';
+                
+                div.className = `disk-block ${bgClass} rounded-sm ${highlightClass}`;
+                div.dataset.index = idx;
+                
+                // Tooltip on hover
+                div.addEventListener('mouseenter', (e) => showBlockTooltip(e, idx, block));
+                div.addEventListener('mouseleave', hideBlockTooltip);
+                
+                div.onclick = () => {
+                    if (block.inodeId !== null && block.inodeId !== selectedInode) {
+                        selectedInode = block.inodeId;
+                        renderInode(block.inodeId);
+                        renderTree();
+                        highlightInodeBlocks(block.inodeId);
+                    }
+                };
+                
+                grid.appendChild(div);
+            });
+        }
+
+        function showBlockTooltip(e, idx, block) {
+            const tooltip = document.getElementById('block-tooltip');
+            const rect = e.target.getBoundingClientRect();
+            
+            let content = `<strong>Block ${idx}</strong><br>`;
+            if (block.type === 'free') {
+                content += `<span class="text-fs-muted">Free</span>`;
+            } else {
+                content += `Type: <span class="${block.type === 'dir' ? 'text-fs-dir' : 'text-fs-file'}">${block.type}</span><br>`;
+                content += `Inode: <span class="text-fs-accent">${block.inodeId}</span><br>`;
+                content += `Part: <span class="text-fs-muted">${block.filePart + 1}</span>`;
+            }
+            
+            tooltip.innerHTML = content;
+            tooltip.style.left = `${rect.left}px`;
+            tooltip.style.top = `${rect.bottom + 8}px`;
+            tooltip.classList.remove('hidden');
+        }
+
+        function hideBlockTooltip() {
+            document.getElementById('block-tooltip').classList.add('hidden');
+        }
+
+        function renderInode(inodeId) {
+            const view = document.getElementById('inode-view');
+            const inode = inodes[inodeId];
+            
+            if (!inode) {
+                view.innerHTML = `<div class="text-fs-muted text-center mt-10">Inode not found</div>`;
+                return;
+            }
+            
+            const isFrag = checkFragmentation(inode.blocks);
+            
+            view.innerHTML = `
+                <div class="space-y-4">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-base font-bold text-white">Inode #${inode.id}</h4>
+                        <span class="text-[9px] px-2 py-0.5 rounded ${inode.type === 'directory' ? 'bg-fs-dir/20 text-fs-dir' : 'bg-fs-file/20 text-fs-file'}">
+                            ${inode.type}
+                        </span>
+                    </div>
+                    
+                    <!-- Metadata -->
+                    <div class="bg-fs-card/50 rounded-lg p-3 border border-fs-border space-y-2 font-mono text-xs">
+                        <div class="flex justify-between py-1 border-b border-fs-border/50">
+                            <span class="text-fs-muted">Permissions</span>
+                            <span class="text-fs-success">${inode.mode}</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-fs-border/50">
+                            <span class="text-fs-muted">Size</span>
+                            <span class="text-white">${inode.size} KB</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-fs-border/50">
+                            <span class="text-fs-muted">Blocks</span>
+                            <span class="text-white">${inode.blocks.length}</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-fs-border/50">
+                            <span class="text-fs-muted">Links</span>
+                            <span class="text-white">${inode.links}</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-fs-border/50">
+                            <span class="text-fs-muted">Modified</span>
+                            <span class="text-white">${inode.mtime.toLocaleTimeString()}</span>
+                        </div>
+                        <div class="flex justify-between py-1">
+                            <span class="text-fs-muted">Created</span>
+                            <span class="text-white">${inode.ctime.toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Block Pointers -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] text-fs-muted uppercase tracking-wider">Block Pointers</span>
+                            ${isFrag ? '<span class="text-[9px] text-fs-frag">FRAGMENTED</span>' : '<span class="text-[9px] text-fs-success">CONTIGUOUS</span>'}
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            ${inode.blocks.map((b, i) => `
+                                <span class="px-2 py-1 ${i === 0 ? 'bg-fs-success/20 text-fs-success border-fs-success/30' : 'bg-fs-card text-fs-text border-fs-border'} border rounded text-[10px] font-mono cursor-pointer hover:scale-110 transition-transform" onclick="highlightSingleBlock(${b})">
+                                    ${b}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Visual Structure -->
+                    <div class="bg-fs-card/30 rounded-lg p-3 border border-fs-border">
+                        <div class="text-[10px] text-fs-muted mb-2 uppercase tracking-wider">Inode Structure</div>
+                        <div class="space-y-1 text-[10px] font-mono">
+                            <div class="flex items-center gap-2">
+                                <span class="w-16 text-fs-muted">i_mode:</span>
+                                <span class="text-fs-success">${inode.mode}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-16 text-fs-muted">i_size:</span>
+                                <span class="text-white">${inode.size * 1024} bytes</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-16 text-fs-muted">i_blocks:</span>
+                                <span class="text-white">${inode.blocks.length}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-16 text-fs-muted">i_block[0]:</span>
+                                <span class="text-fs-accent">${inode.blocks[0] ?? '-'}</span>
+                            </div>
+                            ${inode.blocks.length > 1 ? `
+                                <div class="flex items-center gap-2">
+                                    <span class="w-16 text-fs-muted">i_block[n]:</span>
+                                    <span class="text-fs-accent">${inode.blocks[inode.blocks.length - 1]}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    ${isFrag ? `
+                        <div class="bg-fs-frag/10 border border-fs-frag/30 rounded-lg p-2">
+                            <p class="text-fs-frag text-[10px]">
+                                This file's blocks are scattered across the disk, causing slower read times due to increased seek operations.
+                            </p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function highlightSingleBlock(idx) {
+            const blocks = document.querySelectorAll('.disk-block');
+            blocks.forEach(b => b.classList.remove('highlight'));
+            if (blocks[idx]) {
+                blocks[idx].classList.add('highlight');
+                blocks[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function renderStats() {
+            const used = diskBlocks.filter(b => b.type !== 'free').length;
+            const usedPct = ((used / TOTAL_BLOCKS) * 100).toFixed(0);
+            
+            // Calculate fragmentation
+            let fragmentedFiles = 0;
+            let totalFiles = 0;
+            Object.values(inodes).forEach(inode => {
+                if (inode.type !== 'directory') {
+                    totalFiles++;
+                    if (checkFragmentation(inode.blocks)) {
+                        fragmentedFiles++;
+                    }
+                }
+            });
+            
+            const fragPct = totalFiles > 0 ? ((fragmentedFiles / totalFiles) * 100).toFixed(0) : 0;
+            
+            const dirs = Object.values(inodes).filter(i => i.type === 'directory').length;
+            const files = Object.values(inodes).filter(i => i.type === 'file').length;
+            
+            document.getElementById('stat-used').textContent = `${usedPct}%`;
+            document.getElementById('stat-frag').textContent = `${fragPct}%`;
+            document.getElementById('stat-dirs').textContent = dirs;
+            document.getElementById('stat-files').textContent = files;
+            document.getElementById('stat-inodes').textContent = Object.keys(inodes).length;
+        }
+
+        function formatDisk() {
+            if (isAnimating) return;
+            
+            diskBlocks = [];
+            fileSystem = {
+                name: '/',
+                type: 'dir',
+                inodeId: 0,
+                children: [],
+                blocks: []
+            };
+            inodes = {};
+            nextInodeId = 1;
+            currentPath = '/';
+            selectedInode = null;
+            diskHistory = [];
+            historyIndex = -1;
+            
+            init();
+            logTerm('Disk formatted. All data erased.');
+        }
+
+        // ==========================================
+        // UTILITIES
+        // ==========================================
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            
+            if (e.key === 'Escape') {
+                selectedInode = null;
+                renderAll();
+            }
+        });
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

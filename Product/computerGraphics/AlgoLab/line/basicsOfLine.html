@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basics of Line | Computer Graphics</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #05080c;
+  --bg-elevated: #0a1018;
+  --card: #0d1520;
+  --border: #1a2535;
+  --accent: #00ffc8;
+  --accent-alt: #ff6b4a;
+  --text: #e4e8ec;
+  --muted: #5a6a7a;
+  --cyan-blue: #00d4ff;
+  --warm-gold: #ffa94d;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 8, 12, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--cyan-blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.nav-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.progress-bar {
+  width: 120px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.hero {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 60px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 255, 200, 0.1);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 255, 200, 0.2);
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.main-title {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  color: var(--text);
+}
+
+.hero-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 600px;
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.hero-nav {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: #00e6b8;
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.section {
+  padding: 80px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: 48px;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 0 0 12px 0;
+}
+
+.section-desc {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.two-col.reverse {
+  direction: rtl;
+}
+
+.two-col.reverse > * {
+  direction: ltr;
+}
+
+.canvas-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.canvas-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.canvas-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.canvas-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.canvas-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.canvas-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.canvas-body {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.canvas-body canvas {
+  border-radius: 8px;
+}
+
+.info-panel {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.info-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.content-block {
+  padding: 24px;
+}
+
+.content-block h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.content-block p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 16px 0;
+}
+
+.formula-box {
+  background: rgba(0, 255, 200, 0.05);
+  border: 1px solid rgba(0, 255, 200, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.formula-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.key-points {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+
+.key-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.key-points li:last-child {
+  border-bottom: none;
+}
+
+.key-point-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.key-point-icon.cyan {
+  background: rgba(0, 255, 200, 0.15);
+  color: var(--accent);
+}
+
+.key-point-icon.orange {
+  background: rgba(255, 107, 74, 0.15);
+  color: var(--accent-alt);
+}
+
+.key-point-icon.blue {
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--cyan-blue);
+}
+
+.key-point-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.slope-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.slope-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.slope-card:hover {
+  border-color: rgba(0, 255, 200, 0.3);
+  transform: translateY(-4px);
+}
+
+.slope-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(0, 255, 200, 0.2);
+}
+
+.slope-preview {
+  height: 100px;
+  background: #080c10;
+  position: relative;
+}
+
+.slope-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.slope-info {
+  padding: 16px;
+}
+
+.slope-type {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.slope-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.comparison-section {
+  margin-top: 60px;
+  padding: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.comparison-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.comparison-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.comparison-item {
+  text-align: center;
+}
+
+.comparison-canvas {
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.comparison-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.comparison-arrow {
+  color: var(--accent);
+  font-size: 24px;
+}
+
+.algo-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.algo-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.algo-card:hover {
+  border-color: rgba(0, 255, 200, 0.3);
+  transform: translateY(-4px);
+}
+
+.algo-card h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.algo-card p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.algo-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(0, 255, 200, 0.1);
+  color: var(--accent);
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  margin-top: 80px;
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
+@media (max-width: 900px) {
+  .two-col {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .two-col.reverse {
+    direction: ltr;
+  }
+  
+  .slope-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .algo-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .nav-progress {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 40px;
+  }
+  
+  .slope-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .canvas-body {
+    min-height: 300px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="../LineAlgoHolder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#05080c" stroke-width="2.5">
+          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">CG Lab</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="algorithm_lab.html">Algorithms</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="line_algorithms.html">Line</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Basics</span>
+    </div>
+    <div class="nav-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+      <span id="progress-text">0%</span>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-badge">Learning Module</div>
+    <h1 class="main-title">Basics of Line Drawing</h1>
+    <p class="hero-subtitle">
+      // Understand the fundamental concept of how lines are represented<br>
+      // and drawn in computer graphics before learning specific algorithms.
+    </p>
+    <div class="hero-nav">
+      <button class="btn btn-primary" onclick="scrollToSection('intro')">
+        Start Learning
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
+      <a href="DDAline.html" class="btn btn-ghost">Skip to DDA</a>
+    </div>
+  </section>
+
+  <!-- Section 1: Introduction -->
+  <section class="section" id="intro">
+    <div class="section-header">
+      <div class="section-number">01 / Introduction</div>
+      <h2 class="section-title">What is a Line in Computer Graphics?</h2>
+      <p class="section-desc">
+        In computer graphics, a line is defined by two endpoints and represents the shortest path between them on a pixel-based display.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">COORDINATE_GRID</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-intro" width="360" height="360"></canvas>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Definition</h3>
+        <p>
+          A line segment in computer graphics is defined by two distinct points 
+          in a coordinate system:
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">P1(x1, y1) and P2(x2, y2)</div>
+          <div class="formula-label">Two endpoints define a line</div>
+        </div>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">1</div>
+            <div class="key-point-text">
+              <strong>Start Point P1:</strong> The beginning coordinate of the line segment
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon cyan">2</div>
+            <div class="key-point-text">
+              <strong>End Point P2:</strong> The ending coordinate of the line segment
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">!</div>
+            <div class="key-point-text">
+              <strong>Challenge:</strong> Screens are made of discrete pixels, not continuous coordinates
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Interactive Line Drawing -->
+  <section class="section" id="interactive">
+    <div class="section-header">
+      <div class="section-number">02 / Interactive Demo</div>
+      <h2 class="section-title">Draw Your Own Line</h2>
+      <p class="section-desc">
+        Click on the grid to place two points. The line between them will be drawn automatically. Watch how coordinates update in real-time.
+      </p>
+    </div>
+    
+    <div class="two-col reverse">
+      <div class="content-block">
+        <h3>How It Works</h3>
+        <p>
+          Click anywhere on the pixel grid to place points. The first click sets P1, 
+          the second click sets P2. The system will calculate and display the line properties.
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula" id="display-points">Click to place points</div>
+          <div class="formula-label">Selected coordinates</div>
+        </div>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">P1</div>
+            <div class="key-point-text">
+              <strong>Point 1:</strong> <span id="info-p1">Not set</span>
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">P2</div>
+            <div class="key-point-text">
+              <strong>Point 2:</strong> <span id="info-p2">Not set</span>
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">d</div>
+            <div class="key-point-text">
+              <strong>Distance:</strong> <span id="info-distance">-</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">PIXEL_GRID</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn" onclick="resetInteractiveCanvas()">Reset</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-interactive" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Grid Size</span>
+            <span class="info-value">20 x 20 pixels</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value" id="info-status">Waiting for P1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Mathematical Representation -->
+  <section class="section" id="math">
+    <div class="section-header">
+      <div class="section-number">03 / Mathematics</div>
+      <h2 class="section-title">Line Equations</h2>
+      <p class="section-desc">
+        Understanding the mathematical foundation of lines is essential for developing efficient drawing algorithms.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">EQUATION_VISUALIZATION</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-math" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Slope (m)</span>
+            <span class="info-value" id="math-slope">0.50</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Y-intercept (c)</span>
+            <span class="info-value" id="math-intercept">2.00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Equation</span>
+            <span class="info-value" id="math-equation">y = 0.50x + 2.00</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Slope-Intercept Form</h3>
+        <p>
+          The most common way to represent a line mathematically is using the slope-intercept equation:
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">y = mx + c</div>
+          <div class="formula-label">Slope-intercept form</div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Calculating Slope</h3>
+        <p>The slope measures the steepness of the line:</p>
+        
+        <div class="formula-box">
+          <div class="formula">m = (y2 - y1) / (x2 - x1)</div>
+          <div class="formula-label">Slope formula</div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Y-Intercept</h3>
+        <p>The point where the line crosses the y-axis:</p>
+        
+        <div class="formula-box">
+          <div class="formula">c = y1 - m * x1</div>
+          <div class="formula-label">Y-intercept calculation</div>
+        </div>
+        
+        <p style="margin-top: 16px; font-size: 13px; color: var(--accent-alt);">
+          Note: Using these equations for every pixel is computationally expensive, which is why we need efficient algorithms like DDA and Bresenham.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Types of Lines -->
+  <section class="section" id="types">
+    <div class="section-header">
+      <div class="section-number">04 / Line Types</div>
+      <h2 class="section-title">Understanding Slope Cases</h2>
+      <p class="section-desc">
+        Different slope values create different line behaviors. Click on each card to see the visualization.
+      </p>
+    </div>
+    
+    <div class="slope-grid" id="slope-grid">
+      <div class="slope-card active" data-type="horizontal" onclick="selectSlopeType('horizontal')">
+        <div class="slope-preview">
+          <canvas id="slope-horizontal"></canvas>
+        </div>
+        <div class="slope-info">
+          <div class="slope-type">Horizontal Line</div>
+          <div class="slope-value">m = 0</div>
+        </div>
+      </div>
+      
+      <div class="slope-card" data-type="vertical" onclick="selectSlopeType('vertical')">
+        <div class="slope-preview">
+          <canvas id="slope-vertical"></canvas>
+        </div>
+        <div class="slope-info">
+          <div class="slope-type">Vertical Line</div>
+          <div class="slope-value">m = undefined</div>
+        </div>
+      </div>
+      
+      <div class="slope-card" data-type="positive" onclick="selectSlopeType('positive')">
+        <div class="slope-preview">
+          <canvas id="slope-positive"></canvas>
+        </div>
+        <div class="slope-info">
+          <div class="slope-type">Positive Slope</div>
+          <div class="slope-value">m > 0</div>
+        </div>
+      </div>
+      
+      <div class="slope-card" data-type="negative" onclick="selectSlopeType('negative')">
+        <div class="slope-preview">
+          <canvas id="slope-negative"></canvas>
+        </div>
+        <div class="slope-info">
+          <div class="slope-type">Negative Slope</div>
+          <div class="slope-value">m < 0</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="canvas-container" style="margin-top: 32px;">
+      <div class="canvas-header">
+        <span class="canvas-title">MAIN_VISUALIZATION</span>
+      </div>
+      <div class="canvas-body">
+        <canvas id="canvas-types" width="500" height="400"></canvas>
+      </div>
+      <div class="info-panel">
+        <div class="info-row">
+          <span class="info-label">Current Type</span>
+          <span class="info-value" id="type-name">Horizontal Line</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Slope Value</span>
+          <span class="info-value" id="type-slope">m = 0</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Description</span>
+          <span class="info-value" id="type-desc">Y remains constant, X changes</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Pixel Approximation -->
+  <section class="section" id="approximation">
+    <div class="section-header">
+      <div class="section-number">05 / Pixel Approximation</div>
+      <h2 class="section-title">Ideal Line vs Pixel Representation</h2>
+      <p class="section-desc">
+        Computer screens use discrete pixels, so we must approximate continuous mathematical lines with discrete points.
+      </p>
+    </div>
+    
+    <div class="comparison-section">
+      <h3 class="comparison-title">From Math to Pixels</h3>
+      <div class="comparison-visual">
+        <div class="comparison-item">
+          <canvas id="canvas-ideal" class="comparison-canvas" width="180" height="180"></canvas>
+          <div class="comparison-label">Ideal Mathematical Line</div>
+        </div>
+        <div class="comparison-arrow">
+          <svg width="40" height="24" viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M0 12h36M28 4l8 8-8 8"/>
+          </svg>
+        </div>
+        <div class="comparison-item">
+          <canvas id="canvas-pixel" class="comparison-canvas" width="180" height="180"></canvas>
+          <div class="comparison-label">Pixel Approximation</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="two-col" style="margin-top: 48px;">
+      <div class="content-block">
+        <h3>The Challenge</h3>
+        <p>
+          Mathematical lines are continuous and have infinite resolution. 
+          But pixel displays are discrete grids with fixed positions.
+        </p>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">1</div>
+            <div class="key-point-text">
+              <strong>Continuous:</strong> Math lines have infinite points between any two points
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">2</div>
+            <div class="key-point-text">
+              <strong>Discrete:</strong> Pixels have fixed integer coordinates only
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">3</div>
+            <div class="key-point-text">
+              <strong>Approximation:</strong> We choose the closest pixels to the ideal line
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">PIXEL_SELECTION</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-approximation" width="360" height="360"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Pixels Used</span>
+            <span class="info-value" id="pixel-count">25</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Approximation</span>
+            <span class="info-value">Nearest neighbor</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Transition to Algorithms -->
+  <section class="section" id="algorithms">
+    <div class="section-header">
+      <div class="section-number">06 / Next Steps</div>
+      <h2 class="section-title">Why We Need Algorithms</h2>
+      <p class="section-desc">
+        Calculating every point using the line equation is inefficient. Specialized algorithms solve this problem with better performance.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="content-block">
+        <h3>The Problem with Direct Calculation</h3>
+        <p>
+          Using y = mx + c for each x position requires:
+        </p>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon orange">1</div>
+            <div class="key-point-text">
+              <strong>Floating-point multiplication</strong> for each pixel (slow)
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">2</div>
+            <div class="key-point-text">
+              <strong>Rounding operations</strong> to convert to integers
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">3</div>
+            <div class="key-point-text">
+              <strong>Special cases</strong> for vertical and steep lines
+            </div>
+          </li>
+        </ul>
+        
+        <h3 style="margin-top: 24px;">The Solution</h3>
+        <p>
+          Incremental algorithms like DDA and Bresenham use previous calculations 
+          to determine the next pixel, avoiding expensive multiplication and division.
+        </p>
+      </div>
+      
+      <div>
+        <div class="algo-cards">
+          <a href="dda_algorithm.html" class="algo-card">
+            <h4>DDA Line Algorithm</h4>
+            <p>
+              Uses incremental floating-point addition to calculate pixel positions. 
+              Simpler to understand but uses floating-point operations.
+            </p>
+            <span class="algo-tag">Digital Differential Analyzer</span>
+          </a>
+          
+          <a href="bresenham_line.html" class="algo-card">
+            <h4>Bresenham Line Algorithm</h4>
+            <p>
+              Uses only integer arithmetic with a decision parameter. 
+              Most efficient and widely used in graphics hardware.
+            </p>
+            <span class="algo-tag">Integer Only</span>
+          </a>
+        </div>
+        
+        <div class="formula-box" style="margin-top: 24px;">
+          <div class="formula" style="font-size: 16px;">
+            Direct: y = mx + c (multiplication per pixel)<br>
+            DDA: y = y + slope (addition per pixel)<br>
+            Bresenham: Integer decision only
+          </div>
+          <div class="formula-label">Efficiency comparison</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>// Basics of Line Drawing - Foundation for Computer Graphics Algorithms</p>
+  </footer>
+  
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const particles = [];
+const particleCount = 30;
+
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.15 + 0.05
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#05080c';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  // Subtle grid
+  bgCtx.strokeStyle = 'rgba(0, 255, 200, 0.02)';
+  bgCtx.lineWidth = 1;
+  
+  const gridSize = 60;
+  for (let x = 0; x < bgWidth; x += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(x, 0);
+    bgCtx.lineTo(x, bgHeight);
+    bgCtx.stroke();
+  }
+  for (let y = 0; y < bgHeight; y += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, y);
+    bgCtx.lineTo(bgWidth, y);
+    bgCtx.stroke();
+  }
+  
+  // Floating lines
+  bgCtx.strokeStyle = 'rgba(0, 255, 200, 0.03)';
+  for (let i = 0; i < 6; i++) {
+    const y = (i / 6) * bgHeight + Math.sin(time + i) * 30;
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, y);
+    bgCtx.lineTo(bgWidth, y - 40);
+    bgCtx.stroke();
+  }
+  
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    if (p.x < 0) p.x = bgWidth;
+    if (p.x > bgWidth) p.x = 0;
+    if (p.y < 0) p.y = bgHeight;
+    if (p.y > bgHeight) p.y = 0;
+    
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 100) {
+      p.x -= dx * 0.005;
+      p.y -= dy * 0.005;
+    }
+    
+    bgCtx.fillStyle = 'rgba(0, 255, 200, ' + p.opacity + ')';
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  // Mouse glow
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 120);
+  gradient.addColorStop(0, 'rgba(0, 255, 200, 0.03)');
+  gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.1;
+  mouseY += (targetMouseY - mouseY) * 0.1;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === CANVAS UTILITIES ===
+function drawGrid(ctx, canvas, pixelSize, showAxes) {
+  const w = canvas.width;
+  const h = canvas.height;
+  
+  ctx.fillStyle = '#080c10';
+  ctx.fillRect(0, 0, w, h);
+  
+  // Grid lines
+  ctx.strokeStyle = 'rgba(0, 255, 200, 0.1)';
+  ctx.lineWidth = 1;
+  
+  for (let x = 0; x <= w; x += pixelSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+  
+  for (let y = 0; y <= h; y += pixelSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  
+  if (showAxes) {
+    const cx = w / 2;
+    const cy = h / 2;
+    
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(w, cy);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, h);
+    ctx.stroke();
+    
+    // Origin
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPixelPoint(ctx, px, py, pixelSize, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(px * pixelSize + 1, py * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+}
+
+function drawLine(ctx, x1, y1, x2, y2, color, width) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+// === INTRO CANVAS ===
+function initIntroCanvas() {
+  const canvas = document.getElementById('canvas-intro');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 18;
+  const cols = Math.floor(canvas.width / pixelSize);
+  const rows = Math.floor(canvas.height / pixelSize);
+  
+  let t = 0;
+  let showP1 = false;
+  let showP2 = false;
+  let showLine = false;
+  
+  const p1 = { x: 5, y: 5 };
+  const p2 = { x: 15, y: 14 };
+  
+  function draw() {
+    t += 0.02;
+    
+    drawGrid(ctx, canvas, pixelSize, false);
+    
+    // Animated reveal
+    if (t > 1 && !showP1) showP1 = true;
+    if (t > 2 && !showP2) showP2 = true;
+    if (t > 3 && !showLine) showLine = true;
+    
+    if (t > 6) {
+      t = 0;
+      showP1 = false;
+      showP2 = false;
+      showLine = false;
+    }
+    
+    if (showLine) {
+      // Draw line
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(p1.x * pixelSize + pixelSize / 2, p1.y * pixelSize + pixelSize / 2);
+      ctx.lineTo(p2.x * pixelSize + pixelSize / 2, p2.y * pixelSize + pixelSize / 2);
+      ctx.stroke();
+      
+      // Pixel approximation
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy));
+      
+      for (let i = 0; i <= steps; i++) {
+        const px = Math.round(p1.x + (dx / steps) * i);
+        const py = Math.round(p1.y + (dy / steps) * i);
+        
+        const alpha = 0.3 + Math.sin(t * 3 + i * 0.2) * 0.2;
+        ctx.fillStyle = 'rgba(0, 255, 200, ' + alpha + ')';
+        ctx.fillRect(px * pixelSize + 2, py * pixelSize + 2, pixelSize - 4, pixelSize - 4);
+      }
+    }
+    
+    if (showP1) {
+      // P1
+      ctx.fillStyle = '#00ffc8';
+      ctx.beginPath();
+      ctx.arc(p1.x * pixelSize + pixelSize / 2, p1.y * pixelSize + pixelSize / 2, 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#05080c';
+      ctx.font = 'bold 10px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('P1', p1.x * pixelSize + pixelSize / 2, p1.y * pixelSize + pixelSize / 2 + 4);
+      
+      ctx.fillStyle = 'rgba(0, 255, 200, 0.7)';
+      ctx.font = '10px JetBrains Mono';
+      ctx.textAlign = 'left';
+      ctx.fillText('(' + p1.x + ', ' + p1.y + ')', p1.x * pixelSize + 12, p1.y * pixelSize - 8);
+    }
+    
+    if (showP2) {
+      // P2
+      ctx.fillStyle = '#ff6b4a';
+      ctx.beginPath();
+      ctx.arc(p2.x * pixelSize + pixelSize / 2, p2.y * pixelSize + pixelSize / 2, 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#05080c';
+      ctx.font = 'bold 10px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('P2', p2.x * pixelSize + pixelSize / 2, p2.y * pixelSize + pixelSize / 2 + 4);
+      
+      ctx.fillStyle = 'rgba(255, 107, 74, 0.7)';
+      ctx.font = '10px JetBrains Mono';
+      ctx.textAlign = 'left';
+      ctx.fillText('(' + p2.x + ', ' + p2.y + ')', p2.x * pixelSize + 12, p2.y * pixelSize - 8);
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === INTERACTIVE CANVAS ===
+let interactiveState = {
+  p1: null,
+  p2: null,
+  phase: 0
+};
+
+function initInteractiveCanvas() {
+  const canvas = document.getElementById('canvas-interactive');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 20;
+  const cols = Math.floor(canvas.width / pixelSize);
+  const rows = Math.floor(canvas.height / pixelSize);
+  
+  function draw() {
+    drawGrid(ctx, canvas, pixelSize, false);
+    
+    // Draw set points
+    if (interactiveState.p1) {
+      ctx.fillStyle = '#00ffc8';
+      ctx.beginPath();
+      ctx.arc(
+        interactiveState.p1.x * pixelSize + pixelSize / 2,
+        interactiveState.p1.y * pixelSize + pixelSize / 2,
+        6, 0, Math.PI * 2
+      );
+      ctx.fill();
+      
+      ctx.fillStyle = 'rgba(0, 255, 200, 0.5)';
+      ctx.fillRect(
+        interactiveState.p1.x * pixelSize + 1,
+        interactiveState.p1.y * pixelSize + 1,
+        pixelSize - 2, pixelSize - 2
+      );
+    }
+    
+    if (interactiveState.p2) {
+      ctx.fillStyle = '#ff6b4a';
+      ctx.beginPath();
+      ctx.arc(
+        interactiveState.p2.x * pixelSize + pixelSize / 2,
+        interactiveState.p2.y * pixelSize + pixelSize / 2,
+        6, 0, Math.PI * 2
+      );
+      ctx.fill();
+      
+      ctx.fillStyle = 'rgba(255, 107, 74, 0.5)';
+      ctx.fillRect(
+        interactiveState.p2.x * pixelSize + 1,
+        interactiveState.p2.y * pixelSize + 1,
+        pixelSize - 2, pixelSize - 2
+      );
+    }
+    
+    // Draw line between points
+    if (interactiveState.p1 && interactiveState.p2) {
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(
+        interactiveState.p1.x * pixelSize + pixelSize / 2,
+        interactiveState.p1.y * pixelSize + pixelSize / 2
+      );
+      ctx.lineTo(
+        interactiveState.p2.x * pixelSize + pixelSize / 2,
+        interactiveState.p2.y * pixelSize + pixelSize / 2
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Draw pixel approximation
+      const dx = interactiveState.p2.x - interactiveState.p1.x;
+      const dy = interactiveState.p2.y - interactiveState.p1.y;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy), 1);
+      
+      for (let i = 0; i <= steps; i++) {
+        const px = Math.round(interactiveState.p1.x + (dx / steps) * i);
+        const py = Math.round(interactiveState.p1.y + (dy / steps) * i);
+        
+        ctx.fillStyle = 'rgba(0, 212, 255, 0.6)';
+        ctx.fillRect(px * pixelSize + 2, py * pixelSize + 2, pixelSize - 4, pixelSize - 4);
+      }
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  
+  canvas.addEventListener('click', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / pixelSize);
+    const y = Math.floor((e.clientY - rect.top) / pixelSize);
+    
+    if (x < 0 || x >= cols || y < 0 || y >= rows) return;
+    
+    if (!interactiveState.p1) {
+      interactiveState.p1 = { x, y };
+      document.getElementById('info-p1').textContent = '(' + x + ', ' + y + ')';
+      document.getElementById('info-status').textContent = 'Waiting for P2';
+      document.getElementById('display-points').textContent = 'P1(' + x + ', ' + y + ')';
+    } else if (!interactiveState.p2) {
+      interactiveState.p2 = { x, y };
+      document.getElementById('info-p2').textContent = '(' + x + ', ' + y + ')';
+      document.getElementById('info-status').textContent = 'Line drawn';
+      document.getElementById('display-points').textContent = 
+        'P1(' + interactiveState.p1.x + ', ' + interactiveState.p1.y + ') to P2(' + x + ', ' + y + ')';
+      
+      const dx = interactiveState.p2.x - interactiveState.p1.x;
+      const dy = interactiveState.p2.y - interactiveState.p1.y;
+      const distance = Math.sqrt(dx * dx + dy * dy).toFixed(2);
+      document.getElementById('info-distance').textContent = distance + ' units';
+    } else {
+      // Reset and start over
+      interactiveState.p1 = { x, y };
+      interactiveState.p2 = null;
+      document.getElementById('info-p1').textContent = '(' + x + ', ' + y + ')';
+      document.getElementById('info-p2').textContent = 'Not set';
+      document.getElementById('info-status').textContent = 'Waiting for P2';
+      document.getElementById('info-distance').textContent = '-';
+      document.getElementById('display-points').textContent = 'P1(' + x + ', ' + y + ')';
+    }
+  });
+  
+  draw();
+}
+
+function resetInteractiveCanvas() {
+  interactiveState.p1 = null;
+  interactiveState.p2 = null;
+  document.getElementById('info-p1').textContent = 'Not set';
+  document.getElementById('info-p2').textContent = 'Not set';
+  document.getElementById('info-status').textContent = 'Waiting for P1';
+  document.getElementById('info-distance').textContent = '-';
+  document.getElementById('display-points').textContent = 'Click to place points';
+}
+
+// === MATH CANVAS ===
+function initMathCanvas() {
+  const canvas = document.getElementById('canvas-math');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 20;
+  let t = 0;
+  
+  // Animated points
+  const p1 = { x: 2, y: 16 };
+  const p2 = { x: 18, y: 4 };
+  
+  function draw() {
+    t += 0.02;
+    
+    drawGrid(ctx, canvas, pixelSize, false);
+    
+    // Animated x position
+    const animX = 2 + (t % 8) * 2;
+    const slope = (p2.y - p1.y) / (p2.x - p1.x);
+    const intercept = p1.y - slope * p1.x;
+    const animY = slope * animX + intercept;
+    
+    // Draw line
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(p1.x * pixelSize + pixelSize / 2, p1.y * pixelSize + pixelSize / 2);
+    ctx.lineTo(p2.x * pixelSize + pixelSize / 2, p2.y * pixelSize + pixelSize / 2);
+    ctx.stroke();
+    
+    // Moving point
+    ctx.fillStyle = '#00d4ff';
+    ctx.beginPath();
+    ctx.arc(animX * pixelSize + pixelSize / 2, animY * pixelSize + pixelSize / 2, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Y value indicator
+    ctx.strokeStyle = 'rgba(0, 212, 255, 0.3)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(animX * pixelSize + pixelSize / 2, animY * pixelSize + pixelSize / 2);
+    ctx.lineTo(animX * pixelSize + pixelSize / 2, canvas.height - 20);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Y value label
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.8)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('y=' + animY.toFixed(1), animX * pixelSize + pixelSize / 2, canvas.height - 8);
+    
+    // Endpoints
+    ctx.fillStyle = '#00ffc8';
+    ctx.beginPath();
+    ctx.arc(p1.x * pixelSize + pixelSize / 2, p1.y * pixelSize + pixelSize / 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#ff6b4a';
+    ctx.beginPath();
+    ctx.arc(p2.x * pixelSize + pixelSize / 2, p2.y * pixelSize + pixelSize / 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Update info
+    document.getElementById('math-slope').textContent = slope.toFixed(2);
+    document.getElementById('math-intercept').textContent = intercept.toFixed(2);
+    document.getElementById('math-equation').textContent = 
+      'y = ' + slope.toFixed(2) + 'x + ' + intercept.toFixed(2);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === SLOPE TYPE CANVASES ===
+const slopeTypes = {
+  horizontal: {
+    p1: { x: 3, y: 8 }, p2: { x: 17, y: 8 },
+    name: 'Horizontal Line',
+    slope: 'm = 0',
+    desc: 'Y remains constant, X changes'
+  },
+  vertical: {
+    p1: { x: 10, y: 3 }, p2: { x: 10, y: 17 },
+    name: 'Vertical Line',
+    slope: 'm = undefined',
+    desc: 'X remains constant, Y changes'
+  },
+  positive: {
+    p1: { x: 3, y: 15 }, p2: { x: 17, y: 5 },
+    name: 'Positive Slope',
+    slope: 'm > 0',
+    desc: 'Line rises from left to right'
+  },
+  negative: {
+    p1: { x: 3, y: 5 }, p2: { x: 17, y: 15 },
+    name: 'Negative Slope',
+    slope: 'm < 0',
+    desc: 'Line falls from left to right'
+  }
+};
+
+let currentSlopeType = 'horizontal';
+
+function initSlopePreviews() {
+  Object.keys(slopeTypes).forEach(type => {
+    const canvas = document.getElementById('slope-' + type);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    const scale = canvas.width / 200;
+    const pixelSize = 10 * scale;
+    
+    const data = slopeTypes[type];
+    
+    function draw() {
+      ctx.fillStyle = '#080c10';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Grid
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.1)';
+      ctx.lineWidth = 1;
+      
+      for (let x = 0; x < canvas.width; x += pixelSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      
+      // Line
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(data.p1.x * pixelSize, data.p1.y * pixelSize);
+      ctx.lineTo(data.p2.x * pixelSize, data.p2.y * pixelSize);
+      ctx.stroke();
+      
+      // Points
+      ctx.fillStyle = '#00ffc8';
+      ctx.beginPath();
+      ctx.arc(data.p1.x * pixelSize, data.p1.y * pixelSize, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ff6b4a';
+      ctx.beginPath();
+      ctx.arc(data.p2.x * pixelSize, data.p2.y * pixelSize, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    draw();
+  });
+}
+
+function initTypesCanvas() {
+  const canvas = document.getElementById('canvas-types');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 20;
+  let t = 0;
+  
+  function draw() {
+    t += 0.02;
+    
+    drawGrid(ctx, canvas, pixelSize, false);
+    
+    const data = slopeTypes[currentSlopeType];
+    
+    // Animated line draw
+    const progress = Math.min(1, (t % 3) / 2);
+    
+    const currentP2 = {
+      x: data.p1.x + (data.p2.x - data.p1.x) * progress,
+      y: data.p1.y + (data.p2.y - data.p1.y) * progress
+    };
+    
+    // Line
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(data.p1.x * pixelSize + pixelSize / 2, data.p1.y * pixelSize + pixelSize / 2);
+    ctx.lineTo(currentP2.x * pixelSize + pixelSize / 2, currentP2.y * pixelSize + pixelSize / 2);
+    ctx.stroke();
+    
+    // Pixel approximation
+    if (progress > 0.5) {
+      const dx = data.p2.x - data.p1.x;
+      const dy = data.p2.y - data.p1.y;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy), 1);
+      
+      for (let i = 0; i <= steps; i++) {
+        const px = Math.round(data.p1.x + (dx / steps) * i);
+        const py = Math.round(data.p1.y + (dy / steps) * i);
+        
+        const alpha = 0.4 + Math.sin(t * 2 + i * 0.15) * 0.2;
+        ctx.fillStyle = 'rgba(0, 212, 255, ' + alpha + ')';
+        ctx.fillRect(px * pixelSize + 2, py * pixelSize + 2, pixelSize - 4, pixelSize - 4);
+      }
+    }
+    
+    // Points
+    ctx.fillStyle = '#00ffc8';
+    ctx.beginPath();
+    ctx.arc(data.p1.x * pixelSize + pixelSize / 2, data.p1.y * pixelSize + pixelSize / 2, 7, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#ff6b4a';
+    ctx.beginPath();
+    ctx.arc(data.p2.x * pixelSize + pixelSize / 2, data.p2.y * pixelSize + pixelSize / 2, 7, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Labels
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.8)';
+    ctx.font = '11px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText('P1', data.p1.x * pixelSize + 12, data.p1.y * pixelSize);
+    
+    ctx.fillStyle = 'rgba(255, 107, 74, 0.8)';
+    ctx.fillText('P2', data.p2.x * pixelSize + 12, data.p2.y * pixelSize);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function selectSlopeType(type) {
+  currentSlopeType = type;
+  
+  // Update cards
+  document.querySelectorAll('.slope-card').forEach(card => {
+    card.classList.remove('active');
+  });
+  document.querySelector('[data-type="' + type + '"]').classList.add('active');
+  
+  // Update info
+  const data = slopeTypes[type];
+  document.getElementById('type-name').textContent = data.name;
+  document.getElementById('type-slope').textContent = data.slope;
+  document.getElementById('type-desc').textContent = data.desc;
+}
+
+// === APPROXIMATION CANVASES ===
+function initApproximationCanvases() {
+  // Ideal line
+  const idealCanvas = document.getElementById('canvas-ideal');
+  if (idealCanvas) {
+    const ctx = idealCanvas.getContext('2d');
+    
+    ctx.fillStyle = '#0d1520';
+    ctx.fillRect(0, 0, 180, 180);
+    
+    ctx.strokeStyle = '#00ffc8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(20, 150);
+    ctx.lineTo(160, 30);
+    ctx.stroke();
+    
+    // Label
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('Continuous', 90, 170);
+  }
+  
+  // Pixel approximation
+  const pixelCanvas = document.getElementById('canvas-pixel');
+  if (pixelCanvas) {
+    const ctx = pixelCanvas.getContext('2d');
+    const pixelSize = 10;
+    
+    ctx.fillStyle = '#0d1520';
+    ctx.fillRect(0, 0, 180, 180);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.1)';
+    for (let x = 0; x < 180; x += pixelSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, 180);
+      ctx.stroke();
+    }
+    
+    // Pixels
+    const pixels = [
+      [2,14],[3,13],[4,12],[5,11],[6,11],[7,10],[8,9],[9,8],[10,8],[11,7],
+      [12,6],[13,5],[14,5],[15,4],[16,3]
+    ];
+    
+    pixels.forEach(p => {
+      ctx.fillStyle = 'rgba(0, 212, 255, 0.7)';
+      ctx.fillRect(p[0] * pixelSize + 1, p[1] * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+    });
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('Discrete', 90, 170);
+  }
+  
+  // Main approximation canvas
+  const mainCanvas = document.getElementById('canvas-approximation');
+  if (mainCanvas) {
+    const ctx = mainCanvas.getContext('2d');
+    const pixelSize = 15;
+    
+    let t = 0;
+    
+    function draw() {
+      t += 0.02;
+      
+      drawGrid(ctx, mainCanvas, pixelSize, false);
+      
+      const p1 = { x: 3, y: 20 };
+      const p2 = { x: 21, y: 4 };
+      
+      // Ideal line
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x * pixelSize + pixelSize / 2, p1.y * pixelSize + pixelSize / 2);
+      ctx.lineTo(p2.x * pixelSize + pixelSize / 2, p2.y * pixelSize + pixelSize / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Pixel approximation
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy));
+      
+      let pixelCount = 0;
+      
+      for (let i = 0; i <= steps; i++) {
+        const px = Math.round(p1.x + (dx / steps) * i);
+        const py = Math.round(p1.y + (dy / steps) * i);
+        
+        const alpha = 0.5 + Math.sin(t * 2 + i * 0.1) * 0.2;
+        
+        // Distance from ideal line (for visualization)
+        const idealX = p1.x + (dx / steps) * i;
+        const idealY = p1.y + (dy / steps) * i;
+        
+        ctx.fillStyle = 'rgba(0, 212, 255, ' + alpha + ')';
+        ctx.fillRect(px * pixelSize + 1, py * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+        
+        pixelCount++;
+      }
+      
+      // Endpoints
+      ctx.fillStyle = '#00ffc8';
+      ctx.beginPath();
+      ctx.arc(p1.x * pixelSize + pixelSize / 2, p1.y * pixelSize + pixelSize / 2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ff6b4a';
+      ctx.beginPath();
+      ctx.arc(p2.x * pixelSize + pixelSize / 2, p2.y * pixelSize + pixelSize / 2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      document.getElementById('pixel-count').textContent = pixelCount;
+      
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
+}
+
+// === SCROLL PROGRESS ===
+function updateProgress() {
+  const sections = ['intro', 'interactive', 'math', 'types', 'approximation', 'algorithms'];
+  const scrollPos = window.scrollY + window.innerHeight * 0.5;
+  
+  let currentSection = 0;
+  sections.forEach((id, index) => {
+    const el = document.getElementById(id);
+    if (el && scrollPos > el.offsetTop) {
+      currentSection = index + 1;
+    }
+  });
+  
+  const progress = Math.round((currentSection / sections.length) * 100);
+  document.getElementById('progress-fill').style.width = progress + '%';
+  document.getElementById('progress-text').textContent = progress + '%';
+}
+
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('scroll', updateProgress);
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initParticles();
+  
+  initSlopePreviews();
+});
+
+// === INITIALIZE ===
+initParticles();
+animate();
+
+document.addEventListener('DOMContentLoaded', function() {
+  initIntroCanvas();
+  initInteractiveCanvas();
+  initMathCanvas();
+  initSlopePreviews();
+  initTypesCanvas();
+  initApproximationCanvases();
+  updateProgress();
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heap Sort Visualizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-card: #161618;
+      --fg: #e8e8e8;
+      --muted: #6b6b6b;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #a855f7;
+      --accent-yellow: #eab308;
+      --accent-orange: #f97316;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+      --border: #2a2a2c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-pattern {
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.04) 0%, transparent 50%),
+        radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 50px 50px, 50px 50px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .card-header {
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #22d3ee;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(6, 182, 212, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--border);
+    }
+
+    .btn-warning {
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Array Bars */
+    .bar-container {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 3px;
+      height: 200px;
+      padding: 16px;
+      position: relative;
+    }
+
+    .bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 28px;
+      border-radius: 4px 4px 0 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .bar-value {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px;
+      color: var(--fg);
+    }
+
+    .bar-default { background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%); }
+    
+    .bar-comparing {
+      background: linear-gradient(180deg, var(--accent-yellow) 0%, #ca8a04 100%);
+      box-shadow: 0 0 25px rgba(234, 179, 8, 0.4);
+    }
+    
+    .bar-swapping {
+      background: linear-gradient(180deg, var(--accent-orange) 0%, #c2410c 100%);
+      box-shadow: 0 0 25px rgba(249, 115, 22, 0.4);
+    }
+    
+    .bar-sorted {
+      background: linear-gradient(180deg, var(--accent-green) 0%, #16a34a 100%);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    }
+    
+    .bar-heap {
+      background: linear-gradient(180deg, var(--accent-purple) 0%, #7c3aed 100%);
+      box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+    }
+
+    .bar-active {
+      background: linear-gradient(180deg, var(--accent-cyan) 0%, #0891b2 100%);
+      box-shadow: 0 0 30px rgba(6, 182, 212, 0.4);
+    }
+
+    /* Heap Boundary */
+    .heap-boundary {
+      position: absolute;
+      bottom: 0;
+      height: 100%;
+      border-right: 2px dashed var(--accent-purple);
+      pointer-events: none;
+      transition: left 0.3s ease;
+    }
+
+    .heap-boundary::after {
+      content: 'Heap | Sorted';
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      white-space: nowrap;
+      color: var(--muted);
+      background: var(--bg-card);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    /* Tree Visualization */
+    .tree-container {
+      position: relative;
+      height: 320px;
+      overflow: hidden;
+    }
+
+    .tree-node {
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+    }
+
+    .tree-node-value {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .tree-node-index {
+      font-size: 8px;
+      opacity: 0.6;
+      margin-top: 1px;
+    }
+
+    .node-default {
+      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+      border: 2px solid #4a4a4a;
+    }
+
+    .node-comparing {
+      background: linear-gradient(135deg, var(--accent-yellow) 0%, #ca8a04 100%);
+      border: 2px solid #fde047;
+      box-shadow: 0 0 30px rgba(234, 179, 8, 0.5);
+      transform: scale(1.15);
+    }
+
+    .node-swapping {
+      background: linear-gradient(135deg, var(--accent-orange) 0%, #c2410c 100%);
+      border: 2px solid #fb923c;
+      box-shadow: 0 0 30px rgba(249, 115, 22, 0.5);
+    }
+
+    .node-sorted {
+      background: linear-gradient(135deg, var(--accent-green) 0%, #16a34a 100%);
+      border: 2px solid #4ade80;
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+    }
+
+    .node-active {
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, #0891b2 100%);
+      border: 2px solid #22d3ee;
+      box-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
+    }
+
+    .node-heap {
+      background: linear-gradient(135deg, var(--accent-purple) 0%, #7c3aed 100%);
+      border: 2px solid #c084fc;
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+    }
+
+    .tree-edge {
+      position: absolute;
+      background: var(--border);
+      height: 2px;
+      transform-origin: left center;
+      z-index: 1;
+      transition: all 0.3s ease;
+    }
+
+    .edge-active {
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+      height: 3px;
+    }
+
+    /* Pseudocode */
+    .code-line {
+      padding: 8px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .code-line.active {
+      background: rgba(6, 182, 212, 0.1);
+      border-left-color: var(--accent-cyan);
+    }
+
+    .code-keyword { color: var(--accent-purple); }
+    .code-variable { color: var(--accent-cyan); }
+    .code-operator { color: var(--accent-yellow); }
+    .code-comment { color: var(--muted); font-style: italic; }
+
+    /* Stats */
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-item:last-child { border-bottom: none; }
+
+    .stat-label { color: var(--muted); font-size: 12px; }
+    .stat-value { font-weight: 600; font-size: 13px; }
+
+    /* Progress */
+    .progress-bar {
+      height: 6px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+      transition: width 0.3s ease;
+    }
+
+    /* Explanation */
+    .explanation-text {
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .highlight {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    .highlight-cyan { background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); }
+    .highlight-yellow { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+    .highlight-green { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+    .highlight-orange { background: rgba(249, 115, 22, 0.2); color: var(--accent-orange); }
+    .highlight-purple { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+
+    /* Input & Range */
+    .input-field {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--fg);
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--bg-secondary);
+      border-radius: 2px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Tooltip */
+    .tooltip { position: relative; }
+    
+    .tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      z-index: 100;
+    }
+
+    .tooltip:hover::after {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Phase Indicator */
+    .phase-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in-up { animation: fadeInUp 0.4s ease forwards; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .pulse { animation: pulse 1s ease-in-out infinite; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    @media (max-width: 1024px) {
+      .tree-container { height: 260px; }
+      .tree-node { width: 44px; height: 44px; font-size: 12px; }
+      .bar-container { height: 160px; }
+    }
+  </style>
+</head>
+<body class="bg-pattern">
+  <div class="min-h-screen p-4 lg:p-5">
+    <!-- Header -->
+    <header class="mb-5 fade-in-up">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div>
+          <h1 class="text-2xl lg:text-3xl font-bold tracking-tight">
+            Heap Sort <span style="color: var(--accent-cyan)">Visualizer</span>
+          </h1>
+          <p class="text-xs mt-1" style="color: var(--muted)">
+            Interactive binary heap visualization with step-by-step explanation
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="phase-indicator" id="phaseIndicator" style="background: rgba(168, 85, 247, 0.2); color: var(--accent-purple)">
+            <span class="w-2 h-2 rounded-full" style="background: var(--accent-purple)"></span>
+            Ready
+          </span>
+          <button class="btn btn-secondary text-xs" onclick="showInfoModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4M12 8h.01"></path>
+            </svg>
+            About
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+      <!-- Left: Visualization -->
+      <div class="xl:col-span-8 space-y-4">
+        <!-- Array Visualization -->
+        <div class="card fade-in-up" style="animation-delay: 0.05s">
+          <div class="card-header">
+            <div class="flex gap-1.5">
+            </div>
+            <span class="card-title ml-2">Array Visualization</span>
+            <div class="ml-auto flex items-center gap-3 text-xs">
+              <span style="color: var(--muted)">Heap Size: <span class="font-mono" style="color: var(--accent-purple)" id="heapSizeDisplay">0</span></span>
+              <span style="color: var(--muted)">Sorted: <span class="font-mono" style="color: var(--accent-green)" id="sortedCountDisplay">0</span></span>
+            </div>
+          </div>
+          <div class="bar-container" id="barContainer">
+            <!-- Bars rendered here -->
+          </div>
+          <div class="px-4 pb-3">
+            <div class="flex items-center gap-4 text-xs" style="color: var(--muted)">
+              <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded" style="background: #4a4a4a"></div><span>Default</span></div>
+              <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded" style="background: var(--accent-yellow)"></div><span>Comparing</span></div>
+              <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded" style="background: var(--accent-orange)"></div><span>Swapping</span></div>
+              <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded" style="background: var(--accent-purple)"></div><span>In Heap</span></div>
+              <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded" style="background: var(--accent-green)"></div><span>Sorted</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Heap Tree Visualization -->
+        <div class="card fade-in-up" style="animation-delay: 0.1s">
+          <div class="card-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple)">
+              <circle cx="12" cy="5" r="3"></circle>
+              <path d="M12 8v4M8 16l4-4 4 4M6 12l2-2M18 12l-2-2"></path>
+            </svg>
+            <span class="card-title">Binary Heap Tree</span>
+          </div>
+          <div class="tree-container" id="treeContainer">
+            <!-- Tree nodes rendered here -->
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card fade-in-up" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan)">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <path d="M9 9h6M9 15h6M9 12h6"></path>
+            </svg>
+            <span class="card-title">Controls</span>
+          </div>
+          <div class="p-4 space-y-3">
+            <div class="flex flex-col lg:flex-row gap-2">
+              <input type="text" class="input-field flex-1" id="customArrayInput" placeholder="Custom array (e.g., 4, 10, 3, 5, 1)">
+              <div class="flex gap-2">
+                <button class="btn btn-secondary" onclick="generateRandomArray()">Random</button>
+                <button class="btn btn-secondary" onclick="applyCustomArray()">Apply</button>
+              </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-2">
+              <button class="btn btn-primary" id="startBtn" onclick="startSorting()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"></polygon></svg>
+                Start
+              </button>
+              <button class="btn btn-warning" id="pauseBtn" onclick="togglePause()" disabled>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" id="pauseIcon"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                <span id="pauseText">Pause</span>
+              </button>
+              <button class="btn btn-secondary" id="stepBtn" onclick="stepForward()" disabled>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                Step
+              </button>
+              <button class="btn btn-danger" id="resetBtn" onclick="resetVisualization()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                Reset
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs mb-1.5 block" style="color: var(--muted)">
+                  Speed: <span id="speedValue" class="font-mono" style="color: var(--accent-cyan)">400ms</span>
+                </label>
+                <input type="range" min="50" max="1000" value="400" id="speedSlider" oninput="updateSpeed(this.value)">
+              </div>
+              <div>
+                <label class="text-xs mb-1.5 block" style="color: var(--muted)">
+                  Size: <span id="sizeValue" class="font-mono" style="color: var(--accent-cyan)">10</span>
+                </label>
+                <input type="range" min="5" max="15" value="10" id="sizeSlider" oninput="updateSize(this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explanation Panel -->
+        <div class="card fade-in-up" style="animation-delay: 0.2s">
+          <div class="card-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-green)">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="card-title">Step Explanation</span>
+          </div>
+          <div class="p-4">
+            <div class="explanation-text" id="explanationText">
+              <p>Welcome to the <span class="highlight highlight-cyan">Heap Sort</span> Visualizer!</p>
+              <p class="mt-2" style="color: var(--muted)">Heap Sort uses a binary heap data structure. A <span class="highlight highlight-purple">Max Heap</span> ensures the largest element is always at the root.</p>
+              <p class="mt-2" style="color: var(--muted)">Click <span class="highlight highlight-cyan">Start</span> to begin or <span class="highlight highlight-cyan">Step</span> for manual control.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Info Panels -->
+      <div class="xl:col-span-4 space-y-4">
+        <!-- Pseudocode -->
+        <div class="card fade-in-up" style="animation-delay: 0.1s">
+          <div class="card-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-yellow)">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            <span class="card-title">Pseudocode</span>
+          </div>
+          <div class="py-1" id="codeContainer">
+            <div class="code-line" data-line="1"><span class="code-keyword">Build</span> <span class="code-variable">MaxHeap</span>(arr)</div>
+            <div class="code-line" data-line="2">  <span class="code-keyword">for</span> i = n/2-1 <span class="code-keyword">downto</span> 0</div>
+            <div class="code-line" data-line="3">    <span class="code-variable">heapify</span>(arr, i)</div>
+            <div class="code-line" data-line="4">  <span class="code-comment">// Heap built</span></div>
+            <div class="code-line" data-line="5">  <span class="code-keyword">for</span> i = n-1 <span class="code-keyword">downto</span> 1</div>
+            <div class="code-line" data-line="6">    <span class="code-variable">swap</span>(arr[0], arr[i])</div>
+            <div class="code-line" data-line="7">    <span class="code-variable">heapify</span>(arr, 0, i)</div>
+            <div class="code-line" data-line="8">  <span class="code-comment">// Sorted!</span></div>
+          </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="card fade-in-up" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-orange)">
+              <path d="M18 20V10M12 20V4M6 20v-6"></path>
+            </svg>
+            <span class="card-title">Statistics</span>
+          </div>
+          <div class="p-4">
+            <div class="stat-item">
+              <span class="stat-label">Array Size</span>
+              <span class="stat-value font-mono" id="statArraySize">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Heap Height</span>
+              <span class="stat-value font-mono" style="color: var(--accent-purple)" id="statHeapHeight">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Comparisons</span>
+              <span class="stat-value font-mono" style="color: var(--accent-yellow)" id="statComparisons">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Swaps</span>
+              <span class="stat-value font-mono" style="color: var(--accent-orange)" id="statSwaps">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Heapify Calls</span>
+              <span class="stat-value font-mono" style="color: var(--accent-cyan)" id="statHeapifyCalls">0</span>
+            </div>
+            <div class="mt-4">
+              <div class="flex justify-between text-xs mb-1.5" style="color: var(--muted)">
+                <span>Progress</span>
+                <span id="progressPercent">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Complexity -->
+        <div class="card fade-in-up" style="animation-delay: 0.2s">
+          <div class="card-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-red)">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span class="card-title">Complexity</span>
+          </div>
+          <div class="p-4 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Best Case</span>
+              <span class="text-xs font-mono px-2 py-1 rounded" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-green)">O(n log n)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Average</span>
+              <span class="text-xs font-mono px-2 py-1 rounded" style="background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow)">O(n log n)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Worst Case</span>
+              <span class="text-xs font-mono px-2 py-1 rounded" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red)">O(n log n)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Space</span>
+              <span class="text-xs font-mono px-2 py-1 rounded" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan)">O(1)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Heap Property Info -->
+        <div class="card fade-in-up" style="animation-delay: 0.25s">
+          <div class="card-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple)">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
+            </svg>
+            <span class="card-title">Heap Property</span>
+          </div>
+          <div class="p-4 text-xs" style="color: var(--muted); line-height: 1.6">
+            <p>In a <span class="highlight highlight-purple">Max Heap</span>, each parent node is greater than or equal to its children.</p>
+            <p class="mt-2">For node at index <span class="highlight highlight-cyan">i</span>:</p>
+            <ul class="mt-1 ml-3 space-y-0.5">
+              <li>Left child: <span class="font-mono">2i + 1</span></li>
+              <li>Right child: <span class="font-mono">2i + 2</span></li>
+              <li>Parent: <span class="font-mono">floor((i-1)/2)</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Modal -->
+  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" id="infoModal">
+    <div class="card max-w-md w-full">
+      <div class="card-header">
+        <span class="card-title">About Heap Sort</span>
+        <button class="ml-auto" style="color: var(--muted)" onclick="hideInfoModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-3 text-sm">
+        <p><span class="highlight highlight-cyan">Heap Sort</span> is a comparison-based sorting algorithm using a binary heap data structure.</p>
+        <p style="color: var(--muted)">It works by:</p>
+        <ol class="ml-4 space-y-1" style="color: var(--muted)">
+          <li>1. Building a Max Heap from the array</li>
+          <li>2. Swapping root (max) with last element</li>
+          <li>3. Reducing heap size and heapifying</li>
+          <li>4. Repeating until sorted</li>
+        </ol>
+        <p class="text-xs" style="color: var(--muted)">Unlike Bubble Sort, Heap Sort guarantees O(n log n) in all cases, making it efficient for large datasets.</p>
+        <button class="btn btn-primary w-full mt-4" onclick="hideInfoModal()">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ STATE ============
+    let array = [];
+    let originalArray = [];
+    let sorting = false;
+    let paused = false;
+    let stepMode = false;
+    let stepResolve = null;
+    let speed = 400;
+    let arraySize = 10;
+    let heapSize = 0;
+    
+    let comparisons = 0;
+    let swaps = 0;
+    let heapifyCalls = 0;
+    let sortedCount = 0;
+    let sortedIndices = [];
+    let currentPhase = 'ready';
+
+    // ============ DOM ============
+    const barContainer = document.getElementById('barContainer');
+    const treeContainer = document.getElementById('treeContainer');
+    const explanationText = document.getElementById('explanationText');
+    const codeLines = document.querySelectorAll('.code-line');
+
+    // ============ UTILITIES ============
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function waitForStep() {
+      if (stepMode) {
+        return new Promise(resolve => { stepResolve = resolve; });
+      }
+      while (paused && sorting) {
+        return new Promise(resolve => {
+          const check = () => {
+            if (!paused || !sorting) resolve();
+            else setTimeout(check, 50);
+          };
+          check();
+        });
+      }
+    }
+
+    function getHeapHeight(n) {
+      return Math.floor(Math.log2(n)) + 1;
+    }
+
+    // ============ ARRAY GENERATION ============
+    function generateRandomArray() {
+      if (sorting) return;
+      array = [];
+      for (let i = 0; i < arraySize; i++) {
+        array.push(Math.floor(Math.random() * 60) + 10);
+      }
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      renderTree();
+      updateExplanation('ready');
+    }
+
+    function applyCustomArray() {
+      if (sorting) return;
+      const input = document.getElementById('customArrayInput').value;
+      const values = input.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
+      if (values.length < 2) {
+        updateExplanation('invalid');
+        return;
+      }
+      array = values.slice(0, 15);
+      arraySize = array.length;
+      document.getElementById('sizeSlider').value = arraySize;
+      document.getElementById('sizeValue').textContent = arraySize;
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      renderTree();
+      updateExplanation('ready');
+    }
+
+    // ============ RENDERING ============
+    function renderBars(comparingIndices = [], swappingIndices = [], activeIndex = -1) {
+      barContainer.innerHTML = '';
+      const maxVal = Math.max(...array);
+      const containerHeight = 160;
+
+      array.forEach((value, index) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        const height = Math.max(25, (value / maxVal) * containerHeight);
+        bar.style.height = `${height}px`;
+
+        if (sortedIndices.includes(index)) {
+          bar.classList.add('bar-sorted');
+        } else if (swappingIndices.includes(index)) {
+          bar.classList.add('bar-swapping');
+        } else if (comparingIndices.includes(index)) {
+          bar.classList.add('bar-comparing');
+        } else if (index === activeIndex) {
+          bar.classList.add('bar-active');
+        } else if (index < heapSize) {
+          bar.classList.add('bar-heap');
+        } else {
+          bar.classList.add('bar-default');
+        }
+
+        const valueLabel = document.createElement('span');
+        valueLabel.className = 'bar-value';
+        valueLabel.textContent = value;
+        bar.appendChild(valueLabel);
+
+        barContainer.appendChild(bar);
+      });
+    }
+
+    function renderTree(comparingIndices = [], swappingIndices = [], activeIndex = -1) {
+      treeContainer.innerHTML = '';
+      if (array.length === 0) return;
+
+      const n = heapSize;
+      if (n === 0) {
+        // Show placeholder
+        const placeholder = document.createElement('div');
+        placeholder.className = 'absolute inset-0 flex items-center justify-center text-sm';
+        placeholder.style.color = 'var(--muted)';
+        placeholder.textContent = 'Heap will appear here';
+        treeContainer.appendChild(placeholder);
+        return;
+      }
+
+      const height = getHeapHeight(n);
+      const containerWidth = treeContainer.offsetWidth;
+      const containerHeight = treeContainer.offsetHeight;
+      const nodeRadius = 26;
+      const levelHeight = Math.min(70, (containerHeight - 60) / height);
+
+      // Calculate positions
+      const positions = [];
+      for (let i = 0; i < n; i++) {
+        const level = Math.floor(Math.log2(i + 1));
+        const levelStart = Math.pow(2, level) - 1;
+        const posInLevel = i - levelStart;
+        const nodesInLevel = Math.pow(2, level);
+        
+        const x = containerWidth / 2 + (posInLevel - (nodesInLevel - 1) / 2) * (containerWidth / nodesInLevel);
+        const y = 30 + level * levelHeight;
+        positions.push({ x, y });
+      }
+
+      // Draw edges first
+      for (let i = 0; i < n; i++) {
+        const left = 2 * i + 1;
+        const right = 2 * i + 2;
+
+        if (left < n) {
+          drawEdge(positions[i], positions[left], comparingIndices.includes(i) || comparingIndices.includes(left));
+        }
+        if (right < n) {
+          drawEdge(positions[i], positions[right], comparingIndices.includes(i) || comparingIndices.includes(right));
+        }
+      }
+
+      // Draw nodes
+      for (let i = 0; i < n; i++) {
+        const node = document.createElement('div');
+        node.className = 'tree-node';
+        node.style.left = `${positions[i].x - nodeRadius}px`;
+        node.style.top = `${positions[i].y - nodeRadius}px`;
+
+        if (sortedIndices.includes(i)) {
+          node.classList.add('node-sorted');
+        } else if (swappingIndices.includes(i)) {
+          node.classList.add('node-swapping');
+        } else if (comparingIndices.includes(i)) {
+          node.classList.add('node-comparing');
+        } else if (i === activeIndex) {
+          node.classList.add('node-active');
+        } else {
+          node.classList.add('node-heap');
+        }
+
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'tree-node-value';
+        valueSpan.textContent = array[i];
+        node.appendChild(valueSpan);
+
+        const indexSpan = document.createElement('span');
+        indexSpan.className = 'tree-node-index';
+        indexSpan.textContent = `[${i}]`;
+        node.appendChild(indexSpan);
+
+        treeContainer.appendChild(node);
+      }
+    }
+
+    function drawEdge(from, to, isActive) {
+      const edge = document.createElement('div');
+      edge.className = 'tree-edge';
+      if (isActive) edge.classList.add('edge-active');
+
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      edge.style.width = `${length}px`;
+      edge.style.left = `${from.x}px`;
+      edge.style.top = `${from.y}px`;
+      edge.style.transform = `rotate(${angle}deg)`;
+
+      treeContainer.appendChild(edge);
+    }
+
+    // ============ STATS & UI ============
+    function resetStats() {
+      comparisons = 0;
+      swaps = 0;
+      heapifyCalls = 0;
+      sortedCount = 0;
+      sortedIndices = [];
+      heapSize = array.length;
+      updateStats();
+      updatePhase('ready');
+    }
+
+    function updateStats() {
+      document.getElementById('statArraySize').textContent = array.length;
+      document.getElementById('statHeapHeight').textContent = getHeapHeight(array.length);
+      document.getElementById('statComparisons').textContent = comparisons;
+      document.getElementById('statSwaps').textContent = swaps;
+      document.getElementById('statHeapifyCalls').textContent = heapifyCalls;
+      document.getElementById('heapSizeDisplay').textContent = heapSize;
+      document.getElementById('sortedCountDisplay').textContent = sortedCount;
+
+      const progress = array.length > 0 ? Math.round((sortedCount / array.length) * 100) : 0;
+      document.getElementById('progressPercent').textContent = `${progress}%`;
+      document.getElementById('progressBar').style.width = `${progress}%`;
+    }
+
+    function updatePhase(phase) {
+      currentPhase = phase;
+      const indicator = document.getElementById('phaseIndicator');
+      const colors = {
+        ready: { bg: 'rgba(168, 85, 247, 0.2)', color: 'var(--accent-purple)', dot: 'var(--accent-purple)' },
+        building: { bg: 'rgba(168, 85, 247, 0.2)', color: 'var(--accent-purple)', dot: 'var(--accent-purple)' },
+        extracting: { bg: 'rgba(6, 182, 212, 0.2)', color: 'var(--accent-cyan)', dot: 'var(--accent-cyan)' },
+        complete: { bg: 'rgba(34, 197, 94, 0.2)', color: 'var(--accent-green)', dot: 'var(--accent-green)' }
+      };
+      const c = colors[phase] || colors.ready;
+      indicator.style.background = c.bg;
+      indicator.style.color = c.color;
+      indicator.querySelector('span').style.background = c.dot;
+      indicator.lastChild.textContent = phase.charAt(0).toUpperCase() + phase.slice(1);
+    }
+
+    function highlightCode(lineNum) {
+      codeLines.forEach(line => {
+        line.classList.remove('active');
+        if (parseInt(line.dataset.line) === lineNum) {
+          line.classList.add('active');
+        }
+      });
+    }
+
+    function updateExplanation(type, data = {}) {
+      let html = '';
+      switch (type) {
+        case 'ready':
+          html = `<p>Ready to sort! Array has <span class="highlight highlight-cyan">${array.length}</span> elements.</p>
+                  <p class="mt-2" style="color: var(--muted)">Click <span class="highlight highlight-cyan">Start</span> to build the max heap and begin sorting.</p>`;
+          break;
+        case 'invalid':
+          html = `<p class="highlight highlight-orange">Invalid input!</p><p class="mt-2" style="color: var(--muted)">Enter comma-separated positive numbers.</p>`;
+          break;
+        case 'buildStart':
+          html = `<p><strong>Building Max Heap</strong></p>
+                  <p class="mt-2">Starting from the last non-leaf node at index <span class="highlight highlight-purple">${data.startIndex}</span>.</p>
+                  <p class="mt-2" style="color: var(--muted)">We'll heapify each subtree from bottom to top.</p>`;
+          break;
+        case 'heapify':
+          html = `<p><strong>Heapify at index ${data.root}</strong></p>
+                  <p class="mt-2">Parent: <span class="highlight highlight-yellow">${data.parentVal}</span> at [${data.root}]</p>
+                  ${data.leftIdx < data.heapSize ? `<p>Left child: <span class="highlight highlight-cyan">${data.leftVal}</span> at [${data.leftIdx}]</p>` : '<p style="color: var(--muted)">No left child</p>'}
+                  ${data.rightIdx < data.heapSize ? `<p>Right child: <span class="highlight highlight-cyan">${data.rightVal}</span> at [${data.rightIdx}]</p>` : ''}
+                  <p class="mt-2">${data.needsSwap ? `<span class="highlight highlight-orange">Swap needed!</span> Largest is at index ${data.largest}.` : '<span class="highlight highlight-green">Heap property satisfied.</span>'}</p>`;
+          break;
+        case 'swap':
+          html = `<p><strong>Swapping</strong></p>
+                  <p class="mt-2"><span class="highlight highlight-orange">${data.val1}</span> at [${data.idx1}] ↔ <span class="highlight highlight-orange">${data.val2}</span> at [${data.idx2}]</p>`;
+          break;
+        case 'heapBuilt':
+          html = `<p><span class="highlight highlight-green">Max Heap Built!</span></p>
+                  <p class="mt-2">The largest element <span class="highlight highlight-purple">${data.maxVal}</span> is now at the root.</p>
+                  <p class="mt-2" style="color: var(--muted)">Now we'll extract elements one by one.</p>`;
+          break;
+        case 'extract':
+          html = `<p><strong>Extract Max - Iteration ${data.iteration}</strong></p>
+                  <p class="mt-2">Swapping root <span class="highlight highlight-orange">${data.rootVal}</span> with last element <span class="highlight highlight-orange">${data.lastVal}</span>.</p>
+                  <p class="mt-2">Element <span class="highlight highlight-green">${data.rootVal}</span> is now sorted!</p>`;
+          break;
+        case 'complete':
+          html = `<p class="highlight highlight-green"><strong>Sorting Complete!</strong></p>
+                  <p class="mt-2">Comparisons: <span class="highlight highlight-yellow">${comparisons}</span> | Swaps: <span class="highlight highlight-orange">${swaps}</span></p>
+                  <p class="mt-2" style="color: var(--muted)">The array is sorted in ascending order.</p>`;
+          break;
+        case 'paused':
+          html = `<p><span class="highlight highlight-yellow">Paused</span></p><p class="mt-2" style="color: var(--muted)">Click Resume or Step to continue.</p>`;
+          break;
+      }
+      explanationText.innerHTML = html;
+    }
+
+    // ============ HEAP ALGORITHM ============
+    async function heapify(n, i) {
+      heapifyCalls++;
+      updateStats();
+      
+      let largest = i;
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+
+      highlightCode(3);
+      
+      // Show comparison
+      const comparing = [i];
+      if (left < n) comparing.push(left);
+      if (right < n) comparing.push(right);
+      
+      renderBars(comparing, [], i);
+      renderTree(comparing, [], i);
+      
+      updateExplanation('heapify', {
+        root: i,
+        parentVal: array[i],
+        leftIdx: left,
+        leftVal: left < n ? array[left] : null,
+        rightIdx: right,
+        rightVal: right < n ? array[right] : null,
+        heapSize: n,
+        needsSwap: false,
+        largest: i
+      });
+      
+      await sleep(speed);
+      await waitForStep();
+
+      comparisons++;
+      
+      if (left < n) {
+        comparisons++;
+        if (array[left] > array[largest]) {
+          largest = left;
+        }
+      }
+
+      if (right < n) {
+        comparisons++;
+        if (array[right] > array[largest]) {
+          largest = right;
+        }
+      }
+
+      updateStats();
+
+      if (largest !== i) {
+        // Swap needed
+        updateExplanation('heapify', {
+          root: i,
+          parentVal: array[i],
+          leftIdx: left,
+          leftVal: left < n ? array[left] : null,
+          rightIdx: right,
+          rightVal: right < n ? array[right] : null,
+          heapSize: n,
+          needsSwap: true,
+          largest: largest
+        });
+
+        renderBars([], [i, largest], i);
+        renderTree([], [i, largest], i);
+        await sleep(speed / 2);
+
+        // Perform swap
+        [array[i], array[largest]] = [array[largest], array[i]];
+        swaps++;
+        updateStats();
+
+        updateExplanation('swap', { val1: array[largest], val2: array[i], idx1: i, idx2: largest });
+        renderBars([], [i, largest], largest);
+        renderTree([], [i, largest], largest);
+        await sleep(speed / 2);
+
+        // Recursively heapify
+        await heapify(n, largest);
+      }
+      
+      updateStats();
+    }
+
+    async function buildMaxHeap() {
+      updatePhase('building');
+      highlightCode(2);
+      
+      const startIdx = Math.floor(array.length / 2) - 1;
+      updateExplanation('buildStart', { startIndex: startIdx });
+      await sleep(speed);
+
+      for (let i = startIdx; i >= 0; i--) {
+        if (!sorting) return false;
+        highlightCode(2);
+        await heapify(array.length, i);
+      }
+
+      highlightCode(4);
+      updateExplanation('heapBuilt', { maxVal: array[0] });
+      renderBars([], [], 0);
+      renderTree([], [], 0);
+      await sleep(speed);
+      
+      return true;
+    }
+
+    async function heapSort() {
+      heapSize = array.length;
+      
+      // Build max heap
+      const built = await buildMaxHeap();
+      if (!built) return false;
+
+      updatePhase('extracting');
+      highlightCode(5);
+
+      // Extract elements
+      for (let i = array.length - 1; i > 0; i--) {
+        if (!sorting) return false;
+
+        highlightCode(6);
+        
+        // Swap root with last element
+        const rootVal = array[0];
+        const lastVal = array[i];
+        
+        updateExplanation('extract', {
+          iteration: array.length - i,
+          rootVal: rootVal,
+          lastVal: lastVal
+        });
+
+        renderBars([], [0, i]);
+        renderTree([], [0, i]);
+        await sleep(speed / 2);
+
+        [array[0], array[i]] = [array[i], array[0]];
+        swaps++;
+        updateStats();
+
+        // Mark as sorted
+        sortedIndices.push(i);
+        sortedCount++;
+        heapSize--;
+        updateStats();
+
+        renderBars([], [0, i]);
+        renderTree([], [0, i]);
+        await sleep(speed / 2);
+
+        // Heapify root
+        highlightCode(7);
+        await heapify(heapSize, 0);
+        
+        renderBars();
+        renderTree();
+      }
+
+      // Last element
+      sortedIndices.push(0);
+      sortedCount++;
+      heapSize = 0;
+      updateStats();
+
+      return true;
+    }
+
+    // ============ CONTROLS ============
+    function startSorting() {
+      if (array.length === 0) generateRandomArray();
+      
+      sorting = true;
+      paused = false;
+      stepMode = false;
+      
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('pauseBtn').disabled = false;
+      document.getElementById('stepBtn').disabled = false;
+
+      heapSort().then(complete => {
+        if (complete) {
+          sorting = false;
+          updatePhase('complete');
+          highlightCode(8);
+          updateExplanation('complete');
+          renderBars();
+          renderTree();
+          
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('pauseBtn').disabled = true;
+          document.getElementById('stepBtn').disabled = true;
+        }
+      });
+    }
+
+    function togglePause() {
+      if (!sorting) return;
+      paused = !paused;
+      
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      
+      if (paused) {
+        pauseText.textContent = 'Resume';
+        pauseIcon.innerHTML = '<polygon points="5 3 19 12 5 21"></polygon>';
+        updateExplanation('paused');
+      } else {
+        pauseText.textContent = 'Pause';
+        pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+      }
+    }
+
+    function stepForward() {
+      if (!sorting) {
+        if (array.length === 0) generateRandomArray();
+        sorting = true;
+        paused = true;
+        stepMode = true;
+        
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('pauseBtn').disabled = false;
+        document.getElementById('stepBtn').disabled = false;
+
+        heapSort().then(complete => {
+          if (complete) {
+            sorting = false;
+            updatePhase('complete');
+            highlightCode(8);
+            updateExplanation('complete');
+            renderBars();
+            renderTree();
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stepBtn').disabled = true;
+          }
+        });
+      } else {
+        stepMode = true;
+        if (stepResolve) {
+          stepResolve();
+          stepResolve = null;
+        }
+      }
+    }
+
+    function resetVisualization() {
+      sorting = false;
+      paused = false;
+      stepMode = false;
+      
+      array = [...originalArray];
+      resetStats();
+      renderBars();
+      renderTree();
+      highlightCode(0);
+      updateExplanation('ready');
+      
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('pauseBtn').disabled = true;
+      document.getElementById('stepBtn').disabled = true;
+      
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      pauseText.textContent = 'Pause';
+      pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+    }
+
+    function updateSpeed(value) {
+      speed = 1050 - parseInt(value);
+      document.getElementById('speedValue').textContent = `${speed}ms`;
+    }
+
+    function updateSize(value) {
+      arraySize = parseInt(value);
+      document.getElementById('sizeValue').textContent = arraySize;
+      if (!sorting) generateRandomArray();
+    }
+
+    // ============ MODAL ============
+    function showInfoModal() {
+      document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function hideInfoModal() {
+      document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    document.getElementById('infoModal').addEventListener('click', function(e) {
+      if (e.target === this) hideInfoModal();
+    });
+
+    // ============ KEYBOARD ============
+    document.addEventListener('keydown', function(e) {
+      if (e.target.tagName === 'INPUT') return;
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          sorting ? togglePause() : startSorting();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          stepForward();
+          break;
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          resetVisualization();
+          break;
+        case 'Escape':
+          hideInfoModal();
+          break;
+      }
+    });
+
+    // ============ INIT ============
+    document.addEventListener('DOMContentLoaded', function() {
+      generateRandomArray();
+    });
+  </script>
+</body>
+</html>

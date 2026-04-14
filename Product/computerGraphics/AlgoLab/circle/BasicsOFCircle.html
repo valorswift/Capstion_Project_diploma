@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basics of Circle Symmetry | Computer Graphics</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #05080c;
+  --bg-elevated: #0a1018;
+  --card: #0d1520;
+  --border: #1a2535;
+  --accent: #00ffc8;
+  --accent-alt: #ff6b4a;
+  --text: #e4e8ec;
+  --muted: #5a6a7a;
+  --cyan-blue: #00d4ff;
+  --warm-gold: #ffa94d;
+  --purple: #a855f7;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 8, 12, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--cyan-blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.nav-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.progress-bar {
+  width: 120px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--cyan-blue));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.hero {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 60px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 255, 200, 0.1);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 255, 200, 0.2);
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.main-title {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  color: var(--text);
+}
+
+.hero-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 600px;
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.hero-nav {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: #00e6b8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 255, 200, 0.25);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.section {
+  padding: 80px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: 48px;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 0 0 12px 0;
+}
+
+.section-desc {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.two-col.reverse {
+  direction: rtl;
+}
+
+.two-col.reverse > * {
+  direction: ltr;
+}
+
+.canvas-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.canvas-container:hover {
+  border-color: rgba(0, 255, 200, 0.2);
+}
+
+.canvas-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.canvas-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.canvas-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.canvas-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.canvas-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.canvas-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.canvas-body {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.canvas-body canvas {
+  border-radius: 8px;
+}
+
+.info-panel {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.info-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.content-block {
+  padding: 24px;
+}
+
+.content-block h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.content-block p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 16px 0;
+}
+
+.formula-box {
+  background: rgba(0, 255, 200, 0.05);
+  border: 1px solid rgba(0, 255, 200, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.formula-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.key-points {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+
+.key-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.key-points li:last-child {
+  border-bottom: none;
+}
+
+.key-point-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.key-point-icon.cyan {
+  background: rgba(0, 255, 200, 0.15);
+  color: var(--accent);
+}
+
+.key-point-icon.orange {
+  background: rgba(255, 107, 74, 0.15);
+  color: var(--accent-alt);
+}
+
+.key-point-icon.blue {
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--cyan-blue);
+}
+
+.key-point-icon.purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--purple);
+}
+
+.key-point-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.symmetry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.symmetry-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.symmetry-item.highlight {
+  border-color: var(--accent);
+  background: rgba(0, 255, 200, 0.05);
+}
+
+.symmetry-item .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.symmetry-item .coord {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.comparison-section {
+  margin-top: 60px;
+  padding: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.comparison-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.comparison-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.comparison-item {
+  text-align: center;
+}
+
+.comparison-canvas {
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.comparison-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.comparison-arrow {
+  color: var(--accent);
+  font-size: 24px;
+}
+
+.slider-container {
+  margin-top: 24px;
+}
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.slider-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.efficiency-visual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.efficiency-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.efficiency-card h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.efficiency-stat {
+  font-size: 48px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.efficiency-stat.good {
+  color: var(--accent);
+}
+
+.efficiency-stat.bad {
+  color: var(--accent-alt);
+}
+
+.efficiency-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.algo-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.algo-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.algo-card:hover {
+  border-color: rgba(0, 255, 200, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.algo-card h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.algo-card p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.algo-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(0, 255, 200, 0.1);
+  color: var(--accent);
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  margin-top: 80px;
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.octant-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.octant-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.animation-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.stage-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage-circle.filled {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.stage-circle .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.stage-arrow {
+  color: var(--muted);
+  font-size: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
+@media (max-width: 900px) {
+  .two-col {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .two-col.reverse {
+    direction: ltr;
+  }
+  
+  .symmetry-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .efficiency-visual {
+    grid-template-columns: 1fr;
+  }
+  
+  .algo-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .nav-progress {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 40px;
+  }
+  
+  .symmetry-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .canvas-body {
+    min-height: 300px;
+  }
+  
+  .comparison-visual {
+    flex-direction: column;
+  }
+  
+  .comparison-arrow {
+    transform: rotate(90deg);
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#05080c" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">CG Lab</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="algorithm_lab.html">Algorithms</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="circle_algorithms.html">Circle</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Symmetry Basics</span>
+    </div>
+    <div class="nav-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+      <span id="progress-text">0%</span>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-badge">Learning Module</div>
+    <h1 class="main-title">Basics of Circle Symmetry</h1>
+    <p class="hero-subtitle">
+      // Discover how 8-way symmetry revolutionizes circle drawing<br>
+      // by reducing computations and ensuring pixel-perfect results.
+    </p>
+    <div class="hero-nav">
+      <button class="btn btn-primary" onclick="scrollToSection('intro')">
+        Start Learning
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
+      <a href="MidPointCircle.html" class="btn btn-ghost">Skip to Midpoint Algorithm</a>
+    </div>
+  </section>
+
+  <!-- Section 1: Introduction -->
+  <section class="section" id="intro">
+    <div class="section-header">
+      <div class="section-number">01 / Introduction</div>
+      <h2 class="section-title">What is a Circle in Computer Graphics?</h2>
+      <p class="section-desc">
+        A circle is defined by its center point and radius. Unlike lines, circles require special consideration due to their curved nature.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">CIRCLE_DEFINITION</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-intro" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Center</span>
+            <span class="info-value" id="intro-center">(200, 200)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Radius</span>
+            <span class="info-value" id="intro-radius">120 px</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Circumference</span>
+            <span class="info-value" id="intro-circum">753.98 px</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Mathematical Definition</h3>
+        <p>
+          A circle is the set of all points in a plane that are at a fixed distance (radius) 
+          from a fixed point (center). The mathematical equation is:
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">(x - xc)² + (y - yc)² = r²</div>
+          <div class="formula-label">Circle equation with center (xc, yc) and radius r</div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Key Components</h3>
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">C</div>
+            <div class="key-point-text">
+              <strong>Center (xc, yc):</strong> The fixed point from which all circle points are equidistant
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">r</div>
+            <div class="key-point-text">
+              <strong>Radius (r):</strong> The distance from center to any point on the circle
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">P</div>
+            <div class="key-point-text">
+              <strong>Point (x, y):</strong> Any point on the circle satisfies the equation
+            </div>
+          </li>
+        </ul>
+        
+        <p style="margin-top: 16px; font-size: 13px; color: var(--accent-alt);">
+          The equation can be rewritten to calculate y for each x: y = yc ± √(r² - (x - xc)²), but this involves expensive square root operations.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Pixel Representation -->
+  <section class="section" id="pixel">
+    <div class="section-header">
+      <div class="section-number">02 / Pixel Representation</div>
+      <h2 class="section-title">Continuous vs Discrete Circles</h2>
+      <p class="section-desc">
+        Mathematical circles are continuous curves, but displays use discrete pixels. Understanding this difference is crucial for efficient drawing algorithms.
+      </p>
+    </div>
+    
+    <div class="comparison-section">
+      <h3 class="comparison-title">From Perfect Curve to Pixel Grid</h3>
+      <div class="comparison-visual">
+        <div class="comparison-item">
+          <canvas id="canvas-ideal" class="comparison-canvas" width="180" height="180"></canvas>
+          <div class="comparison-label">Ideal Mathematical Circle</div>
+        </div>
+        <div class="comparison-arrow">
+          <svg width="40" height="24" viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M0 12h36M28 4l8 8-8 8"/>
+          </svg>
+        </div>
+        <div class="comparison-item">
+          <canvas id="canvas-pixel" class="comparison-canvas" width="180" height="180"></canvas>
+          <div class="comparison-label">Pixel Approximation</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="two-col" style="margin-top: 48px;">
+      <div class="content-block">
+        <h3>The Challenge of Discretization</h3>
+        <p>
+          A mathematical circle has infinite points along its circumference. 
+          Computer screens, however, can only display discrete pixels at fixed grid positions.
+        </p>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">1</div>
+            <div class="key-point-text">
+              <strong>Continuous:</strong> Infinite points, perfect curve, no jagged edges
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">2</div>
+            <div class="key-point-text">
+              <strong>Discrete:</strong> Limited pixels, approximation required, may appear jagged
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">3</div>
+            <div class="key-point-text">
+              <strong>Solution:</strong> Choose pixels closest to the ideal circle path
+            </div>
+          </li>
+        </ul>
+        
+        <div class="formula-box" style="margin-top: 24px;">
+          <div class="formula" style="font-size: 14px;">
+            Pixel selection: minimize distance to ideal circle<br>
+            |d| = |√((x-xc)² + (y-yc)²) - r|
+          </div>
+          <div class="formula-label">Distance from pixel to ideal circle</div>
+        </div>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">PIXEL_ZOOM</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-zoom" width="360" height="360"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Zoom Level</span>
+            <span class="info-value">4x magnified</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Pixel Size</span>
+            <span class="info-value">16x16 units</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Symmetry Concept -->
+  <section class="section" id="symmetry">
+    <div class="section-header">
+      <div class="section-number">03 / Symmetry</div>
+      <h2 class="section-title">8-Way Circle Symmetry</h2>
+      <p class="section-desc">
+        A circle exhibits perfect symmetry. By calculating one point, we can derive seven additional points through reflection, reducing computation by 8 times.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">SYMMETRY_DEMO</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn" onclick="toggleSymmetryAnimation()">Pause</button>
+            <button class="canvas-btn" onclick="resetSymmetryAnimation()">Reset</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-symmetry" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Original Point</span>
+            <span class="info-value" id="sym-original">(x, y)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Symmetric Points</span>
+            <span class="info-value" id="sym-count">8</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Computation Saved</span>
+            <span class="info-value">87.5%</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>How Symmetry Works</h3>
+        <p>
+          A circle centered at the origin is symmetric across both axes and all diagonal lines passing through the center. 
+          This means calculating one point in a single octant (1/8 of the circle) generates all other points.
+        </p>
+        
+        <div class="symmetry-grid">
+          <div class="symmetry-item" id="sym-0">
+            <div class="num">Octant 1</div>
+            <div class="coord">(x, y)</div>
+          </div>
+          <div class="symmetry-item" id="sym-1">
+            <div class="num">Octant 2</div>
+            <div class="coord">(y, x)</div>
+          </div>
+          <div class="symmetry-item" id="sym-2">
+            <div class="num">Octant 3</div>
+            <div class="coord">(-y, x)</div>
+          </div>
+          <div class="symmetry-item" id="sym-3">
+            <div class="num">Octant 4</div>
+            <div class="coord">(-x, y)</div>
+          </div>
+          <div class="symmetry-item" id="sym-4">
+            <div class="num">Octant 5</div>
+            <div class="coord">(-x, -y)</div>
+          </div>
+          <div class="symmetry-item" id="sym-5">
+            <div class="num">Octant 6</div>
+            <div class="coord">(-y, -x)</div>
+          </div>
+          <div class="symmetry-item" id="sym-6">
+            <div class="num">Octant 7</div>
+            <div class="coord">(y, -x)</div>
+          </div>
+          <div class="symmetry-item" id="sym-7">
+            <div class="num">Octant 8</div>
+            <div class="coord">(x, -y)</div>
+          </div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Key Insight</h3>
+        <p>
+          When the circle is centered at an arbitrary point (xc, yc), 
+          the transformations become:
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula" style="font-size: 14px;">
+            (xc + x, yc + y) | (xc + y, yc + x)<br>
+            (xc - y, yc + x) | (xc - x, yc + y)<br>
+            (xc - x, yc - y) | (xc - y, yc - x)<br>
+            (xc + y, yc - x) | (xc + x, yc - y)
+          </div>
+          <div class="formula-label">All 8 symmetric points from (x, y) offset</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Interactive Demo -->
+  <section class="section" id="interactive">
+    <div class="section-header">
+      <div class="section-number">04 / Interactive Demo</div>
+      <h2 class="section-title">Draw Circles with Symmetry</h2>
+      <p class="section-desc">
+        Adjust the radius and center position to see how 8-way symmetry generates all circle pixels from one octant.
+      </p>
+    </div>
+    
+    <div class="two-col reverse">
+      <div class="content-block">
+        <h3>Controls</h3>
+        <p>
+          Use the sliders below to adjust the circle parameters. Watch how pixels are calculated 
+          in the first octant and then reflected to all eight positions.
+        </p>
+        
+        <div class="slider-container">
+          <div class="slider-label">
+            <span class="slider-name">Radius</span>
+            <span class="slider-value" id="radius-value">10</span>
+          </div>
+          <input type="range" id="radius-slider" min="3" max="15" value="10" oninput="updateInteractiveCircle()">
+        </div>
+        
+        <div class="slider-container">
+          <div class="slider-label">
+            <span class="slider-name">Center X Offset</span>
+            <span class="slider-value" id="cx-value">0</span>
+          </div>
+          <input type="range" id="cx-slider" min="-5" max="5" value="0" oninput="updateInteractiveCircle()">
+        </div>
+        
+        <div class="slider-container">
+          <div class="slider-label">
+            <span class="slider-name">Center Y Offset</span>
+            <span class="slider-value" id="cy-value">0</span>
+          </div>
+          <input type="range" id="cy-slider" min="-5" max="5" value="0" oninput="updateInteractiveCircle()">
+        </div>
+        
+        <div class="slider-container">
+          <div class="slider-label">
+            <span class="slider-name">Animation Speed</span>
+            <span class="slider-value" id="speed-value">Normal</span>
+          </div>
+          <input type="range" id="speed-slider" min="1" max="5" value="3" oninput="updateSpeed()">
+        </div>
+        
+        <ul class="key-points" style="margin-top: 24px;">
+          <li>
+            <div class="key-point-icon cyan">1</div>
+            <div class="key-point-text">
+              <strong>Octant Points:</strong> <span id="octant-count">11</span> calculated
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">8x</div>
+            <div class="key-point-text">
+              <strong>Total Pixels:</strong> <span id="total-pixels">88</span> drawn
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">%</div>
+            <div class="key-point-text">
+              <strong>Efficiency:</strong> 87.5% computation saved
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">INTERACTIVE_CIRCLE</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn active" id="btn-animate" onclick="toggleInteractiveAnimation()">Animate</button>
+            <button class="canvas-btn" onclick="showFullCircle()">Show All</button>
+            <button class="canvas-btn" onclick="resetInteractive()">Reset</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-interactive" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Center Position</span>
+            <span class="info-value" id="info-center">(200, 200)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Current Radius</span>
+            <span class="info-value" id="info-radius">10 units</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Animation Status</span>
+            <span class="info-value" id="info-status">Drawing octant...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Efficiency -->
+  <section class="section" id="efficiency">
+    <div class="section-header">
+      <div class="section-number">05 / Efficiency</div>
+      <h2 class="section-title">Why Symmetry Matters</h2>
+      <p class="section-desc">
+        By exploiting 8-way symmetry, circle drawing algorithms achieve an 8x performance improvement by computing only 1/8 of the circle.
+      </p>
+    </div>
+    
+    <div class="efficiency-visual">
+      <div class="efficiency-card">
+        <h4>Without Symmetry</h4>
+        <div class="efficiency-stat bad" id="stat-without">360</div>
+        <div class="efficiency-desc">points calculated per circle</div>
+        <canvas id="canvas-without" width="120" height="120" style="margin-top: 16px; border-radius: 8px; background: var(--bg);"></canvas>
+      </div>
+      
+      <div class="efficiency-card">
+        <h4>With 8-Way Symmetry</h4>
+        <div class="efficiency-stat good" id="stat-with">45</div>
+        <div class="efficiency-desc">points calculated per circle</div>
+        <canvas id="canvas-with" width="120" height="120" style="margin-top: 16px; border-radius: 8px; background: var(--bg);"></canvas>
+      </div>
+    </div>
+    
+    <div class="two-col" style="margin-top: 48px;">
+      <div class="content-block">
+        <h3>Performance Impact</h3>
+        <p>
+          For a circle with radius r, approximately 2πr pixels need to be drawn. 
+          With symmetry, we only need to calculate points in one octant.
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula" style="font-size: 16px;">
+            Total points ≈ 2πr ≈ 6.28r<br>
+            Octant points ≈ r/√2 ≈ 0.707r<br>
+            Reduction = 8x faster
+          </div>
+          <div class="formula-label">Computational savings</div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Real-World Example</h3>
+        <p>
+          Drawing a circle with radius 100 pixels:
+        </p>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon orange">No</div>
+            <div class="key-point-text">
+              <strong>Without symmetry:</strong> ~628 expensive calculations
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon cyan">Yes</div>
+            <div class="key-point-text">
+              <strong>With symmetry:</strong> ~79 calculations + simple reflections
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">+</div>
+            <div class="key-point-text">
+              <strong>Bonus:</strong> Reflections use only sign changes and swaps (no math)
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">EFFICIENCY_COMPARISON</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-efficiency" width="360" height="360"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Algorithm</span>
+            <span class="info-value">Midpoint Circle</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Time Complexity</span>
+            <span class="info-value">O(r)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Optimization</span>
+            <span class="info-value">8-way symmetry</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Algorithms -->
+  <section class="section" id="algorithms">
+    <div class="section-header">
+      <div class="section-number">06 / Next Steps</div>
+      <h2 class="section-title">Circle Drawing Algorithms</h2>
+      <p class="section-desc">
+        Now that you understand circle symmetry, you're ready to learn the actual algorithms that use this property to draw circles efficiently.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="content-block">
+        <h3>How Algorithms Use Symmetry</h3>
+        <p>
+          Both Midpoint and Bresenham circle algorithms work by:
+        </p>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">1</div>
+            <div class="key-point-text">
+              <strong>Calculate:</strong> Find points in only the first octant (0° to 45°)
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">2</div>
+            <div class="key-point-text">
+              <strong>Reflect:</strong> Apply 8-way symmetry transformations
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">3</div>
+            <div class="key-point-text">
+              <strong>Optimize:</strong> Use decision parameters to avoid floating-point math
+            </div>
+          </li>
+        </ul>
+        
+        <div class="formula-box" style="margin-top: 24px;">
+          <div class="formula" style="font-size: 14px;">
+            plotCirclePoints(xc, yc, x, y) {<br>
+            &nbsp;&nbsp;draw(xc+x, yc+y); draw(xc+y, yc+x);<br>
+            &nbsp;&nbsp;draw(xc-y, yc+x); draw(xc-x, yc+y);<br>
+            &nbsp;&nbsp;draw(xc-x, yc-y); draw(xc-y, yc-x);<br>
+            &nbsp;&nbsp;draw(xc+y, yc-x); draw(xc+x, yc-y);<br>
+            }
+          </div>
+          <div class="formula-label">Pseudocode for symmetry function</div>
+        </div>
+      </div>
+      
+      <div>
+        <div class="algo-cards">
+          <a href="midpoint_circle.html" class="algo-card">
+            <h4>Midpoint Circle Algorithm</h4>
+            <p>
+              Uses a decision parameter to choose between two candidate pixels. 
+              The algorithm incrementally updates the decision parameter for efficiency.
+            </p>
+            <span class="algo-tag">Most Common</span>
+          </a>
+          
+          <a href="bresenham_circle.html" class="algo-card">
+            <h4>Bresenham Circle Algorithm</h4>
+            <p>
+              An extension of Bresenham's line algorithm to circles. 
+              Uses only integer arithmetic for maximum performance.
+            </p>
+            <span class="algo-tag">Integer Only</span>
+          </a>
+        </div>
+        
+        <div class="canvas-container" style="margin-top: 24px;">
+          <div class="canvas-header">
+            <span class="canvas-title">ALGORITHM_PREVIEW</span>
+          </div>
+          <div class="canvas-body" style="min-height: 200px;">
+            <canvas id="canvas-algo" width="320" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>// Basics of Circle Symmetry - Foundation for Efficient Circle Drawing Algorithms</p>
+  </footer>
+  
+</div>
+
+<script>
+// === BACKGROUND ANIMATION ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const particles = [];
+const particleCount = 40;
+
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.2,
+      vy: (Math.random() - 0.5) * 0.2,
+      size: Math.random() * 2.5 + 1,
+      opacity: Math.random() * 0.12 + 0.03,
+      pulse: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#05080c';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  // Subtle radial grid
+  bgCtx.strokeStyle = 'rgba(0, 255, 200, 0.015)';
+  bgCtx.lineWidth = 1;
+  
+  const cx = bgWidth / 2;
+  const cy = bgHeight / 2;
+  
+  for (let r = 60; r < Math.max(bgWidth, bgHeight); r += 80) {
+    bgCtx.beginPath();
+    bgCtx.arc(cx, cy, r, 0, Math.PI * 2);
+    bgCtx.stroke();
+  }
+  
+  // Floating circles
+  for (let i = 0; i < 5; i++) {
+    const x = (i + 0.5) * (bgWidth / 5) + Math.sin(time * 0.3 + i) * 20;
+    const y = bgHeight / 2 + Math.cos(time * 0.2 + i * 2) * 60;
+    const radius = 30 + Math.sin(time + i) * 10;
+    
+    bgCtx.strokeStyle = 'rgba(0, 255, 200, 0.04)';
+    bgCtx.lineWidth = 1;
+    bgCtx.beginPath();
+    bgCtx.arc(x, y, radius, 0, Math.PI * 2);
+    bgCtx.stroke();
+  }
+  
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.pulse += 0.02;
+    
+    if (p.x < 0) p.x = bgWidth;
+    if (p.x > bgWidth) p.x = 0;
+    if (p.y < 0) p.y = bgHeight;
+    if (p.y > bgHeight) p.y = 0;
+    
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 120) {
+      p.x -= dx * 0.003;
+      p.y -= dy * 0.003;
+    }
+    
+    const pulseOpacity = p.opacity * (0.7 + Math.sin(p.pulse) * 0.3);
+    bgCtx.fillStyle = 'rgba(0, 255, 200, ' + pulseOpacity + ')';
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  // Mouse glow
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 150);
+  gradient.addColorStop(0, 'rgba(0, 255, 200, 0.04)');
+  gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === CANVAS UTILITIES ===
+function drawPixelGrid(ctx, canvas, pixelSize) {
+  ctx.fillStyle = '#080c10';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  ctx.strokeStyle = 'rgba(0, 255, 200, 0.08)';
+  ctx.lineWidth = 1;
+  
+  for (let x = 0; x <= canvas.width; x += pixelSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  
+  for (let y = 0; y <= canvas.height; y += pixelSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+}
+
+function drawCirclePixels(ctx, cx, cy, radius, pixelSize, color) {
+  let x = 0;
+  let y = radius;
+  let d = 3 - 2 * radius;
+  
+  const pixels = [];
+  
+  while (x <= y) {
+    // 8-way symmetry
+    pixels.push([cx + x, cy + y]);
+    pixels.push([cx + y, cy + x]);
+    pixels.push([cx - y, cy + x]);
+    pixels.push([cx - x, cy + y]);
+    pixels.push([cx - x, cy - y]);
+    pixels.push([cx - y, cy - x]);
+    pixels.push([cx + y, cy - x]);
+    pixels.push([cx + x, cy - y]);
+    
+    if (d < 0) {
+      d = d + 4 * x + 6;
+    } else {
+      d = d + 4 * (x - y) + 10;
+      y--;
+    }
+    x++;
+  }
+  
+  pixels.forEach(p => {
+    ctx.fillStyle = color;
+    ctx.fillRect(
+      p[0] * pixelSize + 1,
+      p[1] * pixelSize + 1,
+      pixelSize - 2,
+      pixelSize - 2
+    );
+  });
+  
+  return pixels.length;
+}
+
+// === INTRO CANVAS ===
+function initIntroCanvas() {
+  const canvas = document.getElementById('canvas-intro');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const cx = 200;
+  const cy = 200;
+  const radius = 120;
+  
+  let t = 0;
+  let phase = 0;
+  let angle = 0;
+  
+  function draw() {
+    t += 0.02;
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < canvas.width; i += 20) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, canvas.height);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(canvas.width, i);
+      ctx.stroke();
+    }
+    
+    // Circle
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Animated fill
+    if (t > 1) {
+      ctx.fillStyle = 'rgba(0, 255, 200, 0.05)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Center point
+    ctx.fillStyle = '#00ffc8';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#05080c';
+    ctx.font = 'bold 10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('C', cx, cy + 4);
+    
+    // Animated radius line
+    if (t > 2) {
+      angle += 0.01;
+      const px = cx + Math.cos(angle) * radius;
+      const py = cy + Math.sin(angle) * radius;
+      
+      ctx.strokeStyle = '#ff6b4a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      
+      // Radius label
+      ctx.fillStyle = 'rgba(255, 107, 74, 0.9)';
+      ctx.font = '11px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('r', (cx + px) / 2 + 15, (cy + py) / 2);
+      
+      // Point on circle
+      ctx.fillStyle = '#00d4ff';
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = 'rgba(0, 212, 255, 0.7)';
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText('P', px + 12, py - 8);
+    }
+    
+    // Equation display
+    if (t > 3) {
+      ctx.fillStyle = 'rgba(0, 255, 200, 0.8)';
+      ctx.font = '12px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('(x - xc)² + (y - yc)² = r²', canvas.width / 2, canvas.height - 20);
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === PIXEL REPRESENTATION CANVASES ===
+function initPixelCanvases() {
+  // Ideal circle
+  const idealCanvas = document.getElementById('canvas-ideal');
+  if (idealCanvas) {
+    const ctx = idealCanvas.getContext('2d');
+    
+    ctx.fillStyle = '#0d1520';
+    ctx.fillRect(0, 0, 180, 180);
+    
+    ctx.strokeStyle = '#00ffc8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(90, 90, 60, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('Perfect curve', 90, 170);
+  }
+  
+  // Pixel circle
+  const pixelCanvas = document.getElementById('canvas-pixel');
+  if (pixelCanvas) {
+    const ctx = pixelCanvas.getContext('2d');
+    const pixelSize = 6;
+    
+    ctx.fillStyle = '#0d1520';
+    ctx.fillRect(0, 0, 180, 180);
+    
+    drawPixelGrid(ctx, pixelCanvas, pixelSize);
+    drawCirclePixels(ctx, 15, 15, 10, pixelSize, 'rgba(0, 212, 255, 0.7)');
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('Discrete pixels', 90, 170);
+  }
+  
+  // Zoom canvas
+  const zoomCanvas = document.getElementById('canvas-zoom');
+  if (zoomCanvas) {
+    const ctx = zoomCanvas.getContext('2d');
+    let t = 0;
+    
+    function draw() {
+      t += 0.02;
+      
+      const pixelSize = 16;
+      
+      ctx.fillStyle = '#080c10';
+      ctx.fillRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+      
+      drawPixelGrid(ctx, zoomCanvas, pixelSize);
+      
+      // Draw partial circle showing pixel selection
+      const cx = 11;
+      const cy = 11;
+      const radius = 8;
+      
+      // Ideal circle (scaled)
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.2)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx * pixelSize + pixelSize / 2, cy * pixelSize + pixelSize / 2, radius * pixelSize, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Pixels
+      let x = 0;
+      let y = radius;
+      let d = 3 - 2 * radius;
+      
+      while (x <= y) {
+        const px = cx + x;
+        const py = cy - y;
+        
+        const alpha = 0.5 + Math.sin(t * 2 + x * 0.3) * 0.3;
+        ctx.fillStyle = 'rgba(0, 212, 255, ' + alpha + ')';
+        ctx.fillRect(px * pixelSize + 2, py * pixelSize + 2, pixelSize - 4, pixelSize - 4);
+        
+        // Show distance to ideal
+        ctx.fillStyle = 'rgba(0, 255, 200, 0.5)';
+        ctx.font = '8px JetBrains Mono';
+        ctx.textAlign = 'center';
+        const dist = Math.abs(Math.sqrt(x * x + y * y) - radius).toFixed(1);
+        
+        if (d < 0) {
+          d = d + 4 * x + 6;
+        } else {
+          d = d + 4 * (x - y) + 10;
+          y--;
+        }
+        x++;
+      }
+      
+      // Center
+      ctx.fillStyle = '#00ffc8';
+      ctx.beginPath();
+      ctx.arc(cx * pixelSize + pixelSize / 2, cy * pixelSize + pixelSize / 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
+}
+
+// === SYMMETRY CANVAS ===
+let symmetryAnimating = true;
+let symmetryT = 0;
+let currentSymPoint = 0;
+
+function initSymmetryCanvas() {
+  const canvas = document.getElementById('canvas-symmetry');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const cx = 200;
+  const cy = 200;
+  const radius = 140;
+  
+  const octantColors = [
+    '#00ffc8', '#00e6b8', '#00cca8', '#00b398',
+    '#009988', '#007f78', '#006668', '#004c58'
+  ];
+  
+  // Calculate octant points
+  const points = [];
+  let x = 0;
+  let y = radius;
+  let d = 3 - 2 * radius;
+  
+  while (x <= y) {
+    points.push({ x, y });
+    if (d < 0) {
+      d = d + 4 * x + 6;
+    } else {
+      d = d + 4 * (x - y) + 10;
+      y--;
+    }
+    x++;
+  }
+  
+  function draw() {
+    if (symmetryAnimating) {
+      symmetryT += 0.015;
+    }
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.05)';
+    for (let i = 0; i < canvas.width; i += 20) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, canvas.height);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(canvas.width, i);
+      ctx.stroke();
+    }
+    
+    // Axes
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(canvas.width, cy);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, canvas.height);
+    ctx.stroke();
+    
+    // Diagonal lines (45°)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(canvas.width, 0);
+    ctx.lineTo(0, canvas.height);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Octant labels
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * 45 + 22.5) * Math.PI / 180;
+      const lx = cx + Math.cos(angle) * (radius + 25);
+      const ly = cy - Math.sin(angle) * (radius + 25);
+      ctx.fillText((i + 1).toString(), lx, ly);
+    }
+    
+    // Draw all symmetric points
+    const pointIndex = Math.floor((symmetryT * 2) % points.length);
+    const p = points[pointIndex];
+    
+    if (p) {
+      document.getElementById('sym-original').textContent = 
+        '(' + p.x + ', ' + p.y + ')';
+      
+      // 8 symmetric points
+      const symPoints = [
+        [cx + p.x, cy - p.y],
+        [cx + p.y, cy - p.x],
+        [cx + p.y, cy + p.x],
+        [cx + p.x, cy + p.y],
+        [cx - p.x, cy + p.y],
+        [cx - p.y, cy + p.x],
+        [cx - p.y, cy - p.x],
+        [cx - p.x, cy - p.y]
+      ];
+      
+      // Highlight current symmetry items
+      for (let i = 0; i < 8; i++) {
+        const el = document.getElementById('sym-' + i);
+        if (el) {
+          el.classList.toggle('highlight', i <= Math.floor((symmetryT * 8) % 8));
+        }
+      }
+      
+      // Draw each symmetric point
+      symPoints.forEach((sp, i) => {
+        const showIndex = Math.floor((symmetryT * 8) % 9);
+        
+        if (i < showIndex) {
+          ctx.fillStyle = octantColors[i];
+          ctx.beginPath();
+          ctx.arc(sp[0], sp[1], 6, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Connection lines
+          if (i === 0) {
+            ctx.strokeStyle = 'rgba(0, 255, 200, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(sp[0], sp[1]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+      });
+    }
+    
+    // Center
+    ctx.fillStyle = '#ff6b4a';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function toggleSymmetryAnimation() {
+  symmetryAnimating = !symmetryAnimating;
+}
+
+function resetSymmetryAnimation() {
+  symmetryT = 0;
+  symmetryAnimating = true;
+}
+
+// === INTERACTIVE CANVAS ===
+let interactiveAnimating = true;
+let interactiveT = 0;
+let interactiveRadius = 10;
+let interactiveCx = 0;
+let interactiveCy = 0;
+let animationSpeed = 3;
+
+function initInteractiveCanvas() {
+  const canvas = document.getElementById('canvas-interactive');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 16;
+  const gridCx = Math.floor(canvas.width / pixelSize / 2);
+  const gridCy = Math.floor(canvas.height / pixelSize / 2);
+  
+  function draw() {
+    if (interactiveAnimating) {
+      interactiveT += 0.02 * animationSpeed;
+    }
+    
+    drawPixelGrid(ctx, canvas, pixelSize);
+    
+    const cx = gridCx + interactiveCx;
+    const cy = gridCy + interactiveCy;
+    const radius = interactiveRadius;
+    
+    // Calculate octant points
+    const octantPoints = [];
+    let x = 0;
+    let y = radius;
+    let d = 3 - 2 * radius;
+    
+    while (x <= y) {
+      octantPoints.push({ x, y });
+      if (d < 0) {
+        d = d + 4 * x + 6;
+      } else {
+        d = d + 4 * (x - y) + 10;
+        y--;
+      }
+      x++;
+    }
+    
+    // How many points to draw
+    const drawCount = Math.floor(interactiveT % (octantPoints.length + 5));
+    
+    // Draw points
+    let totalPixels = 0;
+    
+    octantPoints.forEach((p, i) => {
+      if (i < drawCount) {
+        // First octant (highlighted)
+        ctx.fillStyle = '#00ffc8';
+        ctx.fillRect(
+          (cx + p.x) * pixelSize + 1,
+          (cy - p.y) * pixelSize + 1,
+          pixelSize - 2, pixelSize - 2
+        );
+        
+        // Other 7 octants
+        const symPoints = [
+          [cx + p.y, cy - p.x],
+          [cx + p.y, cy + p.x],
+          [cx + p.x, cy + p.y],
+          [cx - p.x, cy + p.y],
+          [cx - p.y, cy + p.x],
+          [cx - p.y, cy - p.x],
+          [cx - p.x, cy - p.y]
+        ];
+        
+        ctx.fillStyle = 'rgba(0, 212, 255, 0.6)';
+        symPoints.forEach(sp => {
+          ctx.fillRect(
+            sp[0] * pixelSize + 1,
+            sp[1] * pixelSize + 1,
+            pixelSize - 2, pixelSize - 2
+          );
+        });
+        
+        totalPixels += 8;
+      }
+    });
+    
+    // Center point
+    ctx.fillStyle = '#ff6b4a';
+    ctx.beginPath();
+    ctx.arc(cx * pixelSize + pixelSize / 2, cy * pixelSize + pixelSize / 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Update info
+    document.getElementById('octant-count').textContent = Math.min(drawCount, octantPoints.length);
+    document.getElementById('total-pixels').textContent = totalPixels;
+    document.getElementById('info-center').textContent = '(' + cx + ', ' + cy + ')';
+    document.getElementById('info-radius').textContent = radius + ' units';
+    document.getElementById('info-status').textContent = 
+      drawCount < octantPoints.length ? 'Drawing octant...' : 'Complete';
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function updateInteractiveCircle() {
+  interactiveRadius = parseInt(document.getElementById('radius-slider').value);
+  interactiveCx = parseInt(document.getElementById('cx-slider').value);
+  interactiveCy = parseInt(document.getElementById('cy-slider').value);
+  
+  document.getElementById('radius-value').textContent = interactiveRadius;
+  document.getElementById('cx-value').textContent = interactiveCx;
+  document.getElementById('cy-value').textContent = interactiveCy;
+  
+  interactiveT = 0;
+}
+
+function updateSpeed() {
+  animationSpeed = parseInt(document.getElementById('speed-slider').value);
+  const labels = ['Very Slow', 'Slow', 'Normal', 'Fast', 'Very Fast'];
+  document.getElementById('speed-value').textContent = labels[animationSpeed - 1];
+}
+
+function toggleInteractiveAnimation() {
+  interactiveAnimating = !interactiveAnimating;
+  document.getElementById('btn-animate').classList.toggle('active', interactiveAnimating);
+  document.getElementById('btn-animate').textContent = interactiveAnimating ? 'Animate' : 'Paused';
+}
+
+function showFullCircle() {
+  interactiveAnimating = false;
+  interactiveT = 1000;
+  document.getElementById('btn-animate').classList.remove('active');
+  document.getElementById('btn-animate').textContent = 'Animate';
+}
+
+function resetInteractive() {
+  interactiveT = 0;
+  interactiveAnimating = true;
+  document.getElementById('btn-animate').classList.add('active');
+  document.getElementById('btn-animate').textContent = 'Animate';
+}
+
+// === EFFICIENCY CANVASES ===
+function initEfficiencyCanvases() {
+  // Without symmetry
+  const withoutCanvas = document.getElementById('canvas-without');
+  if (withoutCanvas) {
+    const ctx = withoutCanvas.getContext('2d');
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, 120, 120);
+    
+    ctx.strokeStyle = 'rgba(255, 107, 74, 0.3)';
+    ctx.lineWidth = 1;
+    
+    // Many calculation points
+    for (let a = 0; a < 360; a += 3) {
+      const rad = a * Math.PI / 180;
+      const x = 60 + Math.cos(rad) * 40;
+      const y = 60 + Math.sin(rad) * 40;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    
+    ctx.strokeStyle = 'rgba(255, 107, 74, 0.5)';
+    ctx.beginPath();
+    ctx.arc(60, 60, 40, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  
+  // With symmetry
+  const withCanvas = document.getElementById('canvas-with');
+  if (withCanvas) {
+    const ctx = withCanvas.getContext('2d');
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, 120, 120);
+    
+    // Only octant points calculated
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.7)';
+    
+    const octantPoints = [];
+    let x = 0;
+    let y = 40 / 3;
+    let d = 3 - 2 * y;
+    
+    while (x <= y) {
+      octantPoints.push({ x, y });
+      if (d < 0) {
+        d = d + 4 * x + 6;
+      } else {
+        d = d + 4 * (x - y) + 10;
+        y--;
+      }
+      x++;
+    }
+    
+    octantPoints.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(60 + p.x, 60 - p.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    // Reflected points (faded)
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.3)';
+    octantPoints.forEach(p => {
+      const syms = [
+        [60 + p.y, 60 - p.x],
+        [60 + p.y, 60 + p.x],
+        [60 + p.x, 60 + p.y],
+        [60 - p.x, 60 + p.y],
+        [60 - p.y, 60 + p.x],
+        [60 - p.y, 60 - p.x],
+        [60 - p.x, 60 - p.y]
+      ];
+      syms.forEach(s => {
+        ctx.beginPath();
+        ctx.arc(s[0], s[1], 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+    
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.5)';
+    ctx.beginPath();
+    ctx.arc(60, 60, 40, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  
+  // Main efficiency canvas
+  const effCanvas = document.getElementById('canvas-efficiency');
+  if (effCanvas) {
+    const ctx = effCanvas.getContext('2d');
+    let t = 0;
+    
+    function draw() {
+      t += 0.02;
+      
+      const pixelSize = 10;
+      drawPixelGrid(ctx, effCanvas, pixelSize);
+      
+      const cx = 18;
+      const cy = 18;
+      const radius = 14;
+      
+      // Draw full circle with symmetry highlighting
+      let x = 0;
+      let y = radius;
+      let d = 3 - 2 * radius;
+      
+      const points = [];
+      while (x <= y) {
+        points.push({ x, y });
+        if (d < 0) {
+          d = d + 4 * x + 6;
+        } else {
+          d = d + 4 * (x - y) + 10;
+          y--;
+        }
+        x++;
+      }
+      
+      const highlightIndex = Math.floor((t * 2) % points.length);
+      
+      points.forEach((p, i) => {
+        // First octant - highlighted
+        const alpha = i === highlightIndex ? 1 : 0.6;
+        ctx.fillStyle = i === highlightIndex ? '#00ffc8' : 'rgba(0, 255, 200, ' + alpha + ')';
+        ctx.fillRect(
+          (cx + p.x) * pixelSize + 1,
+          (cy - p.y) * pixelSize + 1,
+          pixelSize - 2, pixelSize - 2
+        );
+        
+        // Other octants
+        const symPoints = [
+          [cx + p.y, cy - p.x],
+          [cx + p.y, cy + p.x],
+          [cx + p.x, cy + p.y],
+          [cx - p.x, cy + p.y],
+          [cx - p.y, cy + p.x],
+          [cx - p.y, cy - p.x],
+          [cx - p.x, cy - p.y]
+        ];
+        
+        ctx.fillStyle = i === highlightIndex ? 
+          'rgba(0, 212, 255, 0.8)' : 
+          'rgba(0, 212, 255, 0.4)';
+        symPoints.forEach(sp => {
+          ctx.fillRect(
+            sp[0] * pixelSize + 1,
+            sp[1] * pixelSize + 1,
+            pixelSize - 2, pixelSize - 2
+          );
+        });
+      });
+      
+      // Center
+      ctx.fillStyle = '#ff6b4a';
+      ctx.beginPath();
+      ctx.arc(cx * pixelSize + pixelSize / 2, cy * pixelSize + pixelSize / 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
+}
+
+// === ALGORITHM PREVIEW CANVAS ===
+function initAlgoCanvas() {
+  const canvas = document.getElementById('canvas-algo');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  let t = 0;
+  
+  function draw() {
+    t += 0.02;
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.08)';
+    for (let x = 0; x < canvas.width; x += 12) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 12) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+    
+    const cx = 160;
+    const cy = 100;
+    const radius = 60;
+    
+    // Animated circle drawing
+    const progress = (t % 4) / 3;
+    
+    // Partial circle arc
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+    ctx.stroke();
+    
+    // Pixels following the arc
+    const numPixels = Math.floor(progress * 48);
+    for (let i = 0; i < numPixels; i++) {
+      const angle = -Math.PI / 2 + (i / 48) * Math.PI * 2;
+      const px = cx + Math.cos(angle) * radius;
+      const py = cy + Math.sin(angle) * radius;
+      
+      const alpha = 0.4 + Math.sin(t * 3 + i * 0.1) * 0.3;
+      ctx.fillStyle = 'rgba(0, 212, 255, ' + alpha + ')';
+      ctx.fillRect(px - 4, py - 4, 8, 8);
+    }
+    
+    // Center
+    ctx.fillStyle = '#ff6b4a';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Labels
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText('Algorithm: Midpoint', 10, 20);
+    ctx.fillText('Progress: ' + Math.round(progress * 100) + '%', 10, 35);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === SCROLL PROGRESS ===
+function updateProgress() {
+  const sections = ['intro', 'pixel', 'symmetry', 'interactive', 'efficiency', 'algorithms'];
+  const scrollPos = window.scrollY + window.innerHeight * 0.5;
+  
+  let currentSection = 0;
+  sections.forEach((id, index) => {
+    const el = document.getElementById(id);
+    if (el && scrollPos > el.offsetTop) {
+      currentSection = index + 1;
+    }
+  });
+  
+  const progress = Math.round((currentSection / sections.length) * 100);
+  document.getElementById('progress-fill').style.width = progress + '%';
+  document.getElementById('progress-text').textContent = progress + '%';
+}
+
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('scroll', updateProgress);
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initParticles();
+});
+
+// === INITIALIZE ===
+initParticles();
+animate();
+
+document.addEventListener('DOMContentLoaded', function() {
+  initIntroCanvas();
+  initPixelCanvases();
+  initSymmetryCanvas();
+  initInteractiveCanvas();
+  initEfficiencyCanvases();
+  initAlgoCanvas();
+  updateProgress();
+});
+</script>
+
+</body>
+</html>

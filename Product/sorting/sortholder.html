@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algorithm Visualizer Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #00e5ff;
+  --accent-alt: #a855f7;
+  --accent-warm: #f472b6;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #22d3ee;
+  --purple: #c084fc;
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --red: #ef4444;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.04) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.hero {
+  min-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 229, 255, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--accent); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--accent); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--cyan) 50%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 520px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 28px;
+}
+
+.card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  display: block;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), transparent, rgba(168, 85, 247, 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card:hover::after {
+  opacity: 1;
+}
+
+.card:hover {
+  transform: translateY(-10px) scale(1.01);
+  border-color: rgba(0, 229, 255, 0.25);
+  box-shadow: 
+    0 30px 80px -20px rgba(0, 229, 255, 0.12),
+    0 0 60px -20px rgba(168, 85, 247, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.card-preview {
+  height: 180px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at center, #0c1428 0%, #060a14 100%);
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.card-preview-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  background: rgba(4, 6, 13, 0.85);
+  padding: 6px 12px;
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+  z-index: 1;
+  border: 1px solid rgba(0, 229, 255, 0.1);
+}
+
+.card-content {
+  padding: 28px;
+}
+
+.card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.tag-quadratic { 
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(249, 115, 22, 0.18)); 
+  color: #fb923c; 
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+.tag-logarithmic { 
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(20, 184, 166, 0.18)); 
+  color: #34d399; 
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+.tag-linear { 
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(99, 102, 241, 0.18)); 
+  color: #60a5fa; 
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 24px 0;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  color: var(--bg);
+  transition: all 0.3s ease;
+}
+
+.card:hover .card-btn {
+  background: linear-gradient(135deg, var(--cyan), var(--accent));
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px -4px var(--accent);
+}
+
+.card-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.card:hover .card-btn svg {
+  transform: translateX(4px);
+}
+
+.card-meta {
+  text-align: right;
+}
+
+.card-meta-complexity {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* === VISUALIZER VIEW === */
+#visualizer-view {
+  display: none;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: var(--bg);
+  z-index: 50;
+}
+
+.viz-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.95);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent);
+  transform: translateX(-4px);
+}
+
+.viz-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.viz-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px 40px;
+}
+
+.bars-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 380px;
+  gap: 3px;
+  padding: 20px;
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.8), rgba(8, 12, 22, 0.9));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.bar {
+  flex: 1;
+  max-width: 40px;
+  background: linear-gradient(180deg, var(--cyan) 0%, var(--blue) 100%);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.15s ease, background 0.2s ease;
+  position: relative;
+}
+
+.bar.pivot {
+  background: linear-gradient(180deg, var(--red) 0%, #dc2626 100%) !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+}
+
+.bar.active {
+  background: linear-gradient(180deg, #fff 0%, #e0e0e0 100%) !important;
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+}
+
+.bar.sorted {
+  background: linear-gradient(180deg, var(--green) 0%, #10b981 100%) !important;
+}
+
+.bar.compare {
+  background: linear-gradient(180deg, var(--accent-warm) 0%, #ec4899 100%) !important;
+}
+
+.controls {
+  display: flex;
+  gap: 16px;
+  margin-top: 30px;
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.9), rgba(8, 12, 22, 0.95));
+  padding: 20px 32px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-action {
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  color: var(--bg);
+  border: none;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-action:hover {
+  box-shadow: 0 0 30px rgba(0, 229, 255, 0.4);
+  transform: scale(1.05);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.btn-stop {
+  background: linear-gradient(135deg, var(--red), #dc2626);
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.stats-display {
+  display: flex;
+  gap: 32px;
+  margin-top: 24px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+/* Scroll reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 40vh;
+  }
+  
+  .card-preview {
+    height: 140px;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .viz-nav {
+    padding: 16px 20px;
+  }
+  
+  .bars-container {
+    height: 280px;
+  }
+  
+  .controls {
+    padding: 16px 20px;
+    gap: 12px;
+  }
+  
+  .control-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content" id="hub-view">
+  
+  <nav class="nav">
+    <div class="nav-brand" onclick="goHome()">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <path d="M3 3v18h18"/>
+          <path d="M7 16l4-8 4 4 5-9"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">AlgoViz</span>
+    </div>
+    <div class="nav-breadcrumb">
+      <a href="#">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Sorting Algorithms</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Interactive Algorithm Lab</div>
+    <h1 class="main-title">Sorting Algorithms</h1>
+    <p class="subtitle">
+      // Visualize and understand sorting algorithms<br>
+      // through interactive real-time animations and complexity analysis.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <div class="grid">
+      
+      <!-- Bubble Sort -->
+      <div class="card reveal" onclick="openVisualizer('bubbleSort.html')">
+        <div class="card-preview">
+          <canvas id="preview-bubble"></canvas>
+          <div class="card-preview-overlay">COMPARISON</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-quadratic">O(n^2)</span>
+          <h3>Bubble Sort</h3>
+          <p>
+            Watch adjacent elements bubble up through repeated swaps.
+            Simple yet inefficient for large datasets.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">
+                Stable Sort
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selection Sort -->
+      <div class="card reveal" onclick="openVisualizer('selectionSort.html')">
+        <div class="card-preview">
+          <canvas id="preview-selection"></canvas>
+          <div class="card-preview-overlay">IN-PLACE</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-quadratic">O(n^2)</span>
+          <h3>Selection Sort</h3>
+          <p>
+            Find the minimum element and move it to the sorted portion.
+            Minimal swaps but still quadratic complexity.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">
+                Not Stable
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Merge Sort -->
+      <div class="card reveal" onclick="openVisualizer('mergeSort.html')">
+        <div class="card-preview">
+          <canvas id="preview-merge"></canvas>
+          <div class="card-preview-overlay">DIVIDE</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-logarithmic">O(n log n)</span>
+          <h3>Merge Sort</h3>
+          <p>
+            Divide and conquer approach with guaranteed O(n log n).
+            Split, sort, and merge subarrays efficiently.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">
+                Stable Sort
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Heap Sort -->
+      <div class="card reveal" onclick="openVisualizer('heapSort.html')">
+        <div class="card-preview">
+          <canvas id="preview-heap"></canvas>
+          <div class="card-preview-overlay">HEAP</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-logarithmic">O(n log n)</span>
+          <h3>Heap Sort</h3>
+          <p>
+            Build a max heap then extract elements.
+            In-place sorting with logarithmic guarantees.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">
+                Not Stable
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Sort -->
+      <div class="card reveal" onclick="openVisualizer('quickSort.html')">
+        <div class="card-preview">
+          <canvas id="preview-quick"></canvas>
+          <div class="card-preview-overlay">PIVOT</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-logarithmic">O(n log n)</span>
+          <h3>Quick Sort</h3>
+          <p>
+            Partition around a pivot element recursively.
+            Fast average case with elegant divide and conquer.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">
+                Not Stable
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Radix Sort -->
+      <div class="card reveal" onclick="openVisualizer('radixSort.html')">
+        <div class="card-preview">
+          <canvas id="preview-radix"></canvas>
+          <div class="card-preview-overlay">DIGIT</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-linear">O(nk)</span>
+          <h3>Radix Sort</h3>
+          <p>
+            Sort by individual digits, from least to most significant.
+            Non-comparative sorting for integers.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">
+                Stable Sort
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+    
+  </section>
+
+</div>
+
+<!-- === VISUALIZER VIEW === -->
+<div id="visualizer-view">
+  <nav class="viz-nav">
+    <button class="back-btn" onclick="goHome()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+      Back to Hub
+    </button>
+    <h2 class="viz-title" id="viz-title-text">Quick Sort</h2>
+    <div style="width: 120px;"></div>
+  </nav>
+
+  <div class="viz-content">
+    <div class="stats-display">
+      <div class="stat-item">
+        <div class="stat-value" id="stat-comparisons">0</div>
+        <div class="stat-label">Comparisons</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-swaps">0</div>
+        <div class="stat-label">Swaps</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-time">0ms</div>
+        <div class="stat-label">Elapsed</div>
+      </div>
+    </div>
+
+    <div class="bars-container" id="bars-container"></div>
+
+    <div class="controls">
+      <button class="btn-action" id="startBtn" onclick="toggleSort()">Start Sorting</button>
+      <button class="btn-action btn-secondary" onclick="resetArray()">Reset Array</button>
+      
+      <div class="control-group">
+        <span>Size:</span>
+        <input type="range" min="10" max="80" value="30" id="sizeSlider" oninput="updateSize()">
+        <span id="sizeLabel" style="width: 30px; text-align: center;">30</span>
+      </div>
+      
+      <div class="control-group">
+        <span>Speed:</span>
+        <input type="range" min="1" max="100" value="50" id="speedSlider">
+        <span style="width: 30px; text-align: center;" id="speedLabel">50</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+bgCanvas.width = width;
+bgCanvas.height = height;
+
+let mouseX = width / 2;
+let mouseY = height / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const nodes = [];
+const nodeCount = 60;
+
+function initNodes() {
+  nodes.length = 0;
+  
+  for (let i = 0; i < nodeCount; i++) {
+    nodes.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'cyan' : 'purple'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, width, height);
+  
+  const time = Date.now() * 0.001;
+  
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 120) {
+        const alpha = (1 - dist / 120) * 0.12;
+        const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+        
+        if (nodes[i].type === 'cyan') {
+          bgCtx.strokeStyle = 'rgba(34, 211, 238, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(168, 85, 247, ' + pulseAlpha + ')';
+        }
+        
+        bgCtx.beginPath();
+        bgCtx.moveTo(nodes[i].x, nodes[i].y);
+        bgCtx.lineTo(nodes[j].x, nodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  
+  nodes.forEach(node => {
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.03;
+    
+    if (node.x < 0 || node.x > width) node.vx *= -1;
+    if (node.y < 0 || node.y > height) node.vy *= -1;
+    
+    const dx = mouseX - node.x;
+    const dy = mouseY - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 150) {
+      node.x -= dx * 0.01;
+      node.y -= dy * 0.01;
+    }
+    
+    const pulseRadius = node.radius + Math.sin(node.pulse) * 0.5;
+    const glowRadius = Math.max(1, pulseRadius + 4);
+    
+    const glow = bgCtx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, glowRadius
+    );
+    
+    if (node.type === 'cyan') {
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.4)');
+      glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+      glow.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    }
+    
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+    bgCtx.fill();
+    
+    bgCtx.fillStyle = node.type === 'cyan' ? '#22d3ee' : '#a855f7';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pulseRadius), 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  gradient.addColorStop(0, 'rgba(0, 229, 255, 0.04)');
+  gradient.addColorStop(0.5, 'rgba(168, 85, 247, 0.02)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, width, height);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === PREVIEW CANVASES ===
+function initPreviewBubble() {
+  const canvas = document.getElementById('preview-bubble');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const bars = [];
+  const numBars = 15;
+  let time = 0;
+  let currentI = 0;
+  let currentJ = 0;
+  
+  for (let i = 0; i < numBars; i++) {
+    bars.push({
+      height: 0.2 + Math.random() * 0.7,
+      x: i / numBars
+    });
+  }
+  
+  function draw() {
+    time += 0.016;
+    
+    if (Math.floor(time * 2) % 2 === 0) {
+      currentJ++;
+      if (currentJ >= numBars - currentI - 1) {
+        currentJ = 0;
+        currentI = (currentI + 1) % (numBars - 1);
+      }
+      
+      if (bars[currentJ].height > bars[currentJ + 1].height) {
+        const temp = bars[currentJ].height;
+        bars[currentJ].height = bars[currentJ + 1].height;
+        bars[currentJ + 1].height = temp;
+      }
+    }
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const barWidth = canvas.width / numBars - 4;
+    const maxHeight = canvas.height - 40;
+    
+    bars.forEach((bar, i) => {
+      const x = i * (barWidth + 4) + 2;
+      const h = bar.height * maxHeight;
+      const y = canvas.height - 20 - h;
+      
+      let gradient = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+      gradient.addColorStop(0, '#22d3ee');
+      gradient.addColorStop(1, '#3b82f6');
+      
+      if (i === currentJ || i === currentJ + 1) {
+        gradient = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+        gradient.addColorStop(0, '#ffffff');
+        gradient.addColorStop(1, '#e0e0e0');
+      } else if (i >= numBars - currentI) {
+        gradient = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+        gradient.addColorStop(0, '#22c55e');
+        gradient.addColorStop(1, '#10b981');
+      }
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, h, 3);
+      ctx.fill();
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewSelection() {
+  const canvas = document.getElementById('preview-selection');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const bars = [];
+  const numBars = 15;
+  let time = 0;
+  let currentI = 0;
+  let minIdx = 0;
+  let searching = true;
+  
+  for (let i = 0; i < numBars; i++) {
+    bars.push(0.2 + Math.random() * 0.7);
+  }
+  
+  function draw() {
+    time += 0.016;
+    
+    if (Math.floor(time * 3) % 3 === 0 && searching) {
+      minIdx = currentI;
+      for (let j = currentI + 1; j < numBars; j++) {
+        if (bars[j] < bars[minIdx]) minIdx = j;
+      }
+      const temp = bars[currentI];
+      bars[currentI] = bars[minIdx];
+      bars[minIdx] = temp;
+      currentI = (currentI + 1) % (numBars - 1);
+    }
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const barWidth = canvas.width / numBars - 4;
+    const maxHeight = canvas.height - 40;
+    
+    bars.forEach((height, i) => {
+      const x = i * (barWidth + 4) + 2;
+      const h = height * maxHeight;
+      const y = canvas.height - 20 - h;
+      
+      let gradient = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+      gradient.addColorStop(0, '#22d3ee');
+      gradient.addColorStop(1, '#3b82f6');
+      
+      if (i === currentI) {
+        gradient = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+        gradient.addColorStop(0, '#f472b6');
+        gradient.addColorStop(1, '#ec4899');
+      } else if (i < currentI) {
+        gradient = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+        gradient.addColorStop(0, '#22c55e');
+        gradient.addColorStop(1, '#10b981');
+      }
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, h, 3);
+      ctx.fill();
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewMerge() {
+  const canvas = document.getElementById('preview-merge');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const bars = [];
+  const numBars = 15;
+  let time = 0;
+  
+  for (let i = 0; i < numBars; i++) {
+    bars.push(0.2 + Math.random() * 0.7);
+  }
+  
+  function draw() {
+    time += 0.016;
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const barWidth = canvas.width / numBars - 4;
+    const maxHeight = canvas.height - 40;
+    
+    const splitPoint = Math.floor((Math.sin(time * 0.5) + 1) * numBars / 4) + 2;
+    
+    bars.forEach((height, i) => {
+      const x = i * (barWidth + 4) + 2;
+      const h = height * maxHeight;
+      const y = canvas.height - 20 - h;
+      
+      let gradient = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+      
+      if (i < splitPoint) {
+        gradient.addColorStop(0, '#22d3ee');
+        gradient.addColorStop(1, '#3b82f6');
+      } else {
+        gradient.addColorStop(0, '#a855f7');
+        gradient.addColorStop(1, '#c084fc');
+      }
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, h, 3);
+      ctx.fill();
+    });
+    
+    // Draw division line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(splitPoint * (barWidth + 4), 10);
+    ctx.lineTo(splitPoint * (barWidth + 4), canvas.height - 10);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewHeap() {
+  const canvas = document.getElementById('preview-heap');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const values = [];
+  const numNodes = 15;
+  let time = 0;
+  let highlightIdx = 0;
+  
+  for (let i = 0; i < numNodes; i++) {
+    values.push(0.3 + Math.random() * 0.6);
+  }
+  
+  function draw() {
+    time += 0.016;
+    
+    if (Math.floor(time * 2) % 2 === 0) {
+      highlightIdx = (highlightIdx + 1) % numNodes;
+    }
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const positions = [];
+    let idx = 0;
+    for (let level = 0; level < 4 && idx < numNodes; level++) {
+      const nodesInLevel = Math.pow(2, level);
+      const levelY = 30 + level * 38;
+      const startX = canvas.width / (nodesInLevel + 1);
+      
+      for (let n = 0; n < nodesInLevel && idx < numNodes; n++) {
+        positions.push({
+          x: startX * (n + 1),
+          y: levelY,
+          idx: idx
+        });
+        idx++;
+      }
+    }
+    
+    // Draw edges
+    positions.forEach((pos, i) => {
+      const leftChild = 2 * i + 1;
+      const rightChild = 2 * i + 2;
+      
+      if (leftChild < positions.length) {
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y + 8);
+        ctx.lineTo(positions[leftChild].x, positions[leftChild].y - 8);
+        ctx.stroke();
+      }
+      
+      if (rightChild < positions.length) {
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y + 8);
+        ctx.lineTo(positions[rightChild].x, positions[rightChild].y - 8);
+        ctx.stroke();
+      }
+    });
+    
+    // Draw nodes
+    positions.forEach((pos, i) => {
+      const size = 8 + values[pos.idx] * 10;
+      const isHighlight = i === highlightIdx;
+      
+      if (isHighlight) {
+        const glow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, size + 6);
+        glow.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+        glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, size + 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, size);
+      if (isHighlight) {
+        gradient.addColorStop(0, '#ffffff');
+        gradient.addColorStop(1, '#e0e0e0');
+      } else {
+        gradient.addColorStop(0, '#22d3ee');
+        gradient.addColorStop(1, '#3b82f6');
+      }
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewQuick() {
+  const canvas = document.getElementById('preview-quick');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const bars = [];
+  const numBars = 15;
+  let time = 0;
+  let pivotIdx = 7;
+  let partitionIdx = 0;
+  
+  for (let i = 0; i < numBars; i++) {
+    bars.push(0.2 + Math.random() * 0.7);
+  }
+  
+  function draw() {
+    time += 0.016;
+    
+    pivotIdx = Math.floor((Math.sin(time * 0.8) + 1) * numBars / 4) + numBars / 4;
+    partitionIdx = Math.floor(time * 5) % numBars;
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const barWidth = canvas.width / numBars - 4;
+    const maxHeight = canvas.height - 40;
+    
+    bars.forEach((height, i) => {
+      const x = i * (barWidth + 4) + 2;
+      const h = height * maxHeight;
+      const y = canvas.height - 20 - h;
+      
+      let gradient = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+      
+      if (i === pivotIdx) {
+        gradient.addColorStop(0, '#ef4444');
+        gradient.addColorStop(1, '#dc2626');
+      } else if (i === partitionIdx) {
+        gradient.addColorStop(0, '#ffffff');
+        gradient.addColorStop(1, '#e0e0e0');
+      } else if (height < bars[pivotIdx]) {
+        gradient.addColorStop(0, '#22d3ee');
+        gradient.addColorStop(1, '#3b82f6');
+      } else {
+        gradient.addColorStop(0, '#a855f7');
+        gradient.addColorStop(1, '#c084fc');
+      }
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, h, 3);
+      ctx.fill();
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewRadix() {
+  const canvas = document.getElementById('preview-radix');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const bars = [];
+  const numBars = 15;
+  let time = 0;
+  let digitPlace = 0;
+  
+  for (let i = 0; i < numBars; i++) {
+    bars.push({
+      height: 0.2 + Math.random() * 0.7,
+      digit: Math.floor(Math.random() * 10)
+    });
+  }
+  
+  function draw() {
+    time += 0.016;
+    
+    digitPlace = Math.floor(time * 0.5) % 3;
+    const buckets = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    bars.forEach(b => buckets[b.digit]++);
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const barWidth = canvas.width / numBars - 4;
+    const maxHeight = canvas.height - 60;
+    
+    bars.forEach((bar, i) => {
+      const x = i * (barWidth + 4) + 2;
+      const h = bar.height * maxHeight;
+      const y = canvas.height - 30 - h;
+      
+      const hue = bar.digit * 36;
+      const gradient = ctx.createLinearGradient(x, y, x, canvas.height - 30);
+      gradient.addColorStop(0, 'hsl(' + hue + ', 70%, 60%)');
+      gradient.addColorStop(1, 'hsl(' + hue + ', 70%, 40%)');
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, h, 3);
+      ctx.fill();
+      
+      ctx.font = '9px JetBrains Mono';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.textAlign = 'center';
+      ctx.fillText(bar.digit.toString(), x + barWidth / 2, canvas.height - 15);
+    });
+    
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.8)';
+    ctx.textAlign = 'left';
+    ctx.fillText('DIGIT ' + (digitPlace + 1), 12, 22);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === APP LOGIC ===
+const hubView = document.getElementById('hub-view');
+const vizView = document.getElementById('visualizer-view');
+const startBtn = document.getElementById('startBtn');
+const barsContainer = document.getElementById('bars-container');
+const vizTitleText = document.getElementById('viz-title-text');
+
+let array = [];
+let isSorting = false;
+let abortSort = false;
+let audioCtx = null;
+let comparisons = 0;
+let swaps = 0;
+let startTime = 0;
+let currentAlgorithm = 'quick';
+
+const algorithmTitles = {
+  bubble: 'Bubble Sort',
+  selection: 'Selection Sort',
+  merge: 'Merge Sort',
+  heap: 'Heap Sort',
+  quick: 'Quick Sort',
+  radix: 'Radix Sort'
+};
+
+function playSound(freq) {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+}
+
+function openVisualizer(url) {
+  window.location.href=url;
+}
+
+function goHome() {
+  playSound(400);
+  abortSort = true;
+  isSorting = false;
+  vizView.style.display = 'none';
+  hubView.style.display = 'block';
+}
+
+function updateSize() {
+  const val = document.getElementById('sizeSlider').value;
+  document.getElementById('sizeLabel').textContent = val;
+  document.getElementById('speedLabel').textContent = document.getElementById('speedSlider').value;
+  if (!isSorting) initArray();
+}
+
+function initArray() {
+  const size = parseInt(document.getElementById('sizeSlider').value);
+  array = [];
+  barsContainer.innerHTML = '';
+  comparisons = 0;
+  swaps = 0;
+  startTime = 0;
+  updateStats();
+  
+  for (let i = 0; i < size; i++) {
+    const height = Math.floor(Math.random() * 85) + 10;
+    array.push(height);
+    const bar = document.createElement('div');
+    bar.classList.add('bar');
+    bar.style.height = height + '%';
+    barsContainer.appendChild(bar);
+  }
+}
+
+function resetArray() {
+  abortSort = true;
+  setTimeout(function() {
+    abortSort = false;
+    isSorting = false;
+    startBtn.textContent = 'Start Sorting';
+    startBtn.classList.remove('btn-stop');
+    initArray();
+  }, 100);
+}
+
+function updateStats() {
+  document.getElementById('stat-comparisons').textContent = comparisons;
+  document.getElementById('stat-swaps').textContent = swaps;
+  if (startTime > 0) {
+    document.getElementById('stat-time').textContent = Math.round(performance.now() - startTime) + 'ms';
+  }
+}
+
+function sleep(ms) {
+  return new Promise(function(resolve) {
+    setTimeout(resolve, ms);
+  });
+}
+
+function getSpeed() {
+  const slider = document.getElementById('speedSlider');
+  return 210 - parseInt(slider.value) * 2;
+}
+
+async function updateBars() {
+  const bars = document.getElementsByClassName('bar');
+  for (let i = 0; i < array.length; i++) {
+    bars[i].style.height = array[i] + '%';
+  }
+}
+
+async function swap(i, j) {
+  if (abortSort) return;
+  
+  const bars = document.getElementsByClassName('bar');
+  bars[i].classList.add('active');
+  bars[j].classList.add('active');
+  
+  const temp = array[i];
+  array[i] = array[j];
+  array[j] = temp;
+  
+  swaps++;
+  updateStats();
+  
+  bars[i].style.height = array[i] + '%';
+  bars[j].style.height = array[j] + '%';
+  
+  playSound(200 + array[i] * 3);
+  
+  await sleep(getSpeed());
+  
+  bars[i].classList.remove('active');
+  bars[j].classList.remove('active');
+}
+
+async function bubbleSort() {
+  const n = array.length;
+  const bars = document.getElementsByClassName('bar');
+  
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+      if (abortSort) return;
+      
+      bars[j].classList.add('compare');
+      bars[j + 1].classList.add('compare');
+      comparisons++;
+      updateStats();
+      
+      if (array[j] > array[j + 1]) {
+        await swap(j, j + 1);
+      } else {
+        await sleep(getSpeed());
+      }
+      
+      bars[j].classList.remove('compare');
+      bars[j + 1].classList.remove('compare');
+    }
+    bars[n - i - 1].classList.add('sorted');
+  }
+  bars[0].classList.add('sorted');
+}
+
+async function selectionSort() {
+  const n = array.length;
+  const bars = document.getElementsByClassName('bar');
+  
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i;
+    
+    for (let j = i + 1; j < n; j++) {
+      if (abortSort) return;
+      
+      bars[j].classList.add('compare');
+      comparisons++;
+      updateStats();
+      
+      if (array[j] < array[minIdx]) {
+        minIdx = j;
+      }
+      
+      await sleep(getSpeed() / 2);
+      bars[j].classList.remove('compare');
+    }
+    
+    if (minIdx !== i) {
+      await swap(i, minIdx);
+    }
+    bars[i].classList.add('sorted');
+  }
+  bars[n - 1].classList.add('sorted');
+}
+
+async function mergeSort(start, end) {
+  if (start >= end || abortSort) return;
+  
+  const mid = Math.floor((start + end) / 2);
+  await mergeSort(start, mid);
+  await mergeSort(mid + 1, end);
+  await merge(start, mid, end);
+}
+
+async function merge(start, mid, end) {
+  if (abortSort) return;
+  
+  const bars = document.getElementsByClassName('bar');
+  const left = array.slice(start, mid + 1);
+  const right = array.slice(mid + 1, end + 1);
+  
+  let i = 0, j = 0, k = start;
+  
+  while (i < left.length && j < right.length && !abortSort) {
+    bars[k].classList.add('compare');
+    comparisons++;
+    updateStats();
+    
+    if (left[i] <= right[j]) {
+      array[k] = left[i];
+      i++;
+    } else {
+      array[k] = right[j];
+      j++;
+    }
+    
+    bars[k].style.height = array[k] + '%';
+    playSound(200 + array[k] * 3);
+    
+    await sleep(getSpeed());
+    bars[k].classList.remove('compare');
+    bars[k].classList.add('sorted');
+    k++;
+  }
+  
+  while (i < left.length && !abortSort) {
+    array[k] = left[i];
+    bars[k].style.height = array[k] + '%';
+    bars[k].classList.add('sorted');
+    i++;
+    k++;
+    await sleep(getSpeed() / 2);
+  }
+  
+  while (j < right.length && !abortSort) {
+    array[k] = right[j];
+    bars[k].style.height = array[k] + '%';
+    bars[k].classList.add('sorted');
+    j++;
+    k++;
+    await sleep(getSpeed() / 2);
+  }
+}
+
+async function heapSort() {
+  const n = array.length;
+  const bars = document.getElementsByClassName('bar');
+  
+  for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+    await heapify(n, i);
+  }
+  
+  for (let i = n - 1; i > 0; i--) {
+    if (abortSort) return;
+    await swap(0, i);
+    bars[i].classList.add('sorted');
+    await heapify(i, 0);
+  }
+  bars[0].classList.add('sorted');
+}
+
+async function heapify(n, i) {
+  if (abortSort) return;
+  
+  const bars = document.getElementsByClassName('bar');
+  let largest = i;
+  const left = 2 * i + 1;
+  const right = 2 * i + 2;
+  
+  if (left < n) {
+    bars[left].classList.add('compare');
+    comparisons++;
+    updateStats();
+    if (array[left] > array[largest]) {
+      largest = left;
+    }
+    await sleep(getSpeed() / 3);
+    bars[left].classList.remove('compare');
+  }
+  
+  if (right < n) {
+    bars[right].classList.add('compare');
+    comparisons++;
+    updateStats();
+    if (array[right] > array[largest]) {
+      largest = right;
+    }
+    await sleep(getSpeed() / 3);
+    bars[right].classList.remove('compare');
+  }
+  
+  if (largest !== i) {
+    await swap(i, largest);
+    await heapify(n, largest);
+  }
+}
+
+async function quickSort(start, end) {
+  if (start < end && !abortSort) {
+    const pivotIndex = await partition(start, end);
+    await quickSort(start, pivotIndex - 1);
+    await quickSort(pivotIndex + 1, end);
+  } else if (start >= 0 && start < array.length) {
+    const bars = document.getElementsByClassName('bar');
+    bars[start].classList.add('sorted');
+  }
+}
+
+async function partition(start, end) {
+  if (abortSort) return start;
+  
+  const bars = document.getElementsByClassName('bar');
+  const pivotValue = array[end];
+  bars[end].classList.add('pivot');
+  
+  let pivotIndex = start;
+  
+  for (let i = start; i < end; i++) {
+    if (abortSort) return pivotIndex;
+    
+    bars[i].classList.add('compare');
+    comparisons++;
+    updateStats();
+    
+    if (array[i] < pivotValue) {
+      await swap(i, pivotIndex);
+      pivotIndex++;
+    } else {
+      await sleep(getSpeed());
+    }
+    
+    bars[i].classList.remove('compare');
+  }
+  
+  await swap(pivotIndex, end);
+  bars[end].classList.remove('pivot');
+  bars[pivotIndex].classList.add('sorted');
+  
+  return pivotIndex;
+}
+
+async function radixSort() {
+  const n = array.length;
+  const max = Math.max.apply(null, array);
+  const bars = document.getElementsByClassName('bar');
+  
+  for (let exp = 1; Math.floor(max / exp) > 0 && !abortSort; exp *= 10) {
+    const output = new Array(n);
+    const count = new Array(10).fill(0);
+    
+    for (let i = 0; i < n; i++) {
+      const digit = Math.floor(array[i] / exp) % 10;
+      count[digit]++;
+    }
+    
+    for (let i = 1; i < 10; i++) {
+      count[i] += count[i - 1];
+    }
+    
+    for (let i = n - 1; i >= 0; i--) {
+      const digit = Math.floor(array[i] / exp) % 10;
+      output[count[digit] - 1] = array[i];
+      count[digit]--;
+    }
+    
+    for (let i = 0; i < n && !abortSort; i++) {
+      array[i] = output[i];
+      bars[i].style.height = array[i] + '%';
+      bars[i].classList.add('compare');
+      playSound(200 + array[i] * 3);
+      await sleep(getSpeed());
+      bars[i].classList.remove('compare');
+      bars[i].classList.add('sorted');
+    }
+  }
+}
+
+async function toggleSort() {
+  if (isSorting) {
+    resetArray();
+    return;
+  }
+  
+  isSorting = true;
+  startBtn.textContent = 'Stop';
+  startBtn.classList.add('btn-stop');
+  startTime = performance.now();
+  
+  const sortFunctions = {
+    bubble: bubbleSort,
+    selection: selectionSort,
+    merge: function() { return mergeSort(0, array.length - 1); },
+    heap: heapSort,
+    quick: function() { return quickSort(0, array.length - 1); },
+    radix: radixSort
+  };
+  
+  await sortFunctions[currentAlgorithm]();
+  
+  if (!abortSort) {
+    startBtn.textContent = 'Completed';
+    startBtn.classList.remove('btn-stop');
+    const bars = document.getElementsByClassName('bar');
+    for (let i = 0; i < bars.length; i++) {
+      bars[i].classList.add('sorted');
+    }
+  }
+  
+  isSorting = false;
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry, index) {
+      if (entry.isIntersecting) {
+        setTimeout(function() {
+          entry.target.classList.add('visible');
+        }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  reveals.forEach(function(el) {
+    observer.observe(el);
+  });
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  bgCanvas.width = width;
+  bgCanvas.height = height;
+  initNodes();
+  
+  if (hubView.style.display !== 'none') {
+    initPreviewBubble();
+    initPreviewSelection();
+    initPreviewMerge();
+    initPreviewHeap();
+    initPreviewQuick();
+    initPreviewRadix();
+  }
+});
+
+// === INITIALIZE ===
+initNodes();
+animate();
+initScrollReveal();
+
+requestAnimationFrame(function() {
+  initPreviewBubble();
+  initPreviewSelection();
+  initPreviewMerge();
+  initPreviewHeap();
+  initPreviewQuick();
+  initPreviewRadix();
+});
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value;
+});
+</script>
+
+</body>
+</html>

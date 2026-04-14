@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OS Kernel Academy - Interactive Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        os: {
+                            bg: '#0a0d12',
+                            surface: '#111820',
+                            card: '#161f2a',
+                            border: '#1e2a38',
+                            muted: '#4a5568',
+                            text: '#e2e8f0',
+                            user: '#3b82f6',
+                            kernel: '#ef4444',
+                            hardware: '#22c55e',
+                            syscall: '#f59e0b',
+                            accent: '#06b6d4',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        * { box-sizing: border-box; }
+        
+        body {
+            background: #0a0d12;
+            color: #e2e8f0;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        
+        /* Subtle background pattern */
+        .pattern-bg {
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(239, 68, 68, 0.05) 0%, transparent 50%);
+        }
+        
+        /* Layer styles */
+        .layer-user { 
+            border-color: rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%);
+        }
+        .layer-syscall { 
+            border-color: rgba(245, 158, 11, 0.4);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.02) 100%);
+        }
+        .layer-kernel { 
+            border-color: rgba(239, 68, 68, 0.4);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%);
+        }
+        .layer-hardware { 
+            border-color: rgba(34, 197, 94, 0.4);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.02) 100%);
+        }
+        
+        /* Active highlight */
+        .active-component {
+            position: relative;
+            animation: componentPulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes componentPulse {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 currentColor;
+            }
+            50% { 
+                box-shadow: 0 0 20px 4px currentColor;
+            }
+        }
+        
+        .active-component.user { color: rgba(59, 130, 246, 0.6); }
+        .active-component.syscall { color: rgba(245, 158, 11, 0.6); }
+        .active-component.kernel { color: rgba(239, 68, 68, 0.6); }
+        .active-component.hardware { color: rgba(34, 197, 94, 0.6); }
+        
+        /* Data packet animation */
+        .data-packet {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            z-index: 100;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .data-packet::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 6px;
+            background: inherit;
+            opacity: 0.3;
+            animation: packetGlow 0.8s ease-in-out infinite;
+        }
+        
+        @keyframes packetGlow {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.3); opacity: 0.1; }
+        }
+        
+        /* CPU Ring Animation */
+        .cpu-ring {
+            transition: all 0.5s ease;
+        }
+        
+        .cpu-ring.active {
+            filter: drop-shadow(0 0 10px currentColor);
+        }
+        
+        /* Memory block */
+        .memory-block {
+            transition: all 0.3s ease;
+        }
+        
+        .memory-block.active {
+            transform: scale(1.05);
+        }
+        
+        /* Process token */
+        .process-token {
+            transition: all 0.3s ease;
+        }
+        
+        /* Timeline step */
+        .timeline-step {
+            animation: stepSlide 0.3s ease-out;
+        }
+        
+        @keyframes stepSlide {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* Quiz highlight */
+        .quiz-option {
+            transition: all 0.2s ease;
+        }
+        
+        .quiz-option:hover {
+            transform: translateX(4px);
+        }
+        
+        .quiz-option.correct {
+            background: rgba(34, 197, 94, 0.2) !important;
+            border-color: #22c55e !important;
+        }
+        
+        .quiz-option.incorrect {
+            background: rgba(239, 68, 68, 0.2) !important;
+            border-color: #ef4444 !important;
+        }
+        
+        /* Arrow flow */
+        .flow-arrow {
+            position: relative;
+        }
+        
+        .flow-arrow::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #111820; }
+        ::-webkit-scrollbar-thumb { background: #1e2a38; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2d3f5a; }
+        
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        /* Focus states */
+        button:focus-visible, select:focus-visible {
+            outline: 2px solid #06b6d4;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pattern-bg">
+
+    <div class="flex h-screen">
+        
+        <!-- ==========================================
+             LEFT PANEL - Learning Guide
+             ========================================== -->
+        <aside class="w-[380px] bg-os-surface border-r border-os-border flex flex-col">
+            
+            <!-- Header -->
+            <div class="p-5 border-b border-os-border">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-os-user via-os-syscall to-os-kernel flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-display font-bold text-lg text-white">OS Kernel Academy</h1>
+                        <p class="text-xs text-os-muted">Interactive Learning Platform</p>
+                    </div>
+                </div>
+                
+                <!-- Mode Toggle -->
+                <div class="flex items-center justify-between p-3 bg-os-card rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <span id="mode-icon" class="text-lg">🎓</span>
+                        <span id="mode-label" class="text-sm font-medium">Beginner Mode</span>
+                    </div>
+                    <button onclick="toggleExplanationMode()" class="px-3 py-1 bg-os-border hover:bg-os-muted/30 rounded text-xs text-os-text transition-colors">
+                        Switch
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Current Lesson -->
+            <div class="p-5 border-b border-os-border">
+                <label class="text-xs text-os-muted uppercase tracking-wider mb-2 block">Current Lesson</label>
+                <select id="lesson-select" onchange="selectLesson(this.value)" class="w-full bg-os-card border border-os-border rounded-lg px-4 py-3 text-sm font-medium text-os-text focus:outline-none focus:border-os-accent">
+                    <option value="intro">1. What is a Kernel?</option>
+                    <option value="syscall-read">2. Reading a File (System Call)</option>
+                    <option value="syscall-write">3. Writing a File</option>
+                    <option value="interrupt">4. Keyboard Interrupt</option>
+                    <option value="context-switch">5. Context Switching</option>
+                    <option value="page-fault">6. Page Fault Handling</option>
+                    <option value="fork-exec">7. Creating Processes</option>
+                </select>
+            </div>
+            
+            <!-- Step Guide -->
+            <div class="flex-1 overflow-hidden flex flex-col">
+                <div class="p-5 border-b border-os-border">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-display font-semibold text-sm text-white">Step-by-Step Guide</h3>
+                        <span id="step-indicator" class="px-2 py-1 bg-os-accent/20 text-os-accent text-xs rounded font-mono">0/0</span>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="w-full h-1.5 bg-os-border rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-gradient-to-r from-os-user via-os-syscall to-os-kernel transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <!-- Current Step Detail -->
+                <div id="step-detail" class="flex-1 overflow-y-auto p-5">
+                    <div class="space-y-4">
+                        <div id="step-title" class="text-lg font-semibold text-white">Welcome</div>
+                        <div id="step-beginner" class="text-sm text-os-text leading-relaxed p-4 bg-os-user/10 border border-os-user/30 rounded-lg">
+                            Select a lesson to begin learning how an operating system kernel works.
+                        </div>
+                        <div id="step-advanced" class="text-xs text-os-muted leading-relaxed font-mono p-3 bg-os-card rounded border border-os-border hidden">
+                            Technical details will appear here.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Control Buttons -->
+            <div class="p-5 border-t border-os-border">
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="previousStep()" class="flex flex-col items-center gap-1 p-2 bg-os-card hover:bg-os-border border border-os-border rounded-lg text-xs transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        Back
+                    </button>
+                    <button onclick="playAuto()" id="btn-play" class="flex flex-col items-center gap-1 p-2 bg-os-accent/20 hover:bg-os-accent/30 border border-os-accent/50 rounded-lg text-xs text-os-accent transition-colors">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        Play
+                    </button>
+                    <button onclick="nextStep()" id="btn-next" class="flex flex-col items-center gap-1 p-2 bg-os-card hover:bg-os-border border border-os-border rounded-lg text-xs transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                        Next
+                    </button>
+                    <button onclick="resetLesson()" class="flex flex-col items-center gap-1 p-2 bg-os-card hover:bg-os-border border border-os-border rounded-lg text-xs transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Reset
+                    </button>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- ==========================================
+             MAIN CONTENT - Architecture View
+             ========================================== -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            
+            <!-- Top Bar -->
+            <header class="h-12 bg-os-surface/80 backdrop-blur border-b border-os-border flex items-center px-4 z-20">
+                <h2 class="font-display font-semibold text-white text-sm">OS Architecture Visualization</h2>
+                <div class="flex-1"></div>
+                <div class="flex items-center gap-6 text-xs">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-os-user"></div>
+                        <span class="text-os-muted">User Mode</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-os-kernel"></div>
+                        <span class="text-os-muted">Kernel Mode</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-os-hardware"></div>
+                        <span class="text-os-muted">Hardware</span>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Architecture Layers -->
+            <div id="architecture-container" class="flex-1 p-6 overflow-y-auto relative">
+                
+                <!-- User Space Layer -->
+                <div id="layer-user" class="layer-user border-2 rounded-xl p-4 mb-3 transition-all duration-300">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-os-user/20 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-os-user" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-semibold text-os-user">USER SPACE</h3>
+                            <p class="text-xs text-os-muted">Ring 3 - Applications run here with limited privileges</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-4 gap-3">
+                        <div id="comp-browser" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-user/50 transition-colors" onclick="showInfo('browser')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-user/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-user" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">Browser</div>
+                        </div>
+                        <div id="comp-editor" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-user/50 transition-colors" onclick="showInfo('editor')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-user/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-user" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">Text Editor</div>
+                        </div>
+                        <div id="comp-terminal" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-user/50 transition-colors" onclick="showInfo('terminal')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-user/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-user" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">Terminal</div>
+                        </div>
+                        <div id="comp-libc" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-user/50 transition-colors" onclick="showInfo('libc')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-user/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-user" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">C Library</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Flow Arrow -->
+                <div class="flex justify-center py-2">
+                    <div class="flex flex-col items-center">
+                        <svg class="w-4 h-4 text-os-syscall" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
+                        <span id="flow-label-1" class="text-[10px] text-os-muted mt-1">system call</span>
+                    </div>
+                </div>
+                
+                <!-- System Call Interface -->
+                <div id="layer-syscall" class="layer-syscall border-2 rounded-xl p-4 mb-3 transition-all duration-300">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-os-syscall/20 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-os-syscall" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-semibold text-os-syscall">SYSTEM CALL INTERFACE</h3>
+                            <p class="text-xs text-os-muted">Gateway between User and Kernel - Triggers CPU mode switch</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-center gap-3 flex-wrap">
+                        <div class="px-4 py-2 bg-os-card border border-os-border rounded-lg text-xs font-mono">read()</div>
+                        <div class="px-4 py-2 bg-os-card border border-os-border rounded-lg text-xs font-mono">write()</div>
+                        <div class="px-4 py-2 bg-os-card border border-os-border rounded-lg text-xs font-mono">open()</div>
+                        <div class="px-4 py-2 bg-os-card border border-os-border rounded-lg text-xs font-mono">fork()</div>
+                        <div class="px-4 py-2 bg-os-card border border-os-border rounded-lg text-xs font-mono">exec()</div>
+                        <div class="px-4 py-2 bg-os-card border border-os-border rounded-lg text-xs font-mono">mmap()</div>
+                    </div>
+                </div>
+                
+                <!-- Flow Arrow -->
+                <div class="flex justify-center py-2">
+                    <div class="flex flex-col items-center">
+                        <svg class="w-4 h-4 text-os-kernel" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
+                        <span id="flow-label-2" class="text-[10px] text-os-muted mt-1">kernel entry</span>
+                    </div>
+                </div>
+                
+                <!-- Kernel Space Layer -->
+                <div id="layer-kernel" class="layer-kernel border-2 rounded-xl p-4 mb-3 transition-all duration-300">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-os-kernel/20 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-os-kernel" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-semibold text-os-kernel">KERNEL SPACE</h3>
+                            <p class="text-xs text-os-muted">Ring 0 - Full hardware access, memory management, scheduling</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Kernel Subsystems -->
+                    <div class="grid grid-cols-5 gap-3 mb-4">
+                        <div id="comp-scheduler" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-kernel/50 transition-colors" onclick="showInfo('scheduler')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-kernel/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-kernel" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">Scheduler</div>
+                            <div class="text-[10px] text-os-muted">Process Mgmt</div>
+                        </div>
+                        <div id="comp-memory" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-kernel/50 transition-colors" onclick="showInfo('memory')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-kernel/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-kernel" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">Memory</div>
+                            <div class="text-[10px] text-os-muted">VM/Paging</div>
+                        </div>
+                        <div id="comp-vfs" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-kernel/50 transition-colors" onclick="showInfo('vfs')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-kernel/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-kernel" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">File System</div>
+                            <div class="text-[10px] text-os-muted">VFS/ext4</div>
+                        </div>
+                        <div id="comp-network" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-kernel/50 transition-colors" onclick="showInfo('network')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-kernel/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-kernel" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">Network</div>
+                            <div class="text-[10px] text-os-muted">TCP/IP</div>
+                        </div>
+                        <div id="comp-drivers" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-kernel/50 transition-colors" onclick="showInfo('drivers')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-kernel/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-kernel" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">Drivers</div>
+                            <div class="text-[10px] text-os-muted">Devices</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Device Drivers Row -->
+                    <div class="border-t border-os-border/50 pt-3">
+                        <p class="text-[10px] text-os-muted mb-2 uppercase tracking-wider">Device Drivers</p>
+                        <div class="grid grid-cols-6 gap-2">
+                            <div id="drv-disk" class="comp bg-os-card border border-os-border rounded p-2 text-center text-[10px] cursor-pointer hover:border-os-kernel/50" onclick="showInfo('driver-disk')">
+                                <svg class="w-4 h-4 mx-auto mb-1 text-os-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+                                Disk
+                            </div>
+                            <div id="drv-keyboard" class="comp bg-os-card border border-os-border rounded p-2 text-center text-[10px] cursor-pointer hover:border-os-kernel/50" onclick="showInfo('driver-keyboard')">
+                                <svg class="w-4 h-4 mx-auto mb-1 text-os-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                Keyboard
+                            </div>
+                            <div id="drv-display" class="comp bg-os-card border border-os-border rounded p-2 text-center text-[10px] cursor-pointer hover:border-os-kernel/50" onclick="showInfo('driver-display')">
+                                <svg class="w-4 h-4 mx-auto mb-1 text-os-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                Display
+                            </div>
+                            <div id="drv-network" class="comp bg-os-card border border-os-border rounded p-2 text-center text-[10px] cursor-pointer hover:border-os-kernel/50" onclick="showInfo('driver-network')">
+                                <svg class="w-4 h-4 mx-auto mb-1 text-os-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
+                                Network
+                            </div>
+                            <div id="drv-usb" class="comp bg-os-card border border-os-border rounded p-2 text-center text-[10px] cursor-pointer hover:border-os-kernel/50" onclick="showInfo('driver-usb')">
+                                <svg class="w-4 h-4 mx-auto mb-1 text-os-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"/></svg>
+                                USB
+                            </div>
+                            <div id="drv-audio" class="comp bg-os-card border border-os-border rounded p-2 text-center text-[10px] cursor-pointer hover:border-os-kernel/50" onclick="showInfo('driver-audio')">
+                                <svg class="w-4 h-4 mx-auto mb-1 text-os-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                                Audio
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Flow Arrow -->
+                <div class="flex justify-center py-2">
+                    <div class="flex flex-col items-center">
+                        <svg class="w-4 h-4 text-os-hardware" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
+                        <span id="flow-label-3" class="text-[10px] text-os-muted mt-1">hardware access</span>
+                    </div>
+                </div>
+                
+                <!-- Hardware Layer -->
+                <div id="layer-hardware" class="layer-hardware border-2 rounded-xl p-4 transition-all duration-300">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-os-hardware/20 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-os-hardware" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-semibold text-os-hardware">HARDWARE</h3>
+                            <p class="text-xs text-os-muted">Physical devices - CPU, Memory, Storage, Peripherals</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-5 gap-3">
+                        <div id="hw-cpu" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-hardware/50 transition-colors" onclick="showInfo('cpu')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-hardware/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-hardware" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">CPU</div>
+                        </div>
+                        <div id="hw-ram" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-hardware/50 transition-colors" onclick="showInfo('ram')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-hardware/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-hardware" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">RAM</div>
+                        </div>
+                        <div id="hw-disk" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-hardware/50 transition-colors" onclick="showInfo('disk')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-hardware/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-hardware" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">Disk</div>
+                        </div>
+                        <div id="hw-network" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-hardware/50 transition-colors" onclick="showInfo('nic')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-hardware/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-hardware" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">NIC</div>
+                        </div>
+                        <div id="hw-io" class="comp bg-os-card border border-os-border rounded-lg p-3 text-center cursor-pointer hover:border-os-hardware/50 transition-colors" onclick="showInfo('io')">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-os-hardware/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-os-hardware" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div class="text-xs font-medium">I/O</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Packet Container for animations -->
+                <div id="packet-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+            </div>
+        </main>
+        
+        <!-- ==========================================
+             RIGHT PANEL - Visualizations & Story
+             ========================================== -->
+        <aside class="w-[400px] bg-os-surface border-l border-os-border flex flex-col">
+            
+            <!-- CPU Rings Visualization -->
+            <div class="p-4 border-b border-os-border">
+                <h3 class="font-display font-semibold text-sm text-white mb-3">CPU Privilege Mode</h3>
+                <div class="flex items-center justify-center">
+                    <div class="relative w-32 h-32">
+                        <!-- Ring 3 (outermost) -->
+                        <div id="ring3" class="cpu-ring absolute inset-0 rounded-full border-4 border-os-user/50 flex items-center justify-center">
+                            <!-- Ring 0 (innermost) -->
+                            <div id="ring0" class="cpu-ring w-16 h-16 rounded-full border-4 border-os-kernel/50 flex items-center justify-center">
+                                <span id="ring-label" class="text-xs font-bold text-os-user">Ring 3</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ml-4 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-os-user"></div>
+                            <span class="text-xs text-os-muted">Ring 3 - User Mode</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-os-kernel"></div>
+                            <span class="text-xs text-os-muted">Ring 0 - Kernel Mode</span>
+                        </div>
+                        <div id="mode-status" class="mt-2 px-3 py-1.5 bg-os-user/20 border border-os-user/50 rounded text-center text-xs font-mono text-os-user">
+                            USER MODE
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Memory Map Visualization -->
+            <div class="p-4 border-b border-os-border">
+                <h3 class="font-display font-semibold text-sm text-white mb-3">Virtual Memory Map</h3>
+                <div class="bg-os-card rounded-lg p-3 border border-os-border">
+                    <div class="space-y-1">
+                        <div id="mem-kernel" class="memory-block h-8 bg-os-kernel/20 border border-os-kernel/40 rounded flex items-center px-2 text-xs">
+                            <span class="text-os-kernel">Kernel Space</span>
+                            <span class="ml-auto text-os-muted text-[10px]">0xFFFFFFFF</span>
+                        </div>
+                        <div id="mem-stack" class="memory-block h-6 bg-os-accent/20 border border-os-accent/40 rounded flex items-center px-2 text-xs">
+                            <span class="text-os-accent">Stack</span>
+                            <span class="ml-auto text-os-muted text-[10px]">grows down</span>
+                        </div>
+                        <div id="mem-heap" class="memory-block h-6 bg-os-syscall/20 border border-os-syscall/40 rounded flex items-center px-2 text-xs">
+                            <span class="text-os-syscall">Heap</span>
+                            <span class="ml-auto text-os-muted text-[10px]">grows up</span>
+                        </div>
+                        <div id="mem-data" class="memory-block h-6 bg-os-user/20 border border-os-user/40 rounded flex items-center px-2 text-xs">
+                            <span class="text-os-user">Data/BSS</span>
+                        </div>
+                        <div id="mem-text" class="memory-block h-6 bg-os-hardware/20 border border-os-hardware/40 rounded flex items-center px-2 text-xs">
+                            <span class="text-os-hardware">Text (Code)</span>
+                            <span class="ml-auto text-os-muted text-[10px]">0x08048000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Process Queue Visualization -->
+            <div class="p-4 border-b border-os-border">
+                <h3 class="font-display font-semibold text-sm text-white mb-3">Process Queue</h3>
+                <div class="flex items-center gap-2 overflow-x-auto pb-2">
+                    <div id="proc-running" class="process-token flex-shrink-0 w-12 h-12 bg-os-accent/20 border-2 border-os-accent rounded-lg flex flex-col items-center justify-center">
+                        <span class="text-[10px] text-os-muted">Run</span>
+                        <span id="running-pid" class="text-xs font-bold text-os-accent">A</span>
+                    </div>
+                    <svg class="w-4 h-4 text-os-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <div class="flex gap-2">
+                        <div class="process-token w-10 h-10 bg-os-user/20 border border-os-user/50 rounded-lg flex items-center justify-center text-xs font-bold text-os-user">B</div>
+                        <div class="process-token w-10 h-10 bg-os-user/20 border border-os-user/50 rounded-lg flex items-center justify-center text-xs font-bold text-os-user">C</div>
+                        <div class="process-token w-10 h-10 bg-os-user/20 border border-os-user/50 rounded-lg flex items-center justify-center text-xs font-bold text-os-user">D</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Story Timeline -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <div class="p-4 border-b border-os-border flex items-center justify-between">
+                    <h3 class="font-display font-semibold text-sm text-white">Operation Story</h3>
+                    <span id="story-time" class="text-xs font-mono text-os-muted">0.000s</span>
+                </div>
+                <div id="story-timeline" class="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-xs">
+                    <div class="timeline-step flex items-start gap-3 p-3 rounded-lg bg-os-card/50">
+                        <div class="w-2 h-2 rounded-full bg-os-accent mt-1 flex-shrink-0"></div>
+                        <div>
+                            <div class="text-os-muted">Ready</div>
+                            <div class="text-os-text">Select a lesson to begin the story...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quiz Panel -->
+            <div id="quiz-panel" class="p-4 border-t border-os-border bg-os-card/30 hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-display font-semibold text-sm text-os-accent">Quick Quiz</h3>
+                    <button onclick="closeQuiz()" class="text-os-muted hover:text-white">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <p id="quiz-question" class="text-sm text-os-text mb-3"></p>
+                <div id="quiz-options" class="space-y-2"></div>
+            </div>
+        </aside>
+    </div>
+    
+    <!-- ==========================================
+         COMPONENT INFO MODAL
+         ========================================== -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="closeModal(event)">
+        <div class="bg-os-card border border-os-border rounded-xl max-w-md w-full overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-4 border-b border-os-border flex items-center justify-between">
+                <h3 id="modal-title" class="font-display font-semibold text-white">Component Info</h3>
+                <button onclick="closeModal()" class="text-os-muted hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="modal-content" class="p-4 overflow-y-auto max-h-80 space-y-4">
+                <!-- Content injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // STATE & DATA
+        // ==========================================
+        let state = {
+            currentLesson: 'intro',
+            currentStep: 0,
+            isPlaying: false,
+            isAdvancedMode: false,
+            storyTime: 0
+        };
+        
+        // Component information database
+        const componentInfo = {
+            browser: {
+                title: 'Web Browser',
+                simple: 'A program you use to view websites. It runs in user mode and asks the kernel for network access.',
+                tech: 'Process running in Ring 3. Uses socket() and connect() syscalls for network I/O. Each tab may be a separate process for isolation.'
+            },
+            editor: {
+                title: 'Text Editor',
+                simple: 'A program for writing text. It needs kernel help to save and open files.',
+                tech: 'Uses open(), read(), write() syscalls. Memory-mapped I/O via mmap() for large files.'
+            },
+            terminal: {
+                title: 'Terminal Shell',
+                simple: 'A command-line interface that runs other programs. It is the bridge between you and the kernel.',
+                tech: 'Uses fork() to create child processes, exec() to run programs, pipe() for I/O redirection, and signals for job control.'
+            },
+            libc: {
+                title: 'C Standard Library',
+                simple: 'A helper library that makes it easier to ask the kernel to do things.',
+                tech: 'Provides syscall wrappers (read, write, open). Implements buffered I/O (FILE*), memory allocation (malloc via brk/sbrk or mmap).'
+            },
+            scheduler: {
+                title: 'Process Scheduler',
+                simple: 'The kernel component that decides which program runs on the CPU at any moment.',
+                tech: 'Linux uses CFS (Completely Fair Scheduler). Maintains runqueue as red-black tree keyed by virtual runtime. Handles real-time (RT) and deadline scheduling classes.'
+            },
+            memory: {
+                title: 'Memory Manager',
+                simple: 'Manages the computer\'s RAM and gives each program its own private memory space.',
+                tech: 'Handles virtual memory via 4-level page tables (x86_64). Manages page cache, swap, mmap regions. Uses buddy allocator for pages, slab/slub for kernel objects.'
+            },
+            vfs: {
+                title: 'Virtual File System',
+                simple: 'Lets programs work with files the same way, no matter where they are stored.',
+                tech: 'Abstracts ext4, btrfs, xfs, ntfs, etc. Uses inode/dentry cache. Implements open(), read(), write() through file_operations structure.'
+            },
+            network: {
+                title: 'Network Stack',
+                simple: 'Handles all internet communication for programs.',
+                tech: 'Implements TCP/IP suite. Uses sk_buff for packet management. Socket layer provides BSD socket API. Netfilter hooks for firewalling.'
+            },
+            drivers: {
+                title: 'Device Drivers',
+                simple: 'Programs that let the kernel talk to specific hardware devices.',
+                tech: 'Run in kernel mode (Ring 0). Register via file_operations or net_device. Use request_irq() for interrupts, DMA for bulk transfers.'
+            },
+            'driver-disk': {
+                title: 'Disk Driver',
+                simple: 'Controls the hard drive or SSD to read and write data.',
+                tech: 'Block device driver using bio/request queues. Implements elevator scheduling. NVMe driver for modern SSDs, AHCI for SATA.'
+            },
+            'driver-keyboard': {
+                title: 'Keyboard Driver',
+                simple: 'Handles keyboard input and sends key presses to programs.',
+                tech: 'Input subsystem driver. ISR reads scancode from I/O port 0x60. Events go through evdev to userspace.'
+            },
+            'driver-display': {
+                title: 'Display/GPU Driver',
+                simple: 'Controls the graphics card to show images on screen.',
+                tech: 'DRM/KMS for mode setting. GPU drivers (amdgpu, i915, nouveau) provide 3D acceleration via ioctl. Framebuffer for basic console.'
+            },
+            'driver-network': {
+                title: 'Network Card Driver',
+                simple: 'Controls the network hardware to send and receive data packets.',
+                tech: 'Uses NAPI for interrupt mitigation. Manages ring buffers for DMA. Implements ethtool operations. Registers net_device with kernel.'
+            },
+            'driver-usb': {
+                title: 'USB Driver',
+                simple: 'Manages USB devices like flash drives, keyboards, and cameras.',
+                tech: 'USB core handles device enumeration. Host controller drivers (xhci, ehci). Device drivers bind to specific interfaces.'
+            },
+            'driver-audio': {
+                title: 'Audio Driver',
+                simple: 'Controls sound hardware for playing and recording audio.',
+                tech: 'ALSA (Advanced Linux Sound Architecture) framework. PCM streams for audio data. Mixer controls for volume.'
+            },
+            cpu: {
+                title: 'CPU (Processor)',
+                simple: 'The brain of the computer. Runs programs and switches between them.',
+                tech: 'x86_64 provides Rings 0-3. Syscall via SYSCALL/SYSRET or INT 0x80. CR3 register holds page table pointer. IDT for interrupt handlers.'
+            },
+            ram: {
+                title: 'RAM (Memory)',
+                simple: 'Fast temporary storage for programs and data currently in use.',
+                tech: 'Physical memory managed by buddy allocator. Mapped to virtual addresses via page tables. ECC for error detection.'
+            },
+            disk: {
+                title: 'Disk Storage',
+                simple: 'Permanent storage for files. Much slower than RAM but keeps data when powered off.',
+                tech: 'Block devices accessed via I/O scheduler. SSDs: NVMe over PCIe (microseconds latency). HDDs: SATA (milliseconds due to seek).'
+            },
+            nic: {
+                title: 'Network Interface Card',
+                simple: 'Hardware that connects the computer to a network.',
+                tech: 'DMA engine for zero-copy transfers. Ring buffers for TX/RX. Offloads: checksum, TSO, RSS. Interrupt coalescing.'
+            },
+            io: {
+                title: 'I/O Devices',
+                simple: 'Other hardware like keyboard, mouse, and USB devices.',
+                tech: 'Memory-mapped I/O or port I/O. Interrupt-driven for async events. Polling for high-throughput devices.'
+            }
+        };
+        
+        // Lesson definitions
+        const lessons = {
+            'intro': {
+                title: 'What is a Kernel?',
+                steps: [
+                    {
+                        component: 'layer-user',
+                        title: 'User Space',
+                        beginner: 'This is where your applications live - browsers, text editors, games. They run with limited privileges to protect the system.',
+                        advanced: 'User processes run in Ring 3 (x86) with restricted privileges. Virtual address space is isolated per process. Cannot directly access hardware or kernel memory.',
+                        story: { time: '0.000s', text: 'Applications run in User Space with limited access to system resources.' },
+                        mode: 'user'
+                    },
+                    {
+                        component: 'layer-kernel',
+                        title: 'Kernel Space',
+                        beginner: 'The kernel is like a security guard that manages all access to hardware. It runs with full privileges.',
+                        advanced: 'Kernel runs in Ring 0 with full hardware access. Manages CPU scheduling, memory allocation, device I/O. All hardware access must go through kernel.',
+                        story: { time: '0.100s', text: 'The Kernel manages all hardware access and protects the system.' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'layer-hardware',
+                        title: 'Hardware',
+                        beginner: 'Physical components: CPU, memory, disk, network. Only the kernel can directly control them.',
+                        advanced: 'Hardware accessed via I/O ports, memory-mapped I/O, or DMA. Interrupts signal events. CPU provides privilege rings for protection.',
+                        story: { time: '0.200s', text: 'Hardware devices are controlled exclusively by the Kernel.' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'layer-syscall',
+                        title: 'The Bridge',
+                        beginner: 'Programs ask the kernel for help through "system calls" - like asking a librarian to get a book from a restricted section.',
+                        advanced: 'System calls use CPU trap mechanism (INT 0x80 or SYSCALL instruction). CPU switches from Ring 3 to Ring 0. Kernel validates all requests.',
+                        story: { time: '0.300s', text: 'System calls are the safe bridge between User programs and Kernel services.' },
+                        mode: 'kernel'
+                    }
+                ]
+            },
+            'syscall-read': {
+                title: 'Reading a File',
+                steps: [
+                    {
+                        component: 'comp-editor',
+                        title: 'Step 1: Application Request',
+                        beginner: 'Your text editor wants to read a file. It calls a function like read() - but it can\'t access the disk directly.',
+                        advanced: 'Application calls read(fd, buffer, size). libc wraps this into a system call, placing syscall number in EAX and arguments in registers.',
+                        story: { time: '0.000s', text: 'Text Editor requests to read file "document.txt"' },
+                        mode: 'user'
+                    },
+                    {
+                        component: 'layer-syscall',
+                        title: 'Step 2: Mode Switch',
+                        beginner: 'The read() function triggers a special CPU instruction that switches to kernel mode. This is like ringing a doorbell.',
+                        advanced: 'SYSCALL instruction executes. CPU saves user state (RIP, RSP, RFLAGS), loads kernel CS/SS, jumps to MSR_LSTAR. Stack switches to kernel stack.',
+                        story: { time: '0.001s', text: 'CPU switches from Ring 3 (User) to Ring 0 (Kernel) mode' },
+                        mode: 'kernel',
+                        highlight: ['ring0', 'ring3']
+                    },
+                    {
+                        component: 'comp-vfs',
+                        title: 'Step 3: File System',
+                        beginner: 'The kernel finds where the file is stored. It\'s like looking up a book\'s location in a library catalog.',
+                        advanced: 'VFS resolves pathname to dentry/inode. Checks permissions (read access). Determines file offset, filesystem type (ext4, etc.).',
+                        story: { time: '0.005s', text: 'VFS locates file inode and verifies read permissions' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-memory',
+                        title: 'Step 4: Page Cache Check',
+                        beginner: 'First, the kernel checks if the data is already in memory (cache). If yes, no need to read from slow disk!',
+                        advanced: 'Checks page cache for file pages at offset. If present (cache hit), data is already in memory. Cache miss triggers actual I/O.',
+                        story: { time: '0.010s', text: 'Checking page cache for requested data' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'drv-disk',
+                        title: 'Step 5: Disk Driver',
+                        beginner: 'If data isn\'t cached, the disk driver prepares a request to read from the physical disk.',
+                        advanced: 'Block layer creates bio request. I/O scheduler merges/sorts requests. Driver programs disk controller (NVMe submission queue or ATA command).',
+                        story: { time: '0.015s', text: 'Disk driver queues read request to hardware' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'hw-disk',
+                        title: 'Step 6: Hardware Read',
+                        beginner: 'The disk physically reads the data. SSDs are fast (microseconds), HDDs take longer (milliseconds).',
+                        advanced: 'NVMe: DMA transfer to host memory, completion queue interrupt. SATA: PIO or DMA mode. SSD controller handles wear leveling, FTL.',
+                        story: { time: '0.100s', text: 'Disk hardware reads data from storage medium' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-memory',
+                        title: 'Step 7: Copy to User',
+                        beginner: 'The kernel copies the data from kernel memory to your program\'s memory buffer.',
+                        advanced: 'copy_to_user() copies from kernel buffer to user space. Must validate user pointer is valid and writable. Updates page cache.',
+                        story: { time: '0.150s', text: 'Kernel copies data to application buffer' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-editor',
+                        title: 'Step 8: Return to User',
+                        beginner: 'The system call completes and returns to your application. CPU switches back to user mode.',
+                        advanced: 'SYSRET instruction restores user CS/SS, RIP, RSP. Returns to instruction after syscall. Application continues with data in buffer.',
+                        story: { time: '0.151s', text: 'Return to User Mode, application receives file contents' },
+                        mode: 'user',
+                        quiz: {
+                            question: 'Why can\'t the application read directly from disk?',
+                            options: [
+                                'Because it\'s faster this way',
+                                'Security - applications must be isolated from hardware',
+                                'The disk doesn\'t allow it'
+                            ],
+                            correct: 1
+                        }
+                    }
+                ]
+            },
+            'syscall-write': {
+                title: 'Writing a File',
+                steps: [
+                    {
+                        component: 'comp-editor',
+                        title: 'Step 1: Write Request',
+                        beginner: 'Your editor wants to save changes. It calls write() with the data to save.',
+                        advanced: 'write(fd, buf, count) syscall. Kernel validates fd is writable, buffer is readable.',
+                        story: { time: '0.000s', text: 'Editor requests to write 1024 bytes to file' },
+                        mode: 'user'
+                    },
+                    {
+                        component: 'layer-syscall',
+                        title: 'Step 2: Enter Kernel',
+                        beginner: 'CPU switches to kernel mode to handle the write request.',
+                        advanced: 'SYSCALL instruction transitions to Ring 0. Kernel write handler invoked.',
+                        story: { time: '0.001s', text: 'Mode switch: User -> Kernel' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-vfs',
+                        title: 'Step 3: File System',
+                        beginner: 'Kernel finds the file and checks if you have permission to write.',
+                        advanced: 'VFS checks write permission on inode. Gets file offset from file struct. May need to allocate new blocks.',
+                        story: { time: '0.005s', text: 'VFS validates write permission and file position' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-memory',
+                        title: 'Step 4: Page Cache Write',
+                        beginner: 'Data is first written to memory (page cache). The actual disk write happens later for speed.',
+                        advanced: 'copy_from_user() to page cache. Pages marked dirty. Writeback happens asynchronously via pdflush/kcompactd.',
+                        story: { time: '0.010s', text: 'Data written to page cache (memory), marked dirty' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-editor',
+                        title: 'Step 5: Quick Return',
+                        beginner: 'The write returns quickly! The kernel will save to disk in the background.',
+                        advanced: 'Return from syscall immediately. Dirty pages written back later (30s default). fsync() forces immediate write.',
+                        story: { time: '0.015s', text: 'Write returns to application (data in cache)' },
+                        mode: 'user',
+                        quiz: {
+                            question: 'Why does write() return before data is on disk?',
+                            options: [
+                                'It\'s a bug',
+                                'Performance - disk is much slower than memory',
+                                'The kernel forgets to write'
+                            ],
+                            correct: 1
+                        }
+                    }
+                ]
+            },
+            'interrupt': {
+                title: 'Keyboard Interrupt',
+                steps: [
+                    {
+                        component: 'hw-io',
+                        title: 'Step 1: Key Pressed',
+                        beginner: 'You press a key. The keyboard hardware sends an electrical signal to the CPU.',
+                        advanced: 'Keyboard controller raises IRQ1 on interrupt controller. PIC/APIC signals CPU with interrupt vector.',
+                        story: { time: '0.000s', text: 'User presses key, hardware raises interrupt signal' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'hw-cpu',
+                        title: 'Step 2: CPU Interrupt',
+                        beginner: 'The CPU stops what it\'s doing and jumps to a special handler function.',
+                        advanced: 'CPU saves context (CS, RIP, RFLAGS, SS, RSP) to kernel stack. Looks up IDT entry for vector 0x21. Jumps to ISR.',
+                        story: { time: '0.001s', text: 'CPU pauses current task, saves state, jumps to interrupt handler' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'drv-keyboard',
+                        title: 'Step 3: Read Scancode',
+                        beginner: 'The keyboard driver reads which key was pressed from the keyboard hardware.',
+                        advanced: 'ISR reads scancode from I/O port 0x60. Translates to keycode. Signals input subsystem.',
+                        story: { time: '0.002s', text: 'Keyboard driver reads scancode from hardware port' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-scheduler',
+                        title: 'Step 4: Wake Process',
+                        beginner: 'If a program was waiting for keyboard input, the kernel wakes it up.',
+                        advanced: 'Processes blocked on read() from terminal are woken via wait queue. Scheduler marks them TASK_RUNNING.',
+                        story: { time: '0.005s', text: 'Waiting process woken up, marked ready to run' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'hw-cpu',
+                        title: 'Step 5: Resume',
+                        beginner: 'The interrupt finishes and the CPU goes back to what it was doing.',
+                        advanced: 'IRET instruction restores saved context. CPU returns to interrupted instruction. Or scheduler runs if higher priority task ready.',
+                        story: { time: '0.010s', text: 'Interrupt returns, normal execution resumes' },
+                        mode: 'kernel'
+                    }
+                ]
+            },
+            'context-switch': {
+                title: 'Context Switch',
+                steps: [
+                    {
+                        component: 'comp-scheduler',
+                        title: 'Step 1: Timer Interrupt',
+                        beginner: 'The CPU gets an interrupt from a timer, signaling it\'s time to let another program run.',
+                        advanced: 'Timer interrupt (IRQ0) fires. Scheduler_tick() updates runtime, checks if time slice expired. Sets TIF_NEED_RESCHED flag.',
+                        story: { time: '0.000s', text: 'Timer interrupt fires, time slice expired for Process A' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-scheduler',
+                        title: 'Step 2: Save State',
+                        beginner: 'The kernel saves everything about the current program - where it was, what it was doing.',
+                        advanced: 'Current process context saved to PCB (task_struct). Registers saved to kernel stack. Instruction pointer saved.',
+                        story: { time: '0.001s', text: 'Save Process A state: registers, stack pointer, program counter' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-scheduler',
+                        title: 'Step 3: Choose Next',
+                        beginner: 'The scheduler picks the next program to run based on priority and fairness.',
+                        advanced: 'CFS picks leftmost node in red-black tree (min vruntime). RT scheduler picks highest priority task. Updates scheduling statistics.',
+                        story: { time: '0.002s', text: 'Scheduler selects Process B to run next' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-memory',
+                        title: 'Step 4: Switch Address Space',
+                        beginner: 'The kernel switches to the new program\'s memory layout.',
+                        advanced: 'Load new CR3 value (page table root). Flush TLB (or use PCID). Switch kernel stack to new process.',
+                        story: { time: '0.003s', text: 'Load Process B page tables (CR3), flush TLB' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-scheduler',
+                        title: 'Step 5: Restore State',
+                        beginner: 'Load the saved state of the new program and let it run.',
+                        advanced: 'Restore registers from kernel stack. Load kernel stack pointer. Return to userspace.',
+                        story: { time: '0.004s', text: 'Restore Process B state, resume execution' },
+                        mode: 'user'
+                    }
+                ]
+            },
+            'page-fault': {
+                title: 'Page Fault',
+                steps: [
+                    {
+                        component: 'comp-browser',
+                        title: 'Step 1: Memory Access',
+                        beginner: 'A program tries to use memory that isn\'t currently loaded.',
+                        advanced: 'Process accesses virtual address. Page table entry not present or invalid. CPU raises page fault exception (#PF).',
+                        story: { time: '0.000s', text: 'Browser accesses virtual address 0x7f000000 (not mapped)' },
+                        mode: 'user'
+                    },
+                    {
+                        component: 'hw-cpu',
+                        title: 'Step 2: Page Fault Exception',
+                        beginner: 'The CPU generates a special error and calls the kernel.',
+                        advanced: 'CPU pushes error code and faulting address (CR2) to stack. Invokes page fault handler via IDT gate.',
+                        story: { time: '0.001s', text: 'CPU raises #PF exception, faulting address in CR2' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-memory',
+                        title: 'Step 3: Analyze Fault',
+                        beginner: 'The kernel checks if this is a valid memory request or a bug.',
+                        advanced: 'Find VMA containing address. Check protection flags. Determine if: not present, COW, swap, or invalid access (SIGSEGV).',
+                        story: { time: '0.002s', text: 'Kernel finds VMA, determines valid anonymous mapping' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-memory',
+                        title: 'Step 4: Allocate Page',
+                        beginner: 'The kernel finds free memory and assigns it to this address.',
+                        advanced: 'Allocate page from buddy allocator. Zero the page (security). Update page table entry with physical address.',
+                        story: { time: '0.010s', text: 'Allocate physical page, update page tables' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-browser',
+                        title: 'Step 5: Resume',
+                        beginner: 'The program continues as if nothing happened - the memory is now available.',
+                        advanced: 'Return from exception. CPU retries faulting instruction. Page is now present and accessible.',
+                        story: { time: '0.011s', text: 'Return to user mode, instruction re-executes successfully' },
+                        mode: 'user'
+                    }
+                ]
+            },
+            'fork-exec': {
+                title: 'Creating Processes',
+                steps: [
+                    {
+                        component: 'comp-terminal',
+                        title: 'Step 1: Fork System Call',
+                        beginner: 'The terminal wants to run a new program. It makes an exact copy of itself first.',
+                        advanced: 'fork() syscall. Kernel duplicates process: copies page tables (COW), file descriptors, signal handlers. Child gets new PID.',
+                        story: { time: '0.000s', text: 'Terminal calls fork() to create child process' },
+                        mode: 'user'
+                    },
+                    {
+                        component: 'comp-scheduler',
+                        title: 'Step 2: New Process Created',
+                        beginner: 'Now there are two identical processes - parent and child. Both continue from the same point.',
+                        advanced: 'Child task_struct allocated. Scheduled alongside parent. Both return from fork() - child returns 0, parent returns child PID.',
+                        story: { time: '0.010s', text: 'Child process created, both return from fork()' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-terminal',
+                        title: 'Step 3: Exec System Call',
+                        beginner: 'The child process asks to replace itself with a completely new program.',
+                        advanced: 'execve() syscall. Kernel loads new binary: reads ELF header, sets up new memory map, loads program segments.',
+                        story: { time: '0.020s', text: 'Child calls execve("/bin/ls") to run new program' },
+                        mode: 'user'
+                    },
+                    {
+                        component: 'comp-memory',
+                        title: 'Step 4: Load Program',
+                        beginner: 'The kernel reads the program from disk and sets up memory for it.',
+                        advanced: 'Load ELF segments via page faults (demand paging). Set up stack, heap, environment. Initialize registers (RIP = entry point).',
+                        story: { time: '0.100s', text: 'Kernel loads program code, sets up memory segments' },
+                        mode: 'kernel'
+                    },
+                    {
+                        component: 'comp-terminal',
+                        title: 'Step 5: New Program Runs',
+                        beginner: 'The new program starts running in the child process!',
+                        advanced: 'Return to user mode at program entry point. Process is now running the new program with same PID.',
+                        story: { time: '0.101s', text: 'New program "ls" begins execution' },
+                        mode: 'user'
+                    }
+                ]
+            }
+        };
+        
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        function init() {
+            selectLesson('intro');
+        }
+        
+        // ==========================================
+        // LESSON CONTROL
+        // ==========================================
+        function selectLesson(lessonId) {
+            const lesson = lessons[lessonId];
+            if (!lesson) return;
+            
+            state.currentLesson = lessonId;
+            state.currentStep = 0;
+            state.isPlaying = false;
+            
+            clearHighlights();
+            clearTimeline();
+            updateStepDisplay();
+            updateProgress();
+            
+            addTimelineEvent('0.000s', `Lesson: ${lesson.title}`, 'accent');
+        }
+        
+        function updateStepDisplay() {
+            const lesson = lessons[state.currentLesson];
+            if (!lesson) return;
+            
+            const step = lesson.steps[state.currentStep];
+            const total = lesson.steps.length;
+            
+            document.getElementById('step-indicator').textContent = `${state.currentStep + 1}/${total}`;
+            document.getElementById('step-title').textContent = step ? step.title : 'Complete!';
+            
+            if (step) {
+                document.getElementById('step-beginner').textContent = step.beginner;
+                document.getElementById('step-advanced').textContent = step.advanced;
+                
+                // Update mode display
+                setCPUMode(step.mode || 'user');
+            }
+        }
+        
+        function updateProgress() {
+            const lesson = lessons[state.currentLesson];
+            if (!lesson) return;
+            
+            const progress = ((state.currentStep + 1) / lesson.steps.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+        
+        async function nextStep() {
+            const lesson = lessons[state.currentLesson];
+            if (!lesson) return;
+            
+            if (state.currentStep >= lesson.steps.length - 1) {
+                addTimelineEvent(formatTime(state.storyTime), 'Lesson complete!', 'accent');
+                return;
+            }
+            
+            const currentStepData = lesson.steps[state.currentStep];
+            
+            // Execute step visualization
+            await executeStepVisualization(currentStepData);
+            
+            // Add story event
+            if (currentStepData.story) {
+                state.storyTime += 0.05;
+                addTimelineEvent(
+                    currentStepData.story.time,
+                    currentStepData.story.text,
+                    currentStepData.mode === 'kernel' ? 'kernel' : 'user'
+                );
+            }
+            
+            state.currentStep++;
+            updateStepDisplay();
+            updateProgress();
+            
+            // Show quiz if available
+            if (currentStepData.quiz && state.currentStep < lesson.steps.length) {
+                showQuiz(currentStepData.quiz);
+            }
+        }
+        
+        function previousStep() {
+            if (state.currentStep > 0) {
+                state.currentStep--;
+                updateStepDisplay();
+                updateProgress();
+            }
+        }
+        
+        async function playAuto() {
+            const lesson = lessons[state.currentLesson];
+            if (!lesson) return;
+            
+            if (state.isPlaying) {
+                state.isPlaying = false;
+                document.getElementById('btn-play').innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Play';
+                return;
+            }
+            
+            state.isPlaying = true;
+            document.getElementById('btn-play').innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>Pause';
+            
+            while (state.isPlaying && state.currentStep < lesson.steps.length) {
+                await nextStep();
+                await sleep(1500);
+            }
+            
+            state.isPlaying = false;
+            document.getElementById('btn-play').innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Play';
+        }
+        
+        function resetLesson() {
+            state.currentStep = 0;
+            state.storyTime = 0;
+            state.isPlaying = false;
+            
+            clearHighlights();
+            clearTimeline();
+            updateStepDisplay();
+            updateProgress();
+            setCPUMode('user');
+            closeQuiz();
+            
+            const lesson = lessons[state.currentLesson];
+            addTimelineEvent('0.000s', `Lesson: ${lesson.title}`, 'accent');
+        }
+        
+        // ==========================================
+        // VISUALIZATION
+        // ==========================================
+        async function executeStepVisualization(step) {
+            clearHighlights();
+            
+            // Highlight component
+            const comp = document.getElementById(step.component);
+            if (comp) {
+                comp.classList.add('active-component');
+                if (step.mode === 'kernel') {
+                    comp.classList.add('kernel');
+                } else if (step.mode === 'user') {
+                    comp.classList.add('user');
+                }
+            }
+            
+            // Animate packet
+            await animatePacket(step.component, step.mode);
+            
+            // Update CPU mode
+            setCPUMode(step.mode || 'user');
+        }
+        
+        function clearHighlights() {
+            document.querySelectorAll('.active-component').forEach(el => {
+                el.classList.remove('active-component', 'user', 'kernel', 'hardware', 'syscall');
+            });
+        }
+        
+        function setCPUMode(mode) {
+            const ring0 = document.getElementById('ring0');
+            const ring3 = document.getElementById('ring3');
+            const label = document.getElementById('ring-label');
+            const status = document.getElementById('mode-status');
+            
+            if (mode === 'kernel') {
+                ring0.classList.add('active');
+                ring0.style.borderColor = '#ef4444';
+                ring0.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.5)';
+                ring3.classList.remove('active');
+                ring3.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                ring3.style.boxShadow = 'none';
+                label.textContent = 'Ring 0';
+                label.style.color = '#ef4444';
+                status.textContent = 'KERNEL MODE';
+                status.style.background = 'rgba(239, 68, 68, 0.2)';
+                status.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                status.style.color = '#ef4444';
+            } else {
+                ring3.classList.add('active');
+                ring3.style.borderColor = '#3b82f6';
+                ring3.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.5)';
+                ring0.classList.remove('active');
+                ring0.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                ring0.style.boxShadow = 'none';
+                label.textContent = 'Ring 3';
+                label.style.color = '#3b82f6';
+                status.textContent = 'USER MODE';
+                status.style.background = 'rgba(59, 130, 246, 0.2)';
+                status.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                status.style.color = '#3b82f6';
+            }
+        }
+        
+        async function animatePacket(targetId, mode) {
+            return new Promise(resolve => {
+                const target = document.getElementById(targetId);
+                const container = document.getElementById('packet-container');
+                
+                if (!target || !container) {
+                    resolve();
+                    return;
+                }
+                
+                const targetRect = target.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                
+                const colors = {
+                    user: '#3b82f6',
+                    kernel: '#ef4444',
+                    hardware: '#22c55e',
+                    syscall: '#f59e0b'
+                };
+                
+                const packet = document.createElement('div');
+                packet.className = 'data-packet';
+                packet.style.background = colors[mode] || colors.user;
+                packet.style.boxShadow = `0 0 20px ${colors[mode] || colors.user}`;
+                packet.textContent = mode === 'kernel' ? 'K' : 'U';
+                
+                const startX = containerRect.width / 2;
+                const startY = 60;
+                const endX = targetRect.left - containerRect.left + targetRect.width / 2;
+                const endY = targetRect.top - containerRect.top + targetRect.height / 2;
+                
+                packet.style.left = startX + 'px';
+                packet.style.top = startY + 'px';
+                
+                container.appendChild(packet);
+                
+                const duration = 500;
+                const startTime = performance.now();
+                
+                function animate(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const eased = easeOutCubic(progress);
+                    
+                    const currentX = startX + (endX - startX) * eased;
+                    const currentY = startY + (endY - startY) * eased;
+                    
+                    packet.style.left = currentX + 'px';
+                    packet.style.top = currentY + 'px';
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        setTimeout(() => {
+                            packet.remove();
+                            resolve();
+                        }, 150);
+                    }
+                }
+                
+                requestAnimationFrame(animate);
+            });
+        }
+        
+        function easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+        
+        // ==========================================
+        // TIMELINE
+        // ==========================================
+        function addTimelineEvent(time, text, type) {
+            const timeline = document.getElementById('story-timeline');
+            const colors = {
+                user: 'bg-os-user',
+                kernel: 'bg-os-kernel',
+                hardware: 'bg-os-hardware',
+                accent: 'bg-os-accent'
+            };
+            
+            const event = document.createElement('div');
+            event.className = 'timeline-step flex items-start gap-3 p-3 rounded-lg bg-os-card/50';
+            event.innerHTML = `
+                <div class="w-2 h-2 rounded-full ${colors[type] || colors.accent} mt-1 flex-shrink-0"></div>
+                <div>
+                    <div class="text-os-muted text-[10px]">${time}</div>
+                    <div class="text-os-text">${text}</div>
+                </div>
+            `;
+            
+            timeline.appendChild(event);
+            timeline.scrollTop = timeline.scrollHeight;
+            
+            document.getElementById('story-time').textContent = time;
+        }
+        
+        function clearTimeline() {
+            document.getElementById('story-timeline').innerHTML = '';
+            state.storyTime = 0;
+        }
+        
+        function formatTime(seconds) {
+            return seconds.toFixed(3) + 's';
+        }
+        
+        // ==========================================
+        // QUIZ
+        // ==========================================
+        function showQuiz(quiz) {
+            const panel = document.getElementById('quiz-panel');
+            const question = document.getElementById('quiz-question');
+            const options = document.getElementById('quiz-options');
+            
+            question.textContent = quiz.question;
+            options.innerHTML = quiz.options.map((opt, i) => `
+                <button onclick="checkAnswer(${i}, ${quiz.correct})" class="quiz-option w-full text-left p-3 bg-os-card border border-os-border rounded-lg text-xs hover:border-os-accent transition-colors">
+                    ${String.fromCharCode(65 + i)}) ${opt}
+                </button>
+            `).join('');
+            
+            panel.classList.remove('hidden');
+        }
+        
+        function checkAnswer(selected, correct) {
+            const options = document.querySelectorAll('.quiz-option');
+            options.forEach((opt, i) => {
+                opt.disabled = true;
+                if (i === correct) {
+                    opt.classList.add('correct');
+                } else if (i === selected && i !== correct) {
+                    opt.classList.add('incorrect');
+                }
+            });
+            
+            if (selected === correct) {
+                setTimeout(() => {
+                    closeQuiz();
+                }, 1500);
+            }
+        }
+        
+        function closeQuiz() {
+            document.getElementById('quiz-panel').classList.add('hidden');
+        }
+        
+        // ==========================================
+        // MODAL
+        // ==========================================
+        function showInfo(id) {
+            const info = componentInfo[id];
+            if (!info) return;
+            
+            document.getElementById('modal-title').textContent = info.title;
+            document.getElementById('modal-content').innerHTML = `
+                <div>
+                    <h4 class="text-xs font-semibold text-os-accent mb-2 uppercase tracking-wider">Simple Explanation</h4>
+                    <p class="text-sm text-os-text leading-relaxed">${info.simple}</p>
+                </div>
+                <div>
+                    <h4 class="text-xs font-semibold text-os-kernel mb-2 uppercase tracking-wider">Technical Details</h4>
+                    <p class="text-xs text-os-muted leading-relaxed font-mono">${info.tech}</p>
+                </div>
+            `;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+        
+        function closeModal(event) {
+            if (!event || event.target.id === 'modal-overlay') {
+                document.getElementById('modal-overlay').classList.add('hidden');
+            }
+        }
+        
+        // ==========================================
+        // MODE TOGGLE
+        // ==========================================
+        function toggleExplanationMode() {
+            state.isAdvancedMode = !state.isAdvancedMode;
+            
+            const beginner = document.getElementById('step-beginner');
+            const advanced = document.getElementById('step-advanced');
+            const modeIcon = document.getElementById('mode-icon');
+            const modeLabel = document.getElementById('mode-label');
+            
+            if (state.isAdvancedMode) {
+                beginner.classList.add('hidden');
+                advanced.classList.remove('hidden');
+                modeIcon.textContent = '🔧';
+                modeLabel.textContent = 'Advanced Mode';
+            } else {
+                beginner.classList.remove('hidden');
+                advanced.classList.add('hidden');
+                modeIcon.textContent = '🎓';
+                modeLabel.textContent = 'Beginner Mode';
+            }
+        }
+        
+        // ==========================================
+        // UTILITIES
+        // ==========================================
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            
+            if (e.key === 'Escape') closeModal();
+            if (e.key === ' ') {
+                e.preventDefault();
+                playAuto();
+            }
+            if (e.key === 'ArrowRight') nextStep();
+            if (e.key === 'ArrowLeft') previousStep();
+            if (e.key === 'r') resetLesson();
+        });
+        
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

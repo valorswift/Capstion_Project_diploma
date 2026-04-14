@@ -1,0 +1,2770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support Vector Machine - ML Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #00e5ff;
+  --accent-alt: #a855f7;
+  --accent-warm: #f472b6;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #22d3ee;
+  --purple: #c084fc;
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --orange: #f97316;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(244, 114, 182, 0.04) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--purple), var(--accent-warm));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--purple), var(--accent-warm));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--purple);
+}
+
+.hero {
+  min-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--orange);
+  background: rgba(249, 115, 22, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(249, 115, 22, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--orange);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--orange); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--orange); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--orange) 50%, var(--accent-warm) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 620px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Theory Card */
+.theory-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.theory-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--accent-warm), var(--orange));
+  opacity: 0.6;
+}
+
+.theory-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at center, rgba(249, 115, 22, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.theory-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.theory-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(244, 114, 182, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.theory-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.theory-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px;
+  align-items: start;
+}
+
+.theory-text {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.theory-text p {
+  margin: 0 0 18px 0;
+}
+
+.theory-text p:last-child {
+  margin-bottom: 0;
+}
+
+.theory-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Conceptual Diagram */
+.concept-diagram {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.diagram-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.diagram-box {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(244, 114, 182, 0.1));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+  min-width: 110px;
+}
+
+.diagram-box.highlight {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(244, 114, 182, 0.2));
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.diagram-box-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--orange);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diagram-box-value {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.diagram-arrow {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* Key Concepts */
+.key-concepts {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.key-concepts-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-concepts-title::before {
+  content: '';
+  width: 12px;
+  height: 2px;
+  background: var(--orange);
+}
+
+.concept-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.concept-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.15);
+  font-size: 13px;
+  color: var(--muted);
+  transition: all 0.3s ease;
+}
+
+.concept-list li:last-child {
+  border-bottom: none;
+}
+
+.concept-list li:hover {
+  padding-left: 8px;
+  color: var(--text);
+}
+
+.concept-list li strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.concept-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--orange), var(--accent-warm));
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* Simulator Section */
+.simulator-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 60px;
+}
+
+.simulator-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--accent-warm), var(--orange));
+  opacity: 0.6;
+}
+
+.simulator-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simulator-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.simulator-title svg {
+  color: var(--orange);
+}
+
+.simulator-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--orange);
+  background: rgba(249, 115, 22, 0.1);
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.simulator-body {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 0;
+}
+
+/* Control Panel */
+.control-panel {
+  padding: 24px;
+  border-right: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.control-section {
+  margin-bottom: 24px;
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.control-select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(10, 16, 32, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c7090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.control-select:hover, .control-select:focus {
+  border-color: var(--orange);
+  outline: none;
+}
+
+.control-slider-group {
+  margin-bottom: 16px;
+}
+
+.control-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.control-slider-label span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.control-slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--orange);
+  background: rgba(249, 115, 22, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.control-slider {
+  width: 100%;
+  height: 6px;
+  background: rgba(92, 112, 144, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.control-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--orange), var(--accent-warm));
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.control-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.control-btn.primary {
+  background: linear-gradient(135deg, var(--orange), var(--accent-warm));
+  color: var(--bg);
+}
+
+.control-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 4px 20px -4px var(--orange);
+  transform: translateY(-2px);
+}
+
+.control-btn.secondary {
+  background: rgba(249, 115, 22, 0.1);
+  color: var(--orange);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.control-btn.secondary:hover:not(:disabled) {
+  background: rgba(249, 115, 22, 0.15);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Visualization Panel */
+.viz-panel {
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.viz-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.viz-section {
+  background: rgba(10, 16, 32, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  flex: 1;
+  height: 420px;
+}
+
+.viz-section-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.viz-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.viz-section-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.viz-canvas-wrap {
+  padding: 16px;
+  height: 370px;
+}
+
+.viz-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: #060a14;
+  cursor: crosshair;
+}
+
+/* Explanation Panel */
+.explanation-panel {
+  padding: 24px;
+  border-left: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.explanation-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--accent-warm);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explanation-header::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--accent-warm);
+  border-radius: 2px;
+}
+
+.explanation-step {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.explanation-step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--orange);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explanation-step-num::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: rgba(249, 115, 22, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.explanation-step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.explanation-step-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Metrics Display */
+.metrics-display {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.metrics-display-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-name {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.metric-value.highlight {
+  color: var(--orange);
+}
+
+/* Equation Display */
+.equation-display {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.equation-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.equation-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--orange);
+  text-align: center;
+  padding: 8px;
+  background: rgba(249, 115, 22, 0.05);
+  border-radius: 4px;
+}
+
+/* Margin Visualization */
+.margin-viz {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.margin-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.margin-bar-container {
+  height: 8px;
+  background: rgba(92, 112, 144, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.margin-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--orange), var(--accent-warm));
+  transition: width 0.5s ease;
+}
+
+.margin-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Advantages Section */
+.advantages-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.advantages-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--accent-warm), var(--orange));
+  opacity: 0.6;
+}
+
+.advantages-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.advantages-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(244, 114, 182, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.advantages-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.advantages-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.advantage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  transition: all 0.3s ease;
+}
+
+.advantage-item:hover {
+  border-color: rgba(249, 115, 22, 0.2);
+  background: rgba(249, 115, 22, 0.03);
+}
+
+.advantage-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(244, 114, 182, 0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.advantage-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* Help Button */
+.help-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--orange), var(--accent-warm));
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 32px -8px rgba(249, 115, 22, 0.4),
+    0 0 48px -12px rgba(244, 114, 182, 0.3);
+  transition: all 0.3s ease;
+}
+
+.help-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 12px 40px -8px rgba(249, 115, 22, 0.5),
+    0 0 60px -12px rgba(244, 114, 182, 0.4);
+}
+
+.help-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--orange), var(--accent-warm));
+  opacity: 0.3;
+  filter: blur(10px);
+  z-index: -1;
+}
+
+/* Help Modal */
+.help-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 13, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  padding: 20px;
+}
+
+.help-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.help-modal {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.98), rgba(8, 12, 22, 0.99));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.help-modal-overlay.active .help-modal {
+  transform: translateY(0) scale(1);
+}
+
+.help-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--accent-warm), var(--orange));
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.help-modal-title svg {
+  color: var(--orange);
+}
+
+.help-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.help-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.help-modal-body {
+  padding: 28px;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-section-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--orange);
+  border-radius: 2px;
+}
+
+.help-section-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.help-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.help-list li:last-child {
+  border-bottom: none;
+}
+
+.help-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--orange), var(--accent-warm));
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  background: rgba(10, 16, 32, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 150;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(8px);
+  max-width: 200px;
+}
+
+.tooltip.visible {
+  opacity: 1;
+}
+
+.tooltip-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--orange);
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.tooltip-label {
+  color: var(--muted);
+}
+
+.tooltip-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text);
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Scroll reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .simulator-body {
+    grid-template-columns: 260px 1fr 260px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .theory-content {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  
+  .simulator-body {
+    grid-template-columns: 1fr;
+  }
+  
+  .control-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .explanation-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  
+  .advantages-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .viz-canvas-wrap {
+    height: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 35vh;
+  }
+  
+  .theory-card {
+    padding: 28px 24px;
+  }
+  
+  .simulator-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .diagram-flow {
+    flex-direction: column;
+  }
+  
+  .diagram-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .help-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .viz-canvas-wrap {
+    height: 300px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="classificationHolder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="ml_lab.html">Machine Learning</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="supervised.html">Supervised</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="classification.html">Classification</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Support Vector Machine</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Classification Algorithm</div>
+    <h1 class="main-title">Support Vector Machine</h1>
+    <p class="subtitle">
+      // A powerful margin-based classifier that finds the optimal hyperplane<br>
+      // separating different classes by maximizing the distance between them.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <!-- Theory Card -->
+    <div class="theory-card reveal">
+      <div class="theory-header">
+        <div class="theory-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round">
+            <line x1="4" y1="12" x2="20" y2="12"/>
+            <line x1="12" y1="4" x2="12" y2="20" stroke-dasharray="2 2"/>
+            <circle cx="8" cy="8" r="2"/>
+            <circle cx="16" cy="8" r="2"/>
+            <circle cx="8" cy="16" r="2"/>
+            <circle cx="16" cy="16" r="2"/>
+          </svg>
+        </div>
+        <h2 class="theory-title">Understanding Support Vector Machines</h2>
+      </div>
+      
+      <div class="theory-content">
+        <div class="theory-text">
+          <p>
+            <strong>Support Vector Machine (SVM) is a supervised learning algorithm</strong> that finds the optimal hyperplane to separate different classes by maximizing the margin between them. It's particularly effective in high-dimensional spaces.
+          </p>
+          <p>
+            The algorithm identifies <strong>support vectors</strong> - the data points closest to the decision boundary - and uses them to define the hyperplane. The <strong>maximum margin principle</strong> ensures the best generalization by keeping the boundary as far from training points as possible.
+          </p>
+          
+          <!-- Conceptual Diagram -->
+          <div class="concept-diagram">
+            <div class="diagram-flow">
+              <div class="diagram-box">
+                <div class="diagram-box-title">Input</div>
+                <div class="diagram-box-value">Training Data</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Find</div>
+                <div class="diagram-box-value">Hyperplane</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Maximize</div>
+                <div class="diagram-box-value">Margin</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Identify</div>
+                <div class="diagram-box-value">Support Vectors</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Output</div>
+                <div class="diagram-box-value">Classifier</div>
+              </div>
+            </div>
+          </div>
+          
+          <p><strong>Kernel Trick:</strong> SVM can handle non-linearly separable data by mapping inputs to higher-dimensional feature spaces. Common kernels include <strong>Linear</strong>, <strong>Polynomial</strong>, and <strong>RBF (Radial Basis Function)</strong>.</p>
+        </div>
+        
+        <div class="key-concepts">
+          <div class="key-concepts-title">Key Concepts</div>
+          <ul class="concept-list">
+            <li>
+              <div>
+                <strong>Hyperplane</strong>
+                A decision boundary that separates data points of different classes in feature space.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Margin</strong>
+                The distance between the hyperplane and the nearest data points from each class.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Support Vectors</strong>
+                The data points that lie closest to the hyperplane and define its position.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Regularization (C)</strong>
+                Controls the trade-off between maximizing margin and minimizing classification errors.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Kernel Trick</strong>
+                Technique to handle non-linear data by implicitly mapping to higher dimensions.
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Simulator -->
+    <div class="simulator-card reveal">
+      <div class="simulator-header">
+        <h3 class="simulator-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" y1="12" x2="20" y2="12"/>
+            <circle cx="8" cy="12" r="3"/>
+            <circle cx="16" cy="12" r="3"/>
+          </svg>
+          Interactive SVM Simulator
+        </h3>
+        <span class="simulator-badge">STEP-BY-STEP</span>
+      </div>
+      
+      <div class="simulator-body">
+        <!-- Control Panel -->
+        <div class="control-panel">
+          <div class="control-section">
+            <label class="control-label">Dataset</label>
+            <select class="control-select" id="datasetSelect">
+              <option value="linear">Linear Separable</option>
+              <option value="overlap">Overlapping Classes</option>
+              <option value="random">Random Data</option>
+            </select>
+          </div>
+          
+          <div class="control-section">
+            <label class="control-label">Kernel Type</label>
+            <select class="control-select" id="kernelSelect">
+              <option value="linear">Linear</option>
+              <option value="poly">Polynomial</option>
+              <option value="rbf">RBF</option>
+            </select>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Regularization (C)</span>
+                <span class="control-slider-value" id="cValueDisplay">1.0</span>
+              </div>
+              <input type="range" class="control-slider" id="cSlider" min="0.1" max="10" step="0.1" value="1">
+            </div>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Animation Speed</span>
+                <span class="control-slider-value" id="speedValueDisplay">1.0x</span>
+              </div>
+              <input type="range" class="control-slider" id="speedSlider" min="0.5" max="2" step="0.25" value="1">
+            </div>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-buttons">
+              <button class="control-btn primary" id="addPointBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Test Point
+              </button>
+              <button class="control-btn secondary" id="trainBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Train SVM
+              </button>
+              <button class="control-btn secondary" id="resetBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="1 4 1 10 7 10"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Visualization Panel -->
+        <div class="viz-panel">
+          <div class="viz-container">
+            <div class="viz-section">
+              <div class="viz-section-header">
+                <span class="viz-section-title">Feature Space</span>
+                <span class="viz-section-info" id="datasetInfo">Click canvas to add test point</span>
+              </div>
+              <div class="viz-canvas-wrap">
+                <canvas class="viz-canvas" id="mainCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Explanation Panel -->
+        <div class="explanation-panel">
+          <div class="explanation-header">Algorithm Progress</div>
+          
+          <div class="explanation-step" id="currentStep">
+            <div class="explanation-step-num" id="stepNum">READY</div>
+            <div class="explanation-step-title" id="stepTitle">Select Dataset</div>
+            <div class="explanation-step-text" id="stepText">
+              Choose a dataset from the dropdown, then click "Add Test Point" or directly on the canvas. Adjust kernel type and regularization before training.
+            </div>
+          </div>
+          
+          <div class="metrics-display">
+            <div class="metrics-display-title">Current Settings</div>
+            <div class="metric-row">
+              <span class="metric-name">Kernel</span>
+              <span class="metric-value highlight" id="currentKernel">Linear</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Regularization C</span>
+              <span class="metric-value" id="currentC">1.0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Training Points</span>
+              <span class="metric-value" id="trainingCount">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Test Point</span>
+              <span class="metric-value" id="testPointStatus">Not placed</span>
+            </div>
+          </div>
+          
+          <div class="equation-display" id="equationDisplay" style="display: none;">
+            <div class="equation-title">Hyperplane Equation</div>
+            <div class="equation-text" id="hyperplaneEq">w·x + b = 0</div>
+          </div>
+          
+          <div class="margin-viz" id="marginViz" style="display: none;">
+            <div class="margin-title">Margin Width</div>
+            <div class="margin-bar-container">
+              <div class="margin-bar" id="marginBar" style="width: 50%;"></div>
+            </div>
+            <div class="margin-labels">
+              <span>Small</span>
+              <span id="marginValue">0.00</span>
+              <span>Large</span>
+            </div>
+          </div>
+          
+          <div class="metrics-display" id="resultMetrics" style="display: none;">
+            <div class="metrics-display-title">Training Result</div>
+            <div class="metric-row">
+              <span class="metric-name">Support Vectors</span>
+              <span class="metric-value highlight" id="svCount">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Margin Size</span>
+              <span class="metric-value" id="marginSize">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Test Prediction</span>
+              <span class="metric-value" id="prediction">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Distance to Hyperplane</span>
+              <span class="metric-value" id="hyperplaneDist">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advantages Section -->
+    <div class="advantages-card reveal">
+      <div class="advantages-header">
+        <div class="advantages-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3 class="advantages-title">Advantages of Support Vector Machine</h3>
+      </div>
+      
+      <div class="advantages-grid">
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2">
+              <path d="M12 20V10"/>
+              <path d="M18 20V4"/>
+              <path d="M6 20v-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Works well in high-dimensional spaces where the number of dimensions exceeds the number of samples.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Maximum margin principle ensures better generalization and reduces overfitting on training data.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Kernel trick enables handling of non-linear decision boundaries without explicit transformation.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Memory efficient as only support vectors are needed for prediction after training.</div>
+        </div>
+      </div>
+    </div>
+    
+  </section>
+
+  <footer>
+    <p>// Support Vector Machine algorithm visualization for machine learning education</p>
+  </footer>
+  
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-title" id="tooltipTitle"></div>
+  <div class="tooltip-content" id="tooltipContent"></div>
+</div>
+
+<!-- Help Button -->
+<button class="help-btn" id="helpBtn" aria-label="Help">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+</button>
+
+<!-- Help Modal -->
+<div class="help-modal-overlay" id="helpModal">
+  <div class="help-modal">
+    <div class="help-modal-header">
+      <h3 class="help-modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        SVM Algorithm Guide
+      </h3>
+      <button class="help-modal-close" id="closeModal" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="help-modal-body">
+      <div class="help-section">
+        <h4 class="help-section-title">What is Support Vector Machine?</h4>
+        <p class="help-section-text">
+          Support Vector Machine (SVM) is a supervised learning algorithm that finds the optimal hyperplane to separate classes by maximizing the margin. It's effective for both linear and non-linear classification problems.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How to Use the Simulator</h4>
+        <ul class="help-list">
+          <li>Select a dataset type from the dropdown menu</li>
+          <li>Choose a kernel type (Linear, Polynomial, or RBF)</li>
+          <li>Adjust the regularization parameter C using the slider</li>
+          <li>Click "Add Test Point" or click directly on the canvas</li>
+          <li>Click "Train SVM" to run the algorithm step-by-step</li>
+          <li>Observe the hyperplane, margins, and support vectors</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Understanding Support Vectors</h4>
+        <p class="help-section-text">
+          Support vectors are the critical data points that lie closest to the decision boundary. They are the only points that affect the position of the hyperplane. Removing other points would not change the model, but removing a support vector would.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Kernel Types Explained</h4>
+        <ul class="help-list">
+          <li><strong>Linear Kernel:</strong> Best for linearly separable data. Creates a straight line (2D) or hyperplane decision boundary.</li>
+          <li><strong>Polynomial Kernel:</strong> Handles curved decision boundaries by transforming features using polynomial functions.</li>
+          <li><strong>RBF Kernel:</strong> Most flexible kernel that can create complex, non-linear decision boundaries. Works well for most datasets.</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Regularization Parameter C</h4>
+        <p class="help-section-text">
+          The C parameter controls the trade-off between maximizing the margin and minimizing classification errors. Small C creates a wider margin but allows more misclassifications. Large C creates a narrower margin with fewer misclassifications but may overfit.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const bgNodes = [];
+const bgNodeCount = 50;
+
+function initBgNodes() {
+  bgNodes.length = 0;
+  
+  for (let i = 0; i < bgNodeCount; i++) {
+    bgNodes.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'orange' : 'pink'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < bgNodes.length; i++) {
+    for (let j = i + 1; j < bgNodes.length; j++) {
+      const dx = bgNodes[i].x - bgNodes[j].x;
+      const dy = bgNodes[i].y - bgNodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 120) {
+        const alpha = (1 - dist / 120) * 0.15;
+        const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+        
+        if (bgNodes[i].type === 'orange') {
+          bgCtx.strokeStyle = 'rgba(249, 115, 22, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(244, 114, 182, ' + pulseAlpha + ')';
+        }
+        
+        bgCtx.beginPath();
+        bgCtx.moveTo(bgNodes[i].x, bgNodes[i].y);
+        bgCtx.lineTo(bgNodes[j].x, bgNodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  
+  bgNodes.forEach(node => {
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.03;
+    
+    if (node.x < 0 || node.x > bgWidth) node.vx *= -1;
+    if (node.y < 0 || node.y > bgHeight) node.vy *= -1;
+    
+    const dx = mouseX - node.x;
+    const dy = mouseY - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 150) {
+      node.x -= dx * 0.01;
+      node.y -= dy * 0.01;
+    }
+    
+    const pulseRadius = node.radius + Math.sin(node.pulse) * 0.5;
+    const glowRadius = Math.max(1, pulseRadius + 4);
+    
+    const glow = bgCtx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, glowRadius
+    );
+    
+    if (node.type === 'orange') {
+      glow.addColorStop(0, 'rgba(249, 115, 22, 0.4)');
+      glow.addColorStop(1, 'rgba(249, 115, 22, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(244, 114, 182, 0.4)');
+      glow.addColorStop(1, 'rgba(244, 114, 182, 0)');
+    }
+    
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+    bgCtx.fill();
+    
+    bgCtx.fillStyle = node.type === 'orange' ? '#f97316' : '#f472b6';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pulseRadius), 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  gradient.addColorStop(0, 'rgba(249, 115, 22, 0.04)');
+  gradient.addColorStop(0.5, 'rgba(244, 114, 182, 0.02)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animateBg() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animateBg);
+}
+
+// === DATASETS ===
+const datasets = {
+  linear: {
+    name: 'Linear Separable',
+    points: [
+      // Class A (cyan) - left side
+      { x: 0.15, y: 0.2, class: 0 },
+      { x: 0.2, y: 0.3, class: 0 },
+      { x: 0.12, y: 0.4, class: 0 },
+      { x: 0.25, y: 0.15, class: 0 },
+      { x: 0.18, y: 0.5, class: 0 },
+      { x: 0.22, y: 0.35, class: 0 },
+      { x: 0.15, y: 0.6, class: 0 },
+      { x: 0.28, y: 0.25, class: 0 },
+      { x: 0.1, y: 0.35, class: 0 },
+      { x: 0.2, y: 0.45, class: 0 },
+      // Class B (purple) - right side
+      { x: 0.7, y: 0.5, class: 1 },
+      { x: 0.75, y: 0.4, class: 1 },
+      { x: 0.8, y: 0.55, class: 1 },
+      { x: 0.72, y: 0.65, class: 1 },
+      { x: 0.78, y: 0.35, class: 1 },
+      { x: 0.85, y: 0.45, class: 1 },
+      { x: 0.7, y: 0.6, class: 1 },
+      { x: 0.82, y: 0.5, class: 1 },
+      { x: 0.75, y: 0.7, class: 1 },
+      { x: 0.88, y: 0.55, class: 1 }
+    ]
+  },
+  overlap: {
+    name: 'Overlapping Classes',
+    points: [
+      // Class A
+      { x: 0.25, y: 0.3, class: 0 },
+      { x: 0.3, y: 0.35, class: 0 },
+      { x: 0.35, y: 0.25, class: 0 },
+      { x: 0.28, y: 0.45, class: 0 },
+      { x: 0.4, y: 0.3, class: 0 },
+      { x: 0.32, y: 0.5, class: 0 },
+      { x: 0.45, y: 0.35, class: 0 },
+      { x: 0.38, y: 0.55, class: 0 },
+      { x: 0.42, y: 0.45, class: 0 },
+      { x: 0.5, y: 0.4, class: 0 },
+      { x: 0.48, y: 0.5, class: 0 },
+      { x: 0.55, y: 0.45, class: 0 },
+      // Class B
+      { x: 0.45, y: 0.55, class: 1 },
+      { x: 0.5, y: 0.6, class: 1 },
+      { x: 0.55, y: 0.5, class: 1 },
+      { x: 0.52, y: 0.7, class: 1 },
+      { x: 0.6, y: 0.55, class: 1 },
+      { x: 0.48, y: 0.65, class: 1 },
+      { x: 0.65, y: 0.6, class: 1 },
+      { x: 0.58, y: 0.75, class: 1 },
+      { x: 0.62, y: 0.65, class: 1 },
+      { x: 0.7, y: 0.55, class: 1 },
+      { x: 0.68, y: 0.7, class: 1 },
+      { x: 0.55, y: 0.65, class: 1 }
+    ]
+  },
+  random: {
+    name: 'Random Data',
+    points: []
+  }
+};
+
+function generateRandomDataset() {
+  datasets.random.points = [];
+  
+  // Generate two clusters with some overlap
+  for (let i = 0; i < 12; i++) {
+    datasets.random.points.push({
+      x: 0.15 + Math.random() * 0.3,
+      y: 0.2 + Math.random() * 0.6,
+      class: 0
+    });
+  }
+  
+  for (let i = 0; i < 12; i++) {
+    datasets.random.points.push({
+      x: 0.55 + Math.random() * 0.3,
+      y: 0.2 + Math.random() * 0.6,
+      class: 1
+    });
+  }
+}
+
+// === SVM SIMULATOR ===
+let mainCanvas = null;
+let mainCtx = null;
+
+let trainingPoints = [];
+let testPoint = null;
+let kernelType = 'linear';
+let cValue = 1.0;
+let animationSpeed = 1;
+
+// SVM Model
+let svmModel = null;
+let supportVectors = [];
+let isTraining = false;
+let currentStep = 0;
+let animationId = null;
+
+// Animation state
+let hyperplaneProgress = 0;
+let marginProgress = 0;
+let highlightSV = false;
+
+function initSimulator() {
+  mainCanvas = document.getElementById('mainCanvas');
+  if (!mainCanvas) return;
+  
+  mainCtx = mainCanvas.getContext('2d');
+  resizeMainCanvas();
+  loadDataset('linear');
+  
+  mainCanvas.addEventListener('click', handleCanvasClick);
+  mainCanvas.addEventListener('mousemove', handleCanvasHover);
+  mainCanvas.addEventListener('mouseleave', hideTooltip);
+}
+
+function resizeMainCanvas() {
+  if (!mainCanvas) return;
+  
+  const rect = mainCanvas.parentElement.getBoundingClientRect();
+  mainCanvas.width = Math.max(1, rect.width - 32);
+  mainCanvas.height = Math.max(1, rect.height - 32);
+  
+  drawScene();
+}
+
+function loadDataset(name) {
+  if (name === 'random') {
+    generateRandomDataset();
+  }
+  
+  trainingPoints = JSON.parse(JSON.stringify(datasets[name].points));
+  testPoint = null;
+  svmModel = null;
+  supportVectors = [];
+  currentStep = 0;
+  isTraining = false;
+  hyperplaneProgress = 0;
+  marginProgress = 0;
+  highlightSV = false;
+  
+  document.getElementById('datasetInfo').textContent = 
+    trainingPoints.length + ' training points | Click to add test point';
+  document.getElementById('trainingCount').textContent = trainingPoints.length;
+  document.getElementById('testPointStatus').textContent = 'Not placed';
+  document.getElementById('trainBtn').disabled = true;
+  
+  updateStepDisplay('READY', 'Dataset Loaded', 
+    trainingPoints.length + ' training points loaded. Click on the canvas or use "Add Test Point" to place a test point.');
+  
+  document.getElementById('equationDisplay').style.display = 'none';
+  document.getElementById('marginViz').style.display = 'none';
+  document.getElementById('resultMetrics').style.display = 'none';
+  
+  drawScene();
+}
+
+function handleCanvasClick(e) {
+  if (isTraining) return;
+  
+  const rect = mainCanvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / mainCanvas.width;
+  const y = (e.clientY - rect.top) / mainCanvas.height;
+  
+  addTestPointAt(x, y);
+}
+
+function handleCanvasHover(e) {
+  const rect = mainCanvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  
+  let hoveredPoint = null;
+  
+  trainingPoints.forEach(point => {
+    const px = point.x * mainCanvas.width;
+    const py = point.y * mainCanvas.height;
+    const dist = Math.sqrt((mouseX - px) ** 2 + (mouseY - py) ** 2);
+    
+    if (dist < 15) {
+      hoveredPoint = point;
+    }
+  });
+  
+  if (hoveredPoint) {
+    showTooltip(e.clientX, e.clientY, hoveredPoint);
+  } else {
+    hideTooltip();
+  }
+}
+
+function showTooltip(x, y, point) {
+  const tooltip = document.getElementById('tooltip');
+  const titleEl = document.getElementById('tooltipTitle');
+  const contentEl = document.getElementById('tooltipContent');
+  
+  titleEl.textContent = point.class === 0 ? 'Class A' : 'Class B';
+  
+  let isSV = supportVectors.includes(point);
+  let svText = isSV ? '<div class="tooltip-row"><span class="tooltip-label">Support Vector</span><span class="tooltip-value">Yes</span></div>' : '';
+  
+  contentEl.innerHTML = 
+    '<div class="tooltip-row"><span class="tooltip-label">Position:</span><span class="tooltip-value">(' + (point.x * 100).toFixed(1) + '%, ' + (point.y * 100).toFixed(1) + '%)</span></div>' +
+    svText;
+  
+  tooltip.style.left = (x + 15) + 'px';
+  tooltip.style.top = (y + 15) + 'px';
+  tooltip.classList.add('visible');
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+function addTestPoint() {
+  if (isTraining) return;
+  
+  const x = 0.4 + Math.random() * 0.2;
+  const y = 0.3 + Math.random() * 0.4;
+  addTestPointAt(x, y);
+}
+
+function addTestPointAt(x, y) {
+  testPoint = { x: x, y: y, class: null };
+  
+  document.getElementById('testPointStatus').textContent = 
+    '(' + (x * 100).toFixed(0) + '%, ' + (y * 100).toFixed(0) + '%)';
+  document.getElementById('trainBtn').disabled = false;
+  
+  updateStepDisplay('READY', 'Test Point Placed', 
+    'Test point placed at (' + (x * 100).toFixed(0) + '%, ' + (y * 100).toFixed(0) + '%). Adjust kernel and regularization, then click "Train SVM".');
+  
+  drawScene();
+}
+
+// === SIMPLIFIED SVM TRAINING ===
+function trainSVM() {
+  if (!testPoint || isTraining) return;
+  
+  isTraining = true;
+  currentStep = 1;
+  hyperplaneProgress = 0;
+  marginProgress = 0;
+  highlightSV = false;
+  
+  document.getElementById('trainBtn').disabled = true;
+  document.getElementById('addPointBtn').disabled = true;
+  
+  runTrainingStep();
+}
+
+function runTrainingStep() {
+  const stepDelay = 800 / animationSpeed;
+  
+  switch (currentStep) {
+    case 1:
+      step1_LoadData();
+      break;
+    case 2:
+      step2_FindHyperplane();
+      break;
+    case 3:
+      step3_IdentifySupportVectors();
+      break;
+    case 4:
+      step4_DrawMargins();
+      break;
+    case 5:
+      step5_Classify();
+      return;
+  }
+  
+  currentStep++;
+  
+  if (animationId) clearTimeout(animationId);
+  animationId = setTimeout(runTrainingStep, stepDelay);
+}
+
+function step1_LoadData() {
+  updateStepDisplay('STEP 1', 'Loading Training Data', 
+    'Processing ' + trainingPoints.length + ' training samples. Computing feature vectors and preparing optimization.');
+  
+  drawScene();
+}
+
+function step2_FindHyperplane() {
+  updateStepDisplay('STEP 2', 'Finding Optimal Hyperplane', 
+    'Optimizing the decision boundary to maximize margin between classes. Using ' + kernelType + ' kernel with C=' + cValue.toFixed(1) + '.');
+  
+  // Train simplified SVM
+  trainSimplifiedSVM();
+  
+  // Animate hyperplane appearance
+  animateHyperplane();
+}
+
+function trainSimplifiedSVM() {
+  // Simplified SVM: Find separating line
+  // For visualization, we use a simple approach
+  
+  let classA = trainingPoints.filter(p => p.class === 0);
+  let classB = trainingPoints.filter(p => p.class === 1);
+  
+  if (classA.length === 0 || classB.length === 0) {
+    svmModel = { w: [1, 0], b: -0.5, margin: 0.1 };
+    supportVectors = [];
+    return;
+  }
+  
+  // Calculate centroids
+  let centroidA = { x: 0, y: 0 };
+  let centroidB = { x: 0, y: 0 };
+  
+  classA.forEach(p => { centroidA.x += p.x; centroidA.y += p.y; });
+  classB.forEach(p => { centroidB.x += p.x; centroidB.y += p.y; });
+  
+  centroidA.x /= classA.length;
+  centroidA.y /= classA.length;
+  centroidB.x /= classB.length;
+  centroidB.y /= classB.length;
+  
+  // Direction vector from A to B
+  let dx = centroidB.x - centroidA.x;
+  let dy = centroidB.y - centroidA.y;
+  let len = Math.sqrt(dx * dx + dy * dy);
+  
+  if (len < 0.001) {
+    dx = 1; dy = 0; len = 1;
+  }
+  
+  // Normal vector (perpendicular to separating line)
+  let nx = -dy / len;
+  let ny = dx / len;
+  
+  // Midpoint
+  let midX = (centroidA.x + centroidB.x) / 2;
+  let midY = (centroidA.y + centroidB.y) / 2;
+  
+  // Bias term
+  let b = -(nx * midX + ny * midY);
+  
+  // Calculate margin based on distance to closest points
+  let minDistA = Infinity;
+  let minDistB = Infinity;
+  
+  classA.forEach(p => {
+    let dist = Math.abs(nx * p.x + ny * p.y + b);
+    if (dist < minDistA) minDistA = dist;
+  });
+  
+  classB.forEach(p => {
+    let dist = Math.abs(nx * p.x + ny * p.y + b);
+    if (dist < minDistB) minDistB = dist;
+  });
+  
+  let margin = (minDistA + minDistB) / 2;
+  
+  // Apply kernel transformation for non-linear kernels
+  if (kernelType === 'rbf' || kernelType === 'poly') {
+    margin *= 0.7; // Simulate curved boundary effect
+  }
+  
+  // Regularization effect
+  margin *= Math.min(1, cValue / 2);
+  
+  svmModel = {
+    w: [nx, ny],
+    b: b,
+    margin: Math.max(0.02, margin)
+  };
+  
+  // Find support vectors (points close to margin)
+  supportVectors = [];
+  let marginThreshold = svmModel.margin * 1.5;
+  
+  trainingPoints.forEach(p => {
+    let dist = Math.abs(nx * p.x + ny * p.y + b);
+    if (dist <= marginThreshold) {
+      supportVectors.push(p);
+    }
+  });
+  
+  // If no support vectors found, pick closest from each class
+  if (supportVectors.length < 2) {
+    let closestA = classA[0];
+    let minDist = Infinity;
+    classA.forEach(p => {
+      let d = Math.abs(nx * p.x + ny * p.y + b);
+      if (d < minDist) { minDist = d; closestA = p; }
+    });
+    
+    let closestB = classB[0];
+    minDist = Infinity;
+    classB.forEach(p => {
+      let d = Math.abs(nx * p.x + ny * p.y + b);
+      if (d < minDist) { minDist = d; closestB = p; }
+    });
+    
+    supportVectors = [closestA, closestB];
+  }
+}
+
+function animateHyperplane() {
+  hyperplaneProgress = 0;
+  
+  function animate() {
+    hyperplaneProgress += 0.03 * animationSpeed;
+    if (hyperplaneProgress > 1) hyperplaneProgress = 1;
+    
+    drawScene();
+    
+    if (hyperplaneProgress < 1 && isTraining) {
+      requestAnimationFrame(animate);
+    }
+  }
+  
+  animate();
+}
+
+function step3_IdentifySupportVectors() {
+  updateStepDisplay('STEP 3', 'Identifying Support Vectors', 
+    'Found ' + supportVectors.length + ' support vectors. These are the critical points that define the decision boundary and margin.');
+  
+  highlightSV = true;
+  drawScene();
+}
+
+function step4_DrawMargins() {
+  updateStepDisplay('STEP 4', 'Drawing Margin Boundaries', 
+    'Drawing margin lines at distance ' + svmModel.margin.toFixed(3) + ' from hyperplane. The margin is maximized to improve generalization.');
+  
+  // Animate margins
+  animateMargins();
+}
+
+function animateMargins() {
+  marginProgress = 0;
+  
+  function animate() {
+    marginProgress += 0.03 * animationSpeed;
+    if (marginProgress > 1) marginProgress = 1;
+    
+    drawScene();
+    
+    if (marginProgress < 1 && isTraining) {
+      requestAnimationFrame(animate);
+    }
+  }
+  
+  animate();
+}
+
+function step5_Classify() {
+  // Classify test point
+  let distance = svmModel.w[0] * testPoint.x + svmModel.w[1] * testPoint.y + svmModel.b;
+  let prediction = distance >= 0 ? 1 : 0;
+  let confidence = Math.abs(distance);
+  
+  testPoint.class = prediction;
+  
+  updateStepDisplay('COMPLETE', 'Classification Complete', 
+    'Test point classified as ' + (prediction === 0 ? 'Class A' : 'Class B') + ' with distance ' + distance.toFixed(3) + ' from hyperplane.');
+  
+  // Update equation display
+  document.getElementById('equationDisplay').style.display = 'block';
+  document.getElementById('hyperplaneEq').textContent = 
+    svmModel.w[0].toFixed(2) + 'x + ' + svmModel.w[1].toFixed(2) + 'y + ' + svmModel.b.toFixed(2) + ' = 0';
+  
+  // Update margin display
+  document.getElementById('marginViz').style.display = 'block';
+  document.getElementById('marginBar').style.width = (svmModel.margin * 200) + '%';
+  document.getElementById('marginValue').textContent = svmModel.margin.toFixed(3);
+  
+  // Update result metrics
+  document.getElementById('resultMetrics').style.display = 'block';
+  document.getElementById('svCount').textContent = supportVectors.length;
+  document.getElementById('marginSize').textContent = svmModel.margin.toFixed(3);
+  document.getElementById('prediction').textContent = prediction === 0 ? 'Class A' : 'Class B';
+  document.getElementById('hyperplaneDist').textContent = distance.toFixed(3);
+  
+  isTraining = false;
+  document.getElementById('addPointBtn').disabled = false;
+  document.getElementById('trainBtn').disabled = false;
+  
+  drawScene();
+}
+
+function drawScene() {
+  if (!mainCtx) return;
+  
+  const w = mainCanvas.width;
+  const h = mainCanvas.height;
+  
+  // Background
+  mainCtx.fillStyle = '#060a14';
+  mainCtx.fillRect(0, 0, w, h);
+  
+  // Grid
+  mainCtx.strokeStyle = 'rgba(92, 112, 144, 0.1)';
+  mainCtx.lineWidth = 1;
+  
+  for (let x = 0; x <= w; x += 40) {
+    mainCtx.beginPath();
+    mainCtx.moveTo(x, 0);
+    mainCtx.lineTo(x, h);
+    mainCtx.stroke();
+  }
+  
+  for (let y = 0; y <= h; y += 40) {
+    mainCtx.beginPath();
+    mainCtx.moveTo(0, y);
+    mainCtx.lineTo(w, y);
+    mainCtx.stroke();
+  }
+  
+  // Draw decision boundary and margins
+  if (svmModel && hyperplaneProgress > 0) {
+    drawDecisionBoundary(w, h);
+  }
+  
+  // Draw training points
+  trainingPoints.forEach(point => {
+    const px = point.x * w;
+    const py = point.y * h;
+    const isSV = highlightSV && supportVectors.includes(point);
+    
+    // Support vector highlight
+    if (isSV) {
+      mainCtx.strokeStyle = '#f97316';
+      mainCtx.lineWidth = 3;
+      mainCtx.beginPath();
+      mainCtx.arc(px, py, 14, 0, Math.PI * 2);
+      mainCtx.stroke();
+      
+      // Glow
+      const svGlow = mainCtx.createRadialGradient(px, py, 0, px, py, 25);
+      svGlow.addColorStop(0, 'rgba(249, 115, 22, 0.3)');
+      svGlow.addColorStop(1, 'rgba(249, 115, 22, 0)');
+      mainCtx.fillStyle = svGlow;
+      mainCtx.beginPath();
+      mainCtx.arc(px, py, 25, 0, Math.PI * 2);
+      mainCtx.fill();
+    }
+    
+    // Point glow
+    const glow = mainCtx.createRadialGradient(px, py, 0, px, py, 15);
+    if (point.class === 0) {
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.4)');
+      glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+      glow.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    }
+    mainCtx.fillStyle = glow;
+    mainCtx.beginPath();
+    mainCtx.arc(px, py, 15, 0, Math.PI * 2);
+    mainCtx.fill();
+    
+    // Point
+    mainCtx.fillStyle = point.class === 0 ? '#22d3ee' : '#a855f7';
+    mainCtx.beginPath();
+    mainCtx.arc(px, py, 6, 0, Math.PI * 2);
+    mainCtx.fill();
+  });
+  
+  // Draw test point
+  if (testPoint) {
+    const tx = testPoint.x * w;
+    const ty = testPoint.y * h;
+    
+    // Outer glow
+    const testGlow = mainCtx.createRadialGradient(tx, ty, 0, tx, ty, 30);
+    if (testPoint.class === null) {
+      testGlow.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+      testGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    } else if (testPoint.class === 0) {
+      testGlow.addColorStop(0, 'rgba(34, 211, 238, 0.5)');
+      testGlow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+    } else {
+      testGlow.addColorStop(0, 'rgba(168, 85, 247, 0.5)');
+      testGlow.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    }
+    mainCtx.fillStyle = testGlow;
+    mainCtx.beginPath();
+    mainCtx.arc(tx, ty, 30, 0, Math.PI * 2);
+    mainCtx.fill();
+    
+    // Test point
+    if (testPoint.class === null) {
+      mainCtx.fillStyle = '#ffffff';
+    } else {
+      mainCtx.fillStyle = testPoint.class === 0 ? '#22d3ee' : '#a855f7';
+    }
+    mainCtx.strokeStyle = '#ffffff';
+    mainCtx.lineWidth = 2;
+    mainCtx.beginPath();
+    mainCtx.arc(tx, ty, 10, 0, Math.PI * 2);
+    mainCtx.fill();
+    mainCtx.stroke();
+    
+    // Label
+    mainCtx.font = 'bold 12px JetBrains Mono';
+    mainCtx.fillStyle = testPoint.class === null ? '#04060d' : '#ffffff';
+    mainCtx.textAlign = 'center';
+    mainCtx.textBaseline = 'middle';
+    mainCtx.fillText(testPoint.class === null ? '?' : (testPoint.class === 0 ? 'A' : 'B'), tx, ty);
+  }
+  
+  // Legend
+  mainCtx.font = '10px JetBrains Mono';
+  mainCtx.fillStyle = '#22d3ee';
+  mainCtx.beginPath();
+  mainCtx.arc(16, 16, 5, 0, Math.PI * 2);
+  mainCtx.fill();
+  mainCtx.fillText('Class A', 28, 20);
+  
+  mainCtx.fillStyle = '#a855f7';
+  mainCtx.beginPath();
+  mainCtx.arc(90, 16, 5, 0, Math.PI * 2);
+  mainCtx.fill();
+  mainCtx.fillText('Class B', 102, 20);
+  
+  if (testPoint) {
+    mainCtx.fillStyle = '#ffffff';
+    mainCtx.beginPath();
+    mainCtx.arc(164, 16, 5, 0, Math.PI * 2);
+    mainCtx.fill();
+    mainCtx.fillStyle = '#5c7090';
+    mainCtx.fillText('Test', 176, 20);
+  }
+  
+  if (highlightSV) {
+    mainCtx.strokeStyle = '#f97316';
+    mainCtx.lineWidth = 2;
+    mainCtx.beginPath();
+    mainCtx.arc(220, 16, 5, 0, Math.PI * 2);
+    mainCtx.stroke();
+    mainCtx.fillStyle = '#f97316';
+    mainCtx.fillText('SV', 232, 20);
+  }
+  
+  // Kernel indicator
+  mainCtx.fillStyle = 'rgba(249, 115, 22, 0.7)';
+  mainCtx.textAlign = 'right';
+  mainCtx.fillText(kernelType.toUpperCase(), w - 16, 20);
+  mainCtx.fillText('C=' + cValue.toFixed(1), w - 16, 36);
+}
+
+function drawDecisionBoundary(w, h) {
+  const nx = svmModel.w[0];
+  const ny = svmModel.w[1];
+  const b = svmModel.b;
+  
+  // Find intersection points with canvas edges
+  // Hyperplane: nx*x + ny*y + b = 0
+  
+  let points = [];
+  
+  // Left edge (x = 0)
+  let y0 = -b / ny;
+  if (y0 >= 0 && y0 <= 1) points.push({ x: 0, y: y0 });
+  
+  // Right edge (x = 1)
+  let y1 = -(nx + b) / ny;
+  if (y1 >= 0 && y1 <= 1) points.push({ x: 1, y: y1 });
+  
+  // Top edge (y = 0)
+  let x0 = -b / nx;
+  if (x0 >= 0 && x0 <= 1) points.push({ x: x0, y: 0 });
+  
+  // Bottom edge (y = 1)
+  let x1 = -(ny + b) / nx;
+  if (x1 >= 0 && x1 <= 1) points.push({ x: x1, y: 1 });
+  
+  if (points.length < 2) return;
+  
+  // Draw margin region
+  if (marginProgress > 0) {
+    const marginOffset = svmModel.margin * marginProgress;
+    
+    // Calculate offset perpendicular to hyperplane
+    const perpX = nx * marginOffset;
+    const perpY = ny * marginOffset;
+    
+    // Margin lines
+    const marginPoints1 = [];
+    const marginPoints2 = [];
+    
+    points.forEach(p => {
+      marginPoints1.push({ x: p.x + perpX, y: p.y + perpY });
+      marginPoints2.push({ x: p.x - perpX, y: p.y - perpY });
+    });
+    
+    if (marginPoints1.length >= 2) {
+      mainCtx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
+      mainCtx.lineWidth = 1;
+      mainCtx.setLineDash([5, 5]);
+      mainCtx.beginPath();
+      mainCtx.moveTo(marginPoints1[0].x * w, marginPoints1[0].y * h);
+      mainCtx.lineTo(marginPoints1[1].x * w, marginPoints1[1].y * h);
+      mainCtx.stroke();
+      mainCtx.setLineDash([]);
+    }
+    
+    if (marginPoints2.length >= 2) {
+      mainCtx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
+      mainCtx.lineWidth = 1;
+      mainCtx.setLineDash([5, 5]);
+      mainCtx.beginPath();
+      mainCtx.moveTo(marginPoints2[0].x * w, marginPoints2[0].y * h);
+      mainCtx.lineTo(marginPoints2[1].x * w, marginPoints2[1].y * h);
+      mainCtx.stroke();
+      mainCtx.setLineDash([]);
+    }
+    
+    // Fill margin region
+    mainCtx.fillStyle = 'rgba(249, 115, 22, 0.05)';
+    mainCtx.beginPath();
+    if (marginPoints1.length >= 2 && marginPoints2.length >= 2) {
+      mainCtx.moveTo(marginPoints1[0].x * w, marginPoints1[0].y * h);
+      mainCtx.lineTo(marginPoints1[1].x * w, marginPoints1[1].y * h);
+      mainCtx.lineTo(marginPoints2[1].x * w, marginPoints2[1].y * h);
+      mainCtx.lineTo(marginPoints2[0].x * w, marginPoints2[0].y * h);
+    }
+    mainCtx.closePath();
+    mainCtx.fill();
+  }
+  
+  // Draw main hyperplane
+  const alpha = hyperplaneProgress;
+  
+  // Gradient line
+  const gradient = mainCtx.createLinearGradient(
+    points[0].x * w, points[0].y * h,
+    points[1].x * w, points[1].y * h
+  );
+  gradient.addColorStop(0, 'rgba(249, 115, 22, ' + (alpha * 0.8) + ')');
+  gradient.addColorStop(0.5, 'rgba(244, 114, 182, ' + (alpha * 0.8) + ')');
+  gradient.addColorStop(1, 'rgba(249, 115, 22, ' + (alpha * 0.8) + ')');
+  
+  mainCtx.strokeStyle = gradient;
+  mainCtx.lineWidth = 2;
+  mainCtx.beginPath();
+  mainCtx.moveTo(points[0].x * w, points[0].y * h);
+  mainCtx.lineTo(points[1].x * w, points[1].y * h);
+  mainCtx.stroke();
+  
+  // Glow effect
+  mainCtx.strokeStyle = 'rgba(249, 115, 22, ' + (alpha * 0.3) + ')';
+  mainCtx.lineWidth = 6;
+  mainCtx.beginPath();
+  mainCtx.moveTo(points[0].x * w, points[0].y * h);
+  mainCtx.lineTo(points[1].x * w, points[1].y * h);
+  mainCtx.stroke();
+}
+
+function updateStepDisplay(step, title, text) {
+  document.getElementById('stepNum').textContent = step;
+  document.getElementById('stepTitle').textContent = title;
+  document.getElementById('stepText').textContent = text;
+}
+
+function resetSimulator() {
+  if (animationId) {
+    clearTimeout(animationId);
+    animationId = null;
+  }
+  
+  isTraining = false;
+  testPoint = null;
+  svmModel = null;
+  supportVectors = [];
+  currentStep = 0;
+  hyperplaneProgress = 0;
+  marginProgress = 0;
+  highlightSV = false;
+  
+  document.getElementById('trainBtn').disabled = true;
+  document.getElementById('addPointBtn').disabled = false;
+  document.getElementById('testPointStatus').textContent = 'Not placed';
+  
+  updateStepDisplay('READY', 'Reset Complete', 
+    'Canvas cleared. Click on the canvas or use "Add Test Point" to place a new test point.');
+  
+  document.getElementById('equationDisplay').style.display = 'none';
+  document.getElementById('marginViz').style.display = 'none';
+  document.getElementById('resultMetrics').style.display = 'none';
+  
+  drawScene();
+}
+
+// === HELP MODAL ===
+function initHelpModal() {
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const closeModal = document.getElementById('closeModal');
+  
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('active');
+  });
+  
+  closeModal.addEventListener('click', () => {
+    helpModal.classList.remove('active');
+  });
+  
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.classList.remove('active');
+    }
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && helpModal.classList.contains('active')) {
+      helpModal.classList.remove('active');
+    }
+  });
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initBgNodes();
+  
+  resizeMainCanvas();
+});
+
+// === CONTROL BINDINGS ===
+document.addEventListener('DOMContentLoaded', function() {
+  const datasetSelect = document.getElementById('datasetSelect');
+  const kernelSelect = document.getElementById('kernelSelect');
+  const cSlider = document.getElementById('cSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const addPointBtn = document.getElementById('addPointBtn');
+  const trainBtn = document.getElementById('trainBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  
+  datasetSelect.addEventListener('change', function() {
+    if (isTraining) return;
+    loadDataset(this.value);
+  });
+  
+  kernelSelect.addEventListener('change', function() {
+    kernelType = this.value;
+    document.getElementById('currentKernel').textContent = 
+      this.value.charAt(0).toUpperCase() + this.value.slice(1);
+  });
+  
+  cSlider.addEventListener('input', function() {
+    cValue = parseFloat(this.value);
+    document.getElementById('cValueDisplay').textContent = cValue.toFixed(1);
+    document.getElementById('currentC').textContent = cValue.toFixed(1);
+  });
+  
+  speedSlider.addEventListener('input', function() {
+    animationSpeed = parseFloat(this.value);
+    document.getElementById('speedValueDisplay').textContent = this.value + 'x';
+  });
+  
+  addPointBtn.addEventListener('click', addTestPoint);
+  trainBtn.addEventListener('click', trainSVM);
+  resetBtn.addEventListener('click', resetSimulator);
+  
+  // Initialize
+  initSimulator();
+});
+
+// === INITIALIZE ===
+initBgNodes();
+animateBg();
+initScrollReveal();
+initHelpModal();
+</script>
+
+</body>
+</html>

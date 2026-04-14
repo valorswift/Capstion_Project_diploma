@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Studio: Linked List Dashboard</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+<style>
+:root {
+  /* Dark Mode Variables Only */
+  --bg-body: #0f172a;
+  --bg-sidebar: rgba(30, 41, 59, 0.95);
+  --bg-card: rgba(30, 41, 59, 0.7);
+  --bg-input: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --sidebar-width: 280px;
+  
+  /* Node Colors */
+  --node-bg: linear-gradient(135deg, #1e293b, #0f172a);
+  --node-border: #334155;
+  --node-head: #22c55e;
+  --node-active: #3b82f6;
+  --arrow-color: #475569;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body {
+  min-height: 100vh;
+  background: var(--bg-body);
+  color: var(--text-main);
+  overflow-x: hidden;
+}
+
+/* --- Layout Structure --- */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--border-color);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
+  z-index: 50;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-brand {
+  font-size: 1.2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.nav-menu { padding: 20px 12px; flex: 1; }
+.nav-group-label {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); margin: 20px 12px 8px; font-weight: 700;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  border-radius: 10px; color: var(--text-muted); text-decoration: none;
+  font-weight: 500; transition: all 0.2s; cursor: pointer; margin-bottom: 4px;
+}
+.nav-item:hover { background: var(--bg-body); color: var(--primary); }
+.nav-item.active {
+  background: rgba(59, 130, 246, 0.1); color: var(--primary); font-weight: 600; border: 1px solid rgba(59, 130, 246, 0.2);
+}
+.nav-item i { font-size: 1.2rem; }
+
+.sidebar-footer {
+  padding: 20px; border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+/* --- Main Content --- */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+  padding: 20px;
+  transition: margin-left 0.3s ease;
+}
+
+.center-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- Top Navigation --- */
+.top-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.btn-back {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: var(--text-main);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* --- Mobile Header --- */
+.mobile-header {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0; height: 60px;
+  background: var(--bg-card); backdrop-filter: blur(10px); z-index: 40;
+  align-items: center; justify-content: space-between; padding: 0 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* --- View Switching --- */
+.view-section { display: none; animation: fadeIn 0.4s ease; }
+.view-section.active { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- Visualizer Specifics --- */
+h1, h2, h3 { color: var(--text-main); }
+h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 5px; background: linear-gradient(135deg, var(--primary), #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.section-desc { color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+
+.card {
+  background: var(--bg-card); border-radius: 16px; padding: 20px;
+  box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 20px;
+}
+
+/* --- Controls Toolbar --- */
+.controls-toolbar {
+  background: var(--bg-input); padding: 15px; border-radius: 12px;
+  box-shadow: var(--shadow); border: 1px solid rgba(128,128,128,0.1);
+  display: flex; flex-wrap: wrap; gap: 15px; align-items: center;
+}
+
+.toolbar-group { display: flex; gap: 10px; align-items: center; }
+
+select, input {
+  padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+  background: var(--bg-body); color: var(--text-main); font-weight: 500; font-size: 0.9rem;
+}
+
+button {
+  padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: 0.2s; font-size: 0.85rem; color: white;
+}
+button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.1); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-blue { background: var(--primary); }
+.btn-danger { background: #ef4444; }
+.btn-icon {
+  background: transparent; border: 1px solid var(--border-color); color: var(--text-main);
+  width: 32px; height: 32px; padding: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-icon:hover { background: var(--bg-body); }
+
+/* --- Visual Stage --- */
+.visual-stage {
+  background: var(--bg-input); border-radius: 20px; border: 1px dashed var(--text-muted);
+  display: flex; align-items: center; overflow-x: auto; overflow-y: hidden;
+  padding: 40px; position: relative; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+  min-height: 250px;
+}
+.visual-stage::-webkit-scrollbar { height: 8px; }
+.visual-stage::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+.list-container { display: flex; align-items: center; min-width: 100%; padding: 0 20px; }
+.empty-state { color: var(--text-muted); text-align: center; width: 100%; }
+
+/* --- Nodes --- */
+.node-wrapper { display: flex; align-items: center; transition: transform 0.3s ease; }
+.node {
+  min-width: 80px; height: 60px; background: var(--node-bg); border: 2px solid var(--node-border);
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-family: 'Fira Code', monospace; font-size: 1.2rem; font-weight: 700;
+  color: var(--text-main); box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  position: relative; z-index: 2; transition: all 0.3s ease;
+}
+.node.head { border-color: var(--node-head); box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); }
+.node.head::after {
+  content: "HEAD"; position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; font-weight: 800; color: var(--node-head); font-family: 'Inter', sans-serif;
+}
+.node.tail { border-color: var(--primary); }
+.node.tail::after {
+  content: "TAIL"; position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; font-weight: 800; color: var(--primary); font-family: 'Inter', sans-serif;
+}
+.node.active {
+  background: var(--node-active); color: white; transform: scale(1.1);
+  border-color: var(--primary); box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+}
+
+.arrow { width: 40px; height: 2px; background: var(--arrow-color); position: relative; margin: 0 4px; }
+.singly .arrow::after {
+  content: ""; position: absolute; right: 0; top: -4px;
+  border-left: 8px solid var(--arrow-color);
+  border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+}
+.doubly .arrow::before {
+  content: ""; position: absolute; left: 0; top: -4px;
+  border-right: 8px solid var(--arrow-color);
+  border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+}
+.doubly .arrow::after {
+  content: ""; position: absolute; right: 0; top: -4px;
+  border-left: 8px solid var(--arrow-color);
+  border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+}
+
+/* --- Concept Panel --- */
+.concept-panel {
+  background: rgba(59, 130, 246, 0.1); border-radius: 12px; padding: 16px;
+  border-left: 5px solid var(--primary);
+}
+.concept-panel h4 { color: var(--primary); font-size: 1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.concept-panel p { font-size: 0.9rem; color: var(--text-main); line-height: 1.5; margin-bottom: 8px; }
+.code-snippet { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: var(--text-main); display: inline-block; }
+
+/* --- Logs Panel --- */
+.logs-panel {
+  background: var(--bg-card); border-radius: 16px; padding: 20px;
+  box-shadow: var(--shadow); border: 1px solid var(--border-color);
+  display: flex; flex-direction: column; height: calc(100vh - 40px);
+}
+.logs-header { font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+.log-container { flex: 1; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px; }
+.log-entry { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(128,128,128,0.1); }
+.log-info { color: var(--text-muted); }
+.log-success { color: var(--success); }
+.log-error { color: var(--danger); }
+
+/* --- Educational Diagrams --- */
+.diagram-container { display: flex; justify-content: center; margin: 20px 0; }
+.memory-layout { display: flex; flex-direction: column; gap: 20px; align-items: center; }
+.mem-block {
+  width: 250px; padding: 15px; border: 2px solid var(--text-muted); border-radius: 8px;
+  background: var(--bg-card); position: relative; font-family: 'Fira Code', monospace; font-size: 0.85rem;
+}
+.mem-addr { position: absolute; left: -70px; top: 50%; transform: translateY(-50%); color: var(--primary); font-weight: bold; }
+.mem-connector {
+  width: 2px; height: 20px; background: var(--arrow-color); margin-left: 20px;
+}
+
+.comparison-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.comparison-table th, .comparison-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+.comparison-table th { color: var(--primary); font-size: 0.9rem; text-transform: uppercase; }
+
+.quiz-container { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+.quiz-btn { display: block; width: 100%; margin: 5px 0; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; text-align: left; color: var(--text-main); transition: 0.2s; }
+.quiz-btn:hover { border-color: var(--primary); color: var(--primary); }
+.quiz-btn.correct { background: var(--success); color: white; border-color: var(--success); }
+.quiz-btn.wrong { background: var(--danger); color: white; border-color: var(--danger); }
+
+/* Animations */
+@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.new-node { animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); width: 260px; box-shadow: var(--shadow-lg); }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; grid-template-columns: 1fr; padding: 20px; padding-top: 80px; }
+  .logs-panel { height: 300px; }
+  .mobile-header { display: flex; }
+  .top-bar { display: none; } /* Hide desktop top bar on mobile, use mobile header */
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile Header -->
+<div class="mobile-header">
+  <div class="sidebar-brand" style="font-size:1rem;">
+    <i class="ri-link"></i> List Studio
+  </div>
+  <button class="btn-icon" onclick="toggleSidebar()">
+    <i class="ri-menu-4-line"></i>
+  </button>
+</div>
+
+<div class="app-layout">
+  
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <i class="ri-link"></i> List Studio
+      </div>
+      <button class="btn-icon" onclick="toggleSidebar()" style="width:30px; height:30px;">
+        <i class="ri-arrow-left-s-line"></i>
+      </button>
+    </div>
+
+    <div class="nav-menu">
+      <div class="nav-item active" onclick="navigate('visualizer')">
+        <i class="ri-bar-chart-box-line"></i> Interactive Visualizer
+      </div>
+
+      <div class="nav-group-label">Core Concepts</div>
+      <div class="nav-item" onclick="navigate('basics')">
+        <i class="ri-question-mark"></i> What is a Linked List?
+      </div>
+      <div class="nav-item" onclick="navigate('memory')">
+        <i class="ri-cpu-line"></i> Memory & Microprocessor
+      </div>
+      <div class="nav-item" onclick="navigate('types')">
+        <i class="ri-git-branch-line"></i> Singly vs Doubly
+      </div>
+      
+      <div class="nav-group-label">Analysis</div>
+      <div class="nav-item" onclick="navigate('complexity')">
+        <i class="ri-time-line"></i> Time Complexity
+      </div>
+      <div class="nav-item" onclick="navigate('compare')">
+        <i class="ri-scales-3-line"></i> List vs Array
+      </div>
+      <div class="nav-item" onclick="navigate('apps')">
+        <i class="ri-rocket-line"></i> Applications
+      </div>
+
+      <div class="nav-group-label">Advanced</div>
+      <div class="nav-item" onclick="navigate('advanced')">
+        <i class="ri-code-s-slash-line"></i> Circular & Implementations
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span style="font-size: 0.75rem; color: var(--text-muted);">DSA Learning Studio</span>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    
+    <!-- Top Navigation Bar -->
+    <div class="top-bar">
+      <div style="font-size: 0.9rem; color: var(--text-muted);">
+        <i class="ri-home-4-line"></i> / Linked List Dashboard
+      </div>
+      <a href="linear.html" class="btn-back">
+        <i class="ri-arrow-left-line"></i> Back
+      </a>
+    </div>
+
+    <!-- Center: Content / Visualizer -->
+    <div class="center-stage">
+      
+      <!-- VIEW 1: VISUALIZER -->
+      <section id="view-visualizer" class="view-section active">
+        <h1>Linked List Visualizer</h1>
+        <p class="section-desc">Visualize nodes, pointers, and operations dynamically.</p>
+
+        <!-- Controls Toolbar -->
+        <div class="controls-toolbar">
+          <div class="toolbar-group">
+            <select id="modeSelect" onchange="changeMode()" style="min-width:150px;">
+              <option value="singly">Singly Linked List</option>
+              <option value="doubly">Doubly Linked List</option>
+            </select>
+            <div style="display:flex; align-items:center; gap:5px; color:var(--text-muted); font-size:0.8rem;">
+              <i class="ri-speed-line"></i>
+              <input type="range" id="speedRange" min="100" max="1500" value="600" style="width:80px; padding:0;">
+            </div>
+          </div>
+          
+          <div class="toolbar-group">
+            <input type="number" id="valInput" placeholder="Value" style="width:80px;">
+            <input type="number" id="posInput" placeholder="Pos" style="width:60px;">
+          </div>
+
+          <div class="toolbar-group" style="margin-left:auto;">
+            <button class="btn-blue" onclick="insertHead()"><i class="ri-skip-back-fill"></i> Head</button>
+            <button class="btn-blue" onclick="insertTail()"><i class="ri-skip-forward-fill"></i> Tail</button>
+            <button class="btn-blue" onclick="insertAt()"><i class="ri-add-circle-line"></i> At</button>
+            <button class="btn-danger" onclick="deleteHead()"><i class="ri-delete-bin-line"></i></button>
+            <button class="btn-blue" onclick="traverse()" id="traverseBtn"><i class="ri-play-circle-line"></i> Run</button>
+            <button onclick="clearList()" style="background:#64748b;"><i class="ri-refresh-line"></i></button>
+          </div>
+        </div>
+
+        <!-- Visualization Stage -->
+        <div class="visual-stage" id="stage">
+          <!-- Nodes go here -->
+        </div>
+
+        <!-- Dynamic Concept Panel -->
+        <div class="concept-panel" id="conceptPanel">
+          <h4><i class="ri-lightbulb-flash-line"></i> Concept Insight</h4>
+          <p id="conceptText">Perform an operation to see pointer logic, time complexity, and memory implications here.</p>
+        </div>
+      </section>
+
+      <!-- VIEW 2: BASICS -->
+      <section id="view-basics" class="view-section">
+        <h1>What is a Linked List?</h1>
+        <p class="section-desc">A linear data structure where elements are not stored in contiguous memory locations.</p>
+        
+        <div class="card">
+          <h3>Anatomy of a Node</h3>
+          <p>Each element in a linked list is called a <strong>Node</strong>. A node contains two parts:</p>
+          <ul style="margin-left:20px; margin-top:10px; color:var(--text-muted); line-height:1.6;">
+            <li><strong>Data:</strong> The value to be stored.</li>
+            <li><strong>Pointer (Next):</strong> The memory address of the next node.</li>
+          </ul>
+          <div class="diagram-container">
+             <div style="display:flex; align-items:center; gap:10px;">
+               <div style="padding:10px; border:2px solid var(--border-color); border-radius:8px; font-family:'Fira Code';">[ Data | Next ]</div>
+               <i class="ri-arrow-right-line" style="color:var(--text-muted)"></i>
+               <div style="padding:10px; border:2px solid var(--border-color); border-radius:8px; font-family:'Fira Code';">[ Data | NULL ]</div>
+             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: MEMORY -->
+      <section id="view-memory" class="view-section">
+        <h1>Linked List in Memory</h1>
+        <p class="section-desc">Understanding non-contiguous memory allocation in the Heap.</p>
+
+        <div class="card">
+          <h3>RAM Representation</h3>
+          <p>Unlike arrays, linked list nodes can be scattered anywhere in the heap. They are connected via pointers (addresses).</p>
+          
+          <div class="diagram-container">
+             <div class="memory-layout">
+               <!-- Node 1 -->
+               <div class="mem-block">
+                 <div class="mem-addr">0x1004</div>
+                 <div><strong>Data:</strong> 10</div>
+                 <div><strong>Next:</strong> 0x2048</div>
+               </div>
+               <div style="height:20px; border-left:2px dashed var(--arrow-color); width:2px; margin-left:125px;"></div>
+               
+               <!-- Node 2 -->
+               <div class="mem-block" style="margin-left:50px;">
+                 <div class="mem-addr">0x2048</div>
+                 <div><strong>Data:</strong> 25</div>
+                 <div><strong>Next:</strong> 0x3050</div>
+               </div>
+               <div style="height:20px; border-left:2px dashed var(--arrow-color); width:2px; margin-left:175px;"></div>
+
+               <!-- Node 3 -->
+               <div class="mem-block" style="margin-left:-20px;">
+                 <div class="mem-addr">0x3050</div>
+                 <div><strong>Data:</strong> 40</div>
+                 <div><strong>Next:</strong> NULL</div>
+               </div>
+             </div>
+          </div>
+          
+          <ul style="margin-left:20px; color:var(--text-muted); line-height:1.8;">
+            <li><strong>Heap Allocation:</strong> Nodes are created dynamically using <code>malloc</code> (C) or <code>new</code> (Java/JS).</li>
+            <li><strong>Pointer Dereferencing:</strong> CPU follows the address stored in "Next" to find the next instruction.</li>
+            <li><strong>Fragmentation:</strong> Over time, free memory becomes scattered, making it hard to find large contiguous blocks (unlike arrays).</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- VIEW 4: TYPES -->
+      <section id="view-types" class="view-section">
+        <h1>Singly vs Doubly Linked List</h1>
+        <div class="card">
+          <table class="comparison-table">
+            <thead>
+              <tr><th>Feature</th><th>Singly Linked List</th><th>Doubly Linked List</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Pointers</strong></td>
+                <td>One (Next)</td>
+                <td>Two (Prev, Next)</td>
+              </tr>
+              <tr>
+                <td><strong>Traversal</strong></td>
+                <td>Forward only</td>
+                <td>Forward & Backward</td>
+              </tr>
+              <tr>
+                <td><strong>Memory</strong></td>
+                <td>Less overhead</td>
+                <td>More overhead (extra pointer)</td>
+              </tr>
+              <tr>
+                <td><strong>Deletion</strong></td>
+                <td>Requires prev node pointer</td>
+                <td>Easier (can go backwards)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 5: COMPLEXITY -->
+      <section id="view-complexity" class="view-section">
+        <h1>Time Complexity</h1>
+        <div class="card">
+          <table class="comparison-table">
+            <thead>
+              <tr><th>Operation</th><th>Time Complexity</th><th>Explanation</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Insert Head</strong></td>
+                <td style="color:var(--success)">O(1)</td>
+                <td>Just update Head pointer. No traversal needed.</td>
+              </tr>
+              <tr>
+                <td><strong>Insert Tail</strong></td>
+                <td style="color:var(--success)">O(1)*</td>
+                <td>O(1) if we maintain a Tail pointer. O(n) otherwise.</td>
+              </tr>
+              <tr>
+                <td><strong>Insert At Index</strong></td>
+                <td style="color:var(--warning)">O(n)</td>
+                <td>Must traverse from head to the index.</td>
+              </tr>
+              <tr>
+                <td><strong>Search</strong></td>
+                <td style="color:var(--warning)">O(n)</td>
+                <td>Must visit every node sequentially.</td>
+              </tr>
+              <tr>
+                <td><strong>Delete</strong></td>
+                <td style="color:var(--warning)">O(n)</td>
+                <td>Must find the node before the one to delete.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 6: COMPARE -->
+      <section id="view-compare" class="view-section">
+        <h1>Linked List vs Array</h1>
+        <div class="card">
+          <table class="comparison-table">
+            <thead>
+              <tr><th>Aspect</th><th>Array</th><th>Linked List</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Memory</strong></td><td>Contiguous</td><td>Non-Contiguous (Scattered)</td></tr>
+              <tr><td><strong>Access</strong></td><td>Random Access O(1)</td><td>Sequential Access O(n)</td></tr>
+              <tr><td><strong>Size</strong></td><td>Fixed (Static)</td><td>Dynamic</td></tr>
+              <tr><td><strong>Cache Performance</strong></td><td>Excellent (Locality)</td><td>Poor (Random jumps)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 7: APPS -->
+      <section id="view-apps" class="view-section">
+        <h1>Applications</h1>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px;">
+          <div class="card">
+            <h3><i class="ri-history-line"></i> Browser History</h3>
+            <p>Doubly linked lists are perfect for Back/Forward navigation.</p>
+          </div>
+          <div class="card">
+            <h3><i class="ri-music-2-line"></i> Music Players</h3>
+            <p>Next/Prev song functionality.</p>
+          </div>
+          <div class="card">
+            <h3><i class="ri-image-line"></i> Image Viewer</h3>
+            <p>Slideshow navigation.</p>
+          </div>
+          <div class="card">
+            <h3><i class="ri-node-tree"></i> Graph Adjacency</h3>
+            <p>Representing graphs using adjacency lists.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 8: ADVANCED -->
+      <section id="view-advanced" class="view-section">
+        <h1>Advanced Concepts</h1>
+        
+        <div class="card">
+          <h3>Circular Linked List</h3>
+          <p>The last node points back to the head instead of NULL. Useful for Round Robin scheduling.</p>
+          <div class="diagram-container">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <div style="padding:10px; border:2px solid var(--border-color); border-radius:8px;">[1]</div>
+              <i class="ri-arrow-right-line"></i>
+              <div style="padding:10px; border:2px solid var(--border-color); border-radius:8px;">[2]</div>
+              <i class="ri-arrow-right-line"></i>
+              <div style="padding:10px; border:2px solid var(--border-color); border-radius:8px;">[3]</div>
+              <i class="ri-arrow-left-up-line" style="margin-left:-10px; color:var(--primary);"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="quiz-container">
+          <h3>Mini Quiz</h3>
+          <p style="margin-bottom:10px;">What happens if you lose the Head pointer of a Linked List?</p>
+          <button class="quiz-btn" onclick="checkQuiz(this, false)">A. Memory Leak</button>
+          <button class="quiz-btn" onclick="checkQuiz(this, true)">B. Entire list becomes inaccessible</button>
+          <button class="quiz-btn" onclick="checkQuiz(this, false)">C. Garbage collected immediately</button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right: Logs Panel -->
+    <aside class="logs-panel">
+      <div class="logs-header">
+        <i class="ri-terminal-box-line"></i> System Log
+      </div>
+      <div class="log-container" id="logBox">
+        <div class="log-entry log-info">> System Ready.</div>
+      </div>
+    </aside>
+
+  </main>
+</div>
+
+<script>
+// --- STATE ---
+let list = [];
+let mode = 'singly';
+let isBusy = false;
+let delay = 600;
+
+// DOM Elements
+const stage = document.getElementById('stage');
+const logBox = document.getElementById('logBox');
+const speedRange = document.getElementById('speedRange');
+const valInput = document.getElementById('valInput');
+const posInput = document.getElementById('posInput');
+const conceptPanel = document.getElementById('conceptPanel');
+const conceptText = document.getElementById('conceptText');
+const sidebar = document.getElementById('sidebar');
+
+// --- UTILS ---
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function log(msg, type='info') {
+  const div = document.createElement('div');
+  div.className = `log-entry log-${type}`;
+  div.textContent = `> ${msg}`;
+  logBox.prepend(div);
+}
+
+function updateSpeed() { delay = 1600 - parseInt(speedRange.value); }
+speedRange.addEventListener('input', updateSpeed);
+
+// --- NAVIGATION ---
+function toggleSidebar() {
+  sidebar.classList.toggle('open');
+}
+
+function navigate(viewId) {
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.getElementById(`view-${viewId}`).classList.add('active');
+  
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const items = document.querySelectorAll('.nav-item');
+  for(let item of items) {
+    if(item.getAttribute('onclick').includes(viewId)) {
+      item.classList.add('active');
+      break;
+    }
+  }
+  
+  if(window.innerWidth <= 900) sidebar.classList.remove('open');
+  
+  if(viewId === 'visualizer') {
+    conceptText.textContent = "Perform an operation to see pointer logic, time complexity, and memory implications here.";
+  }
+}
+
+function checkQuiz(btn, isCorrect) {
+  const parent = btn.parentElement;
+  parent.querySelectorAll('.quiz-btn').forEach(b => {
+    b.classList.remove('correct', 'wrong');
+  });
+  if(isCorrect) {
+    btn.classList.add('correct');
+    btn.innerHTML += ' <i class="ri-check-line"></i> Correct!';
+  } else {
+    btn.classList.add('wrong');
+    btn.innerHTML += ' <i class="ri-close-line"></i> Try Again';
+  }
+}
+
+// --- VISUALIZER LOGIC ---
+
+function changeMode() {
+  mode = document.getElementById('modeSelect').value;
+  list = [];
+  stage.className = `visual-stage ${mode}`;
+  render();
+  log(`Switched to ${mode.toUpperCase()} Linked List.`);
+  updateConcept("Mode Changed", `Switched to ${mode.toUpperCase()} Linked List. ${mode === 'singly' ? 'Nodes point only to Next.' : 'Nodes point to Prev and Next.'}`);
+}
+
+function render(animate = false) {
+  stage.innerHTML = '';
+  if (list.length === 0) {
+    stage.innerHTML = `<div class="empty-state">List is empty.<br>Add elements to visualize.</div>`;
+    return;
+  }
+
+  const container = document.createElement('div');
+  container.className = 'list-container';
+
+  list.forEach((val, i) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'node-wrapper';
+    if(animate) wrapper.classList.add('new-node');
+
+    const node = document.createElement('div');
+    node.className = 'node';
+    if (i === 0) node.classList.add('head');
+    if (i === list.length - 1 && list.length > 1) node.classList.add('tail');
+    node.textContent = val;
+    node.id = `node-${i}`;
+    wrapper.appendChild(node);
+
+    if (i < list.length - 1) {
+      const arrow = document.createElement('div');
+      arrow.className = 'arrow';
+      wrapper.appendChild(arrow);
+    }
+
+    container.appendChild(wrapper);
+  });
+
+  stage.appendChild(container);
+  if(animate) stage.scrollLeft = stage.scrollWidth;
+}
+
+function getVal() {
+  const v = parseInt(valInput.value);
+  if (isNaN(v)) {
+    log("Please enter a valid number.", 'error');
+    return null;
+  }
+  valInput.value = '';
+  return v;
+}
+
+function updateConcept(title, content) {
+  conceptPanel.querySelector('h4').innerHTML = `<i class="ri-lightbulb-flash-line"></i> ${title}`;
+  conceptText.innerHTML = content;
+}
+
+// --- OPERATIONS ---
+
+function insertHead() {
+  if(isBusy) return;
+  const val = getVal();
+  if(val === null) return;
+  list.unshift(val);
+  render(true);
+  log(`Inserted ${val} at Head.`);
+  updateConcept("Insert Head", `
+    <p><strong>Complexity:</strong> O(1)</p>
+    <p>1. New node created in Heap.</p>
+    <p>2. New node's Next points to old Head.</p>
+    <p>3. Head pointer updated to new node.</p>
+  `);
+}
+
+function insertTail() {
+  if(isBusy) return;
+  const val = getVal();
+  if(val === null) return;
+  list.push(val);
+  render(true);
+  log(`Inserted ${val} at Tail.`);
+  updateConcept("Insert Tail", `
+    <p><strong>Complexity:</strong> O(1) (With Tail pointer)</p>
+    <p>1. Traverse to end (if no tail pointer).</p>
+    <p>2. Old Tail's Next points to new node.</p>
+    <p>3. New node's Next is NULL.</p>
+  `);
+}
+
+function insertAt() {
+  if(isBusy) return;
+  const val = getVal();
+  const pos = parseInt(posInput.value);
+  
+  if (val === null) return;
+  if (isNaN(pos) || pos < 0 || pos > list.length) {
+    return log(`Invalid position. Current size: ${list.length}`, 'error');
+  }
+  
+  list.splice(pos, 0, val);
+  render(true);
+  log(`Inserted ${val} at index ${pos}.`);
+  updateConcept("Insert At Index", `
+    <p><strong>Complexity:</strong> O(n)</p>
+    <p>We must traverse from Head to index ${pos-1} to adjust pointers.</p>
+    <div class="code-snippet">prev.next = newNode<br>newNode.next = current</div>
+  `);
+}
+
+function deleteHead() {
+  if(isBusy) return;
+  if (list.length === 0) return log("List is empty.", 'error');
+  const removed = list.shift();
+  render();
+  log(`Deleted Head (${removed}).`);
+  updateConcept("Delete Head", `
+    <p><strong>Complexity:</strong> O(1)</p>
+    <p>Head pointer simply moves to Head.next.</p>
+    <p>Old node is marked for Garbage Collection.</p>
+  `);
+}
+
+function deleteTail() {
+  if(isBusy) return;
+  if (list.length === 0) return log("List is empty.", 'error');
+  const removed = list.pop();
+  render();
+  log(`Deleted Tail (${removed}).`);
+  updateConcept("Delete Tail", `
+    <p><strong>Complexity:</strong> O(n)</p>
+    <p>Must traverse to the second-to-last node to set its Next to NULL.</p>
+  `);
+}
+
+function clearList() {
+  if(isBusy) return;
+  list = [];
+  render();
+  log("List cleared.");
+  updateConcept("Cleared", "Head pointer set to NULL. All nodes orphaned.");
+}
+
+async function traverse() {
+  if(isBusy) return;
+  if (list.length === 0) return log("List is empty.", 'error');
+  
+  isBusy = true;
+  document.getElementById('traverseBtn').disabled = true;
+  log("Starting traversal...", 'info');
+
+  const nodes = document.querySelectorAll('.node');
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    node.classList.add('active');
+    
+    const val = node.textContent;
+    const next = i < nodes.length - 1 ? nodes[i+1].textContent : "NULL";
+    
+    log(`Visiting: ${val} (Next: ${next})`);
+
+    await sleep(delay);
+    node.classList.remove('active');
+  }
+
+  log("Traversal complete.", 'success');
+  isBusy = false;
+  document.getElementById('traverseBtn').disabled = false;
+  
+  updateConcept("Traversal", `
+    <p><strong>Complexity:</strong> O(n)</p>
+    <p>Started at Head and followed Next pointers sequentially until NULL was found.</p>
+  `);
+}
+
+// Initialize
+changeMode();
+</script>
+</body>
+</html>

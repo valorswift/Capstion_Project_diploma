@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frame Buffer & Color | Computer Graphics</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #05080c;
+  --bg-elevated: #0a1018;
+  --card: #0d1520;
+  --border: #1a2535;
+  --accent: #00ffc8;
+  --accent-alt: #ff6b4a;
+  --text: #e4e8ec;
+  --muted: #5a6a7a;
+  --cyan-blue: #00d4ff;
+  --warm-gold: #ffa94d;
+  --magenta: #ff4d9d;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 8, 12, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--cyan-blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.nav-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.progress-bar {
+  width: 120px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.hero {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 60px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 255, 200, 0.1);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 255, 200, 0.2);
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.main-title {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  color: var(--text);
+}
+
+.hero-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 600px;
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.hero-nav {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: #00e6b8;
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.section {
+  padding: 80px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: 48px;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 0 0 12px 0;
+}
+
+.section-desc {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.two-col.reverse {
+  direction: rtl;
+}
+
+.two-col.reverse > * {
+  direction: ltr;
+}
+
+.canvas-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.canvas-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.canvas-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.canvas-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.canvas-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.canvas-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.canvas-body {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.canvas-body canvas {
+  border-radius: 8px;
+}
+
+.info-panel {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.info-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.content-block {
+  padding: 24px;
+}
+
+.content-block h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.content-block p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 16px 0;
+}
+
+.formula-box {
+  background: rgba(0, 255, 200, 0.05);
+  border: 1px solid rgba(0, 255, 200, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.formula-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.key-points {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+
+.key-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.key-points li:last-child {
+  border-bottom: none;
+}
+
+.key-point-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.key-point-icon.cyan {
+  background: rgba(0, 255, 200, 0.15);
+  color: var(--accent);
+}
+
+.key-point-icon.orange {
+  background: rgba(255, 107, 74, 0.15);
+  color: var(--accent-alt);
+}
+
+.key-point-icon.blue {
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--cyan-blue);
+}
+
+.key-point-icon.magenta {
+  background: rgba(255, 77, 157, 0.15);
+  color: var(--magenta);
+}
+
+.key-point-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.slider-container {
+  margin: 24px 0;
+}
+
+.slider-group {
+  margin-bottom: 20px;
+}
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.slider-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 40px;
+  text-align: right;
+}
+
+.slider-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  position: relative;
+  cursor: pointer;
+}
+
+.slider-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.1s ease;
+}
+
+.slider-fill.red { background: linear-gradient(90deg, #330000, #ff0000); }
+.slider-fill.green { background: linear-gradient(90deg, #003300, #00ff00); }
+.slider-fill.blue { background: linear-gradient(90deg, #000033, #0000ff); }
+
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg);
+  cursor: grab;
+  transition: transform 0.1s ease;
+}
+
+.slider-thumb:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.color-preview {
+  width: 100%;
+  height: 80px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  margin-top: 20px;
+  transition: background-color 0.2s ease;
+}
+
+.rgb-display {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.rgb-item {
+  text-align: center;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.rgb-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.rgb-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.rgb-value.red { color: #ff4444; }
+.rgb-value.green { color: #44ff44; }
+.rgb-value.blue { color: #4488ff; }
+
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 20px;
+}
+
+.memory-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.memory-cell:hover {
+  transform: scale(1.1);
+  z-index: 10;
+}
+
+.algo-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.algo-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.algo-card:hover {
+  border-color: rgba(0, 255, 200, 0.3);
+  transform: translateY(-4px);
+}
+
+.algo-card h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.algo-card p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.algo-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(0, 255, 200, 0.1);
+  color: var(--accent);
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  margin-top: 80px;
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
+@media (max-width: 900px) {
+  .two-col {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .two-col.reverse {
+    direction: ltr;
+  }
+  
+  .algo-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .nav-progress {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 40px;
+  }
+  
+  .canvas-body {
+    min-height: 300px;
+  }
+  
+  .rgb-display {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="basicsOfComputerGraphics.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#05080c" stroke-width="2.5">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <rect x="7" y="7" width="3" height="3"/>
+          <rect x="14" y="7" width="3" height="3"/>
+          <rect x="7" y="14" width="3" height="3"/>
+          <rect x="14" y="14" width="3" height="3"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="concepts.html">Concepts</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Frame Buffer</span>
+    </div>
+    <div class="nav-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+      <span id="progress-text">0%</span>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-badge">Learning Module</div>
+    <h1 class="main-title">Frame Buffer & Color Representation</h1>
+    <p class="hero-subtitle">
+      // Explore how computer screens store and display colors<br>
+      // Understanding the memory behind every pixel you see.
+    </p>
+    <div class="hero-nav">
+      <button class="btn btn-primary" onclick="scrollToSection('intro')">
+        Start Learning
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
+      <a href="#color" class="btn btn-ghost">Jump to Color</a>
+    </div>
+  </section>
+
+  <!-- Section 1: What is a Frame Buffer -->
+  <section class="section" id="intro">
+    <div class="section-header">
+      <div class="section-number">01 / Introduction</div>
+      <h2 class="section-title">What is a Frame Buffer?</h2>
+      <p class="section-desc">
+        A frame buffer is a dedicated memory area that stores the color value of every pixel that appears on your screen.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">FRAME_BUFFER_SIMULATION</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn" onclick="toggleFramebufferAnim()">Pause</button>
+            <button class="canvas-btn" onclick="resetFramebuffer()">Reset</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-framebuffer" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Resolution</span>
+            <span class="info-value">16 x 16 pixels</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Memory Used</span>
+            <span class="info-value" id="fb-memory">768 bytes</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Active Pixels</span>
+            <span class="info-value" id="fb-active">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Definition</h3>
+        <p>
+          The frame buffer acts as a digital canvas where each memory location 
+          corresponds to a single pixel on the display screen.
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">Pixel(x, y) = Memory[width * y + x]</div>
+          <div class="formula-label">Pixel to memory mapping</div>
+        </div>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">1</div>
+            <div class="key-point-text">
+              <strong>Storage:</strong> Each pixel's color is stored as numerical values in memory
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon cyan">2</div>
+            <div class="key-point-text">
+              <strong>Addressing:</strong> Pixel position (x, y) maps to a specific memory address
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">!</div>
+            <div class="key-point-text">
+              <strong>Refresh:</strong> Display hardware reads this memory 60+ times per second
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Pixel Color Representation -->
+  <section class="section" id="color">
+    <div class="section-header">
+      <div class="section-number">02 / Color Model</div>
+      <h2 class="section-title">Pixel Color Representation</h2>
+      <p class="section-desc">
+        Learn how colors are represented using the RGB color model, combining Red, Green, and Blue light intensities.
+      </p>
+    </div>
+    
+    <div class="two-col reverse">
+      <div class="content-block">
+        <h3>RGB Color Model</h3>
+        <p>
+          Each pixel stores three values representing the intensity of red, green, and blue light. 
+          Values range from 0 (off) to 255 (full intensity).
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">Color = (R, G, B)</div>
+          <div class="formula-label">RGB triplet representation</div>
+        </div>
+        
+        <div class="slider-container">
+          <div class="slider-group">
+            <div class="slider-label">
+              <span class="slider-name" style="color: #ff4444;">Red Channel</span>
+              <span class="slider-value" style="color: #ff4444;" id="red-value">128</span>
+            </div>
+            <div class="slider-track" data-channel="red" id="slider-red">
+              <div class="slider-fill red" style="width: 50%;"></div>
+              <div class="slider-thumb" style="left: 50%;"></div>
+            </div>
+          </div>
+          
+          <div class="slider-group">
+            <div class="slider-label">
+              <span class="slider-name" style="color: #44ff44;">Green Channel</span>
+              <span class="slider-value" style="color: #44ff44;" id="green-value">64</span>
+            </div>
+            <div class="slider-track" data-channel="green" id="slider-green">
+              <div class="slider-fill green" style="width: 25%;"></div>
+              <div class="slider-thumb" style="left: 25%;"></div>
+            </div>
+          </div>
+          
+          <div class="slider-group">
+            <div class="slider-label">
+              <span class="slider-name" style="color: #4488ff;">Blue Channel</span>
+              <span class="slider-value" style="color: #4488ff;" id="blue-value">192</span>
+            </div>
+            <div class="slider-track" data-channel="blue" id="slider-blue">
+              <div class="slider-fill blue" style="width: 75%;"></div>
+              <div class="slider-thumb" style="left: 75%;"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="color-preview" id="color-preview" style="background-color: rgb(128, 64, 192);"></div>
+        
+        <div class="rgb-display">
+          <div class="rgb-item">
+            <div class="rgb-label">RED</div>
+            <div class="rgb-value red" id="display-r">128</div>
+          </div>
+          <div class="rgb-item">
+            <div class="rgb-label">GREEN</div>
+            <div class="rgb-value green" id="display-g">64</div>
+          </div>
+          <div class="rgb-item">
+            <div class="rgb-label">BLUE</div>
+            <div class="rgb-value blue" id="display-b">192</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">COLOR_GRID_VISUALIZATION</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-color" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Hex Value</span>
+            <span class="info-value" id="hex-value">#8040C0</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Bits Per Pixel</span>
+            <span class="info-value">24-bit (True Color)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Total Colors</span>
+            <span class="info-value">16,777,216</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Frame Buffer Memory -->
+  <section class="section" id="memory">
+    <div class="section-header">
+      <div class="section-number">03 / Memory Structure</div>
+      <h2 class="section-title">Frame Buffer Memory Visualization</h2>
+      <p class="section-desc">
+        See how pixel colors are actually stored in memory as a two-dimensional array of RGB values.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">MEMORY_MAP</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn" onclick="randomizeMemory()">Randomize</button>
+            <button class="canvas-btn" onclick="clearMemory()">Clear</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-memory" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Selected Pixel</span>
+            <span class="info-value" id="mem-pixel">(0, 0)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">RGB Value</span>
+            <span class="info-value" id="mem-rgb">(0, 0, 0)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Memory Address</span>
+            <span class="info-value" id="mem-addr">0x0000</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Memory Layout</h3>
+        <p>
+          The frame buffer is organized as a 2D array where each cell contains 
+          the RGB values for one pixel. Memory is typically laid out row by row.
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula" style="font-size: 14px;">
+            Address = Base + (y * width + x) * bytes_per_pixel
+          </div>
+          <div class="formula-label">Memory address calculation</div>
+        </div>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">1</div>
+            <div class="key-point-text">
+              <strong>Row-Major Order:</strong> Pixels stored left-to-right, top-to-bottom
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">2</div>
+            <div class="key-point-text">
+              <strong>Stride:</strong> Number of bytes per row (width * bytes_per_pixel)
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">3</div>
+            <div class="key-point-text">
+              <strong>24-bit Color:</strong> 3 bytes per pixel (R, G, B each 8 bits)
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon magenta">4</div>
+            <div class="key-point-text">
+              <strong>32-bit Color:</strong> 4 bytes (R, G, B, Alpha for transparency)
+            </div>
+          </li>
+        </ul>
+        
+        <div style="margin-top: 24px; padding: 16px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 8px;">Example: 8x8 Frame Buffer</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text); line-height: 1.6;">
+            [0,0]: (255,0,0) [1,0]: (0,255,0) [2,0]: (0,0,255) ...<br>
+            [0,1]: (255,255,0) [1,1]: (0,255,255) [2,1]: (255,0,255) ...<br>
+            ...
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Image Formation -->
+  <section class="section" id="formation">
+    <div class="section-header">
+      <div class="section-number">04 / Rendering</div>
+      <h2 class="section-title">Image Formation Process</h2>
+      <p class="section-desc">
+        Watch how the display reads the frame buffer and renders pixels to form a complete image.
+      </p>
+    </div>
+    
+    <div class="two-col reverse">
+      <div class="content-block">
+        <h3>Scan-Line Rendering</h3>
+        <p>
+          The display controller reads the frame buffer line by line, sending 
+          pixel values to the screen in a process called scan-line rendering.
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula" style="font-size: 14px;">
+            For each scanline y:<br>
+            &nbsp;&nbsp;For each pixel x:<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;Display(x, y) = FrameBuffer(x, y)
+          </div>
+          <div class="formula-label">Scan-line algorithm</div>
+        </div>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">1</div>
+            <div class="key-point-text">
+              <strong>Refresh Rate:</strong> Screen updates typically 60-144 times per second
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">2</div>
+            <div class="key-point-text">
+              <strong>Double Buffering:</strong> Draw to back buffer while front displays
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">3</div>
+            <div class="key-point-text">
+              <strong>V-Sync:</strong> Swap buffers during vertical blanking interval
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">IMAGE_FORMATION</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn active" id="btn-pattern1" onclick="setPattern(1)">Pattern 1</button>
+            <button class="canvas-btn" id="btn-pattern2" onclick="setPattern(2)">Pattern 2</button>
+            <button class="canvas-btn" id="btn-pattern3" onclick="setPattern(3)">Pattern 3</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-formation" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Scan Line</span>
+            <span class="info-value" id="scan-line">0</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Progress</span>
+            <span class="info-value" id="scan-progress">0%</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value" id="scan-status">Rendering...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Connection to Algorithms -->
+  <section class="section" id="algorithms">
+    <div class="section-header">
+      <div class="section-number">05 / Integration</div>
+      <h2 class="section-title">Connection to Graphics Algorithms</h2>
+      <p class="section-desc">
+        All graphics algorithms ultimately work by modifying pixel values in the frame buffer.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">ALGORITHM_DEMO</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn active" onclick="playAlgorithmDemo()">Play</button>
+            <button class="canvas-btn" onclick="resetAlgorithmDemo()">Reset</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-algorithm" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Algorithm</span>
+            <span class="info-value" id="algo-name">Line Drawing</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Pixels Modified</span>
+            <span class="info-value" id="algo-pixels">0</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Frame Buffer Writes</span>
+            <span class="info-value" id="algo-writes">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <div class="content-block">
+          <h3>How Algorithms Use Frame Buffer</h3>
+          <p>
+            Graphics algorithms determine which pixels need to change and write 
+            new color values directly into the frame buffer.
+          </p>
+          
+          <div class="formula-box">
+            <div class="formula" style="font-size: 14px;">
+              Algorithm calculates (x, y)<br>
+              FrameBuffer[x][y] = Color
+            </div>
+            <div class="formula-label">Algorithm output</div>
+          </div>
+        </div>
+        
+        <div class="algo-cards">
+          <a href="line_algorithms.html" class="algo-card">
+            <h4>Line Drawing</h4>
+            <p>Calculates which pixels lie along a line between two points and updates their colors.</p>
+            <span class="algo-tag">DDA / Bresenham</span>
+          </a>
+          
+          <a href="circle_algorithms.html" class="algo-card">
+            <h4>Circle Drawing</h4>
+            <p>Determines pixel positions that approximate a circle using symmetry.</p>
+            <span class="algo-tag">Midpoint Circle</span>
+          </a>
+          
+          <a href="#" class="algo-card">
+            <h4>Polygon Fill</h4>
+            <p>Fills interior pixels of a polygon using scan-line or flood fill algorithms.</p>
+            <span class="algo-tag">Scan-line Fill</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>// Frame Buffer & Color Representation - Foundation of Computer Graphics Display</p>
+  </footer>
+  
+</div>
+
+<script>
+// === UTILITY FUNCTIONS ===
+function clamp(val, min, max) {
+  return Math.max(min, Math.min(max, val));
+}
+
+function rgbToHex(r, g, b) {
+  const toHex = (n) => {
+    const hex = clamp(Math.round(n), 0, 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const particles = [];
+const particleCount = 35;
+
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.2,
+      vy: (Math.random() - 0.5) * 0.2,
+      size: Math.random() * 2.5 + 1,
+      opacity: Math.random() * 0.2 + 0.05,
+      hue: Math.random() > 0.5 ? 160 : 280
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#05080c';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  // Subtle grid
+  bgCtx.strokeStyle = 'rgba(0, 255, 200, 0.02)';
+  bgCtx.lineWidth = 1;
+  
+  const gridSize = 50;
+  for (let x = 0; x < bgWidth; x += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(x, 0);
+    bgCtx.lineTo(x, bgHeight);
+    bgCtx.stroke();
+  }
+  for (let y = 0; y < bgHeight; y += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, y);
+    bgCtx.lineTo(bgWidth, y);
+    bgCtx.stroke();
+  }
+  
+  // Floating pixel blocks
+  for (let i = 0; i < 8; i++) {
+    const x = (Math.sin(time * 0.3 + i * 1.2) * 0.3 + 0.5) * bgWidth;
+    const y = (Math.cos(time * 0.2 + i * 0.8) * 0.3 + 0.5) * bgHeight;
+    const size = 20 + i * 5;
+    
+    bgCtx.strokeStyle = 'rgba(0, 255, 200, 0.05)';
+    bgCtx.lineWidth = 1;
+    bgCtx.strokeRect(x - size/2, y - size/2, size, size);
+    
+    // Pixel grid inside
+    bgCtx.fillStyle = `rgba(0, 255, 200, ${0.02 + Math.sin(time + i) * 0.01})`;
+    for (let px = 0; px < 3; px++) {
+      for (let py = 0; py < 3; py++) {
+        if (Math.random() > 0.5) {
+          bgCtx.fillRect(x - size/2 + px * size/3 + 2, y - size/2 + py * size/3 + 2, size/3 - 4, size/3 - 4);
+        }
+      }
+    }
+  }
+  
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    if (p.x < 0) p.x = bgWidth;
+    if (p.x > bgWidth) p.x = 0;
+    if (p.y < 0) p.y = bgHeight;
+    if (p.y > bgHeight) p.y = 0;
+    
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 120) {
+      p.x -= dx * 0.008;
+      p.y -= dy * 0.008;
+    }
+    
+    const color = p.hue === 160 ? 
+      `rgba(0, 255, 200, ${p.opacity})` : 
+      `rgba(255, 77, 157, ${p.opacity})`;
+    bgCtx.fillStyle = color;
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  // Mouse glow
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 150);
+  gradient.addColorStop(0, 'rgba(0, 255, 200, 0.04)');
+  gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === SECTION 1: FRAME BUFFER CANVAS ===
+let framebufferAnimRunning = true;
+let framebufferData = [];
+const FB_SIZE = 16;
+
+function initFramebuffer() {
+  framebufferData = [];
+  for (let y = 0; y < FB_SIZE; y++) {
+    framebufferData[y] = [];
+    for (let x = 0; x < FB_SIZE; x++) {
+      framebufferData[y][x] = { r: 0, g: 0, b: 0, targetR: 0, targetG: 0, targetB: 0 };
+    }
+  }
+}
+
+function drawFramebufferCanvas() {
+  const canvas = document.getElementById('canvas-framebuffer');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = canvas.width / FB_SIZE;
+  let activeCount = 0;
+  
+  ctx.fillStyle = '#080c10';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Random pixel activation
+  if (framebufferAnimRunning && Math.random() > 0.85) {
+    const rx = Math.floor(Math.random() * FB_SIZE);
+    const ry = Math.floor(Math.random() * FB_SIZE);
+    framebufferData[ry][rx].targetR = Math.random() * 255;
+    framebufferData[ry][rx].targetG = Math.random() * 255;
+    framebufferData[ry][rx].targetB = Math.random() * 255;
+  }
+  
+  // Draw pixels
+  for (let y = 0; y < FB_SIZE; y++) {
+    for (let x = 0; x < FB_SIZE; x++) {
+      const pixel = framebufferData[y][x];
+      
+      // Smooth interpolation
+      pixel.r += (pixel.targetR - pixel.r) * 0.1;
+      pixel.g += (pixel.targetG - pixel.g) * 0.1;
+      pixel.b += (pixel.targetB - pixel.b) * 0.1;
+      
+      // Decay
+      pixel.targetR *= 0.995;
+      pixel.targetG *= 0.995;
+      pixel.targetB *= 0.995;
+      
+      const brightness = pixel.r + pixel.g + pixel.b;
+      if (brightness > 10) activeCount++;
+      
+      const r = clamp(Math.round(pixel.r), 0, 255);
+      const g = clamp(Math.round(pixel.g), 0, 255);
+      const b = clamp(Math.round(pixel.b), 0, 255);
+      
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+      
+      // Grid lines
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+    }
+  }
+  
+  document.getElementById('fb-active').textContent = activeCount;
+  
+  requestAnimationFrame(drawFramebufferCanvas);
+}
+
+function toggleFramebufferAnim() {
+  framebufferAnimRunning = !framebufferAnimRunning;
+  const btn = document.querySelector('[onclick="toggleFramebufferAnim()"]');
+  if (btn) btn.textContent = framebufferAnimRunning ? 'Pause' : 'Play';
+}
+
+function resetFramebuffer() {
+  for (let y = 0; y < FB_SIZE; y++) {
+    for (let x = 0; x < FB_SIZE; x++) {
+      framebufferData[y][x] = { r: 0, g: 0, b: 0, targetR: 0, targetG: 0, targetB: 0 };
+    }
+  }
+}
+
+// === SECTION 2: COLOR SLIDERS ===
+let colorValues = { r: 128, g: 64, b: 192 };
+
+function initColorSliders() {
+  const sliders = document.querySelectorAll('.slider-track');
+  
+  sliders.forEach(slider => {
+    const channel = slider.dataset.channel;
+    
+    slider.addEventListener('mousedown', (e) => startSliderDrag(e, slider, channel));
+    slider.addEventListener('touchstart', (e) => startSliderDrag(e, slider, channel), { passive: false });
+  });
+  
+  updateColorDisplay();
+  drawColorCanvas();
+}
+
+function startSliderDrag(e, slider, channel) {
+  e.preventDefault();
+  
+  const updateSlider = (clientX) => {
+    const rect = slider.getBoundingClientRect();
+    const percent = clamp((clientX - rect.left) / rect.width, 0, 1);
+    const value = Math.round(percent * 255);
+    
+    colorValues[channel.charAt(0)] = value;
+    
+    const fill = slider.querySelector('.slider-fill');
+    const thumb = slider.querySelector('.slider-thumb');
+    
+    if (fill) fill.style.width = (percent * 100) + '%';
+    if (thumb) thumb.style.left = (percent * 100) + '%';
+    
+    document.getElementById(channel + '-value').textContent = value;
+    updateColorDisplay();
+    drawColorCanvas();
+  };
+  
+  const moveHandler = (e) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    updateSlider(clientX);
+  };
+  
+  const upHandler = () => {
+    document.removeEventListener('mousemove', moveHandler);
+    document.removeEventListener('mouseup', upHandler);
+    document.removeEventListener('touchmove', moveHandler);
+    document.removeEventListener('touchend', upHandler);
+  };
+  
+  document.addEventListener('mousemove', moveHandler);
+  document.addEventListener('mouseup', upHandler);
+  document.addEventListener('touchmove', moveHandler, { passive: false });
+  document.addEventListener('touchend', upHandler);
+  
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  updateSlider(clientX);
+}
+
+function updateColorDisplay() {
+  const r = colorValues.r;
+  const g = colorValues.g;
+  const b = colorValues.b;
+  
+  document.getElementById('display-r').textContent = r;
+  document.getElementById('display-g').textContent = g;
+  document.getElementById('display-b').textContent = b;
+  
+  const preview = document.getElementById('color-preview');
+  if (preview) {
+    preview.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+  }
+  
+  const hexValue = rgbToHex(r, g, b);
+  document.getElementById('hex-value').textContent = hexValue.toUpperCase();
+}
+
+function drawColorCanvas() {
+  const canvas = document.getElementById('canvas-color');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const gridSize = 8;
+  const pixelSize = canvas.width / gridSize;
+  
+  ctx.fillStyle = '#080c10';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  const r = colorValues.r;
+  const g = colorValues.g;
+  const b = colorValues.b;
+  
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      // Vary color slightly around the base
+      const vr = clamp(r + (Math.random() - 0.5) * 30, 0, 255);
+      const vg = clamp(g + (Math.random() - 0.5) * 30, 0, 255);
+      const vb = clamp(b + (Math.random() - 0.5) * 30, 0, 255);
+      
+      ctx.fillStyle = `rgb(${Math.round(vr)}, ${Math.round(vg)}, ${Math.round(vb)})`;
+      ctx.fillRect(x * pixelSize + 2, y * pixelSize + 2, pixelSize - 4, pixelSize - 4);
+      
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+    }
+  }
+  
+  // Center highlight
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.lineWidth = 2;
+  const cx = Math.floor(gridSize / 2) * pixelSize;
+  const cy = Math.floor(gridSize / 2) * pixelSize;
+  ctx.strokeRect(cx + 1, cy + 1, pixelSize - 2, pixelSize - 2);
+  
+  // RGB channel bars at bottom
+  const barHeight = 15;
+  const barY = canvas.height - 20;
+  
+  // Red bar
+  const rGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  rGrad.addColorStop(0, '#000000');
+  rGrad.addColorStop(1, '#ff0000');
+  ctx.fillStyle = rGrad;
+  ctx.fillRect(10, barY, canvas.width - 20, barHeight / 3 - 1);
+  
+  // Green bar
+  const gGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  gGrad.addColorStop(0, '#000000');
+  gGrad.addColorStop(1, '#00ff00');
+  ctx.fillStyle = gGrad;
+  ctx.fillRect(10, barY + barHeight / 3, canvas.width - 20, barHeight / 3 - 1);
+  
+  // Blue bar
+  const bGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  bGrad.addColorStop(0, '#000000');
+  bGrad.addColorStop(1, '#0000ff');
+  ctx.fillStyle = bGrad;
+  ctx.fillRect(10, barY + 2 * barHeight / 3, canvas.width - 20, barHeight / 3 - 1);
+  
+  // Current value markers
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(10 + (r / 255) * (canvas.width - 20), barY, 2, barHeight / 3);
+  ctx.fillRect(10 + (g / 255) * (canvas.width - 20), barY + barHeight / 3, 2, barHeight / 3);
+  ctx.fillRect(10 + (b / 255) * (canvas.width - 20), barY + 2 * barHeight / 3, 2, barHeight / 3);
+}
+
+// === SECTION 3: MEMORY VISUALIZATION ===
+let memoryData = [];
+const MEM_SIZE = 12;
+let selectedPixel = { x: 0, y: 0 };
+
+function initMemoryCanvas() {
+  memoryData = [];
+  for (let y = 0; y < MEM_SIZE; y++) {
+    memoryData[y] = [];
+    for (let x = 0; x < MEM_SIZE; x++) {
+      memoryData[y][x] = {
+        r: Math.floor(Math.random() * 256),
+        g: Math.floor(Math.random() * 256),
+        b: Math.floor(Math.random() * 256)
+      };
+    }
+  }
+  drawMemoryCanvas();
+}
+
+function drawMemoryCanvas() {
+  const canvas = document.getElementById('canvas-memory');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = canvas.width / MEM_SIZE;
+  
+  ctx.fillStyle = '#080c10';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  for (let y = 0; y < MEM_SIZE; y++) {
+    for (let x = 0; x < MEM_SIZE; x++) {
+      const pixel = memoryData[y][x];
+      const r = clamp(pixel.r, 0, 255);
+      const g = clamp(pixel.g, 0, 255);
+      const b = clamp(pixel.b, 0, 255);
+      
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      ctx.fillRect(x * pixelSize + 2, y * pixelSize + 2, pixelSize - 4, pixelSize - 4);
+      
+      // Border
+      const isSelected = x === selectedPixel.x && y === selectedPixel.y;
+      ctx.strokeStyle = isSelected ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 255, 200, 0.2)';
+      ctx.lineWidth = isSelected ? 2 : 1;
+      ctx.strokeRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+      
+      // Show RGB value on hover
+      if (isSelected) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(x * pixelSize + 2, y * pixelSize + pixelSize - 14, pixelSize - 4, 12);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '8px JetBrains Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${r},${g},${b}`, x * pixelSize + pixelSize / 2, y * pixelSize + pixelSize - 4);
+      }
+    }
+  }
+  
+  // Update info panel
+  const sp = memoryData[selectedPixel.y][selectedPixel.x];
+  document.getElementById('mem-pixel').textContent = `(${selectedPixel.x}, ${selectedPixel.y})`;
+  document.getElementById('mem-rgb').textContent = `(${sp.r}, ${sp.g}, ${sp.b})`;
+  document.getElementById('mem-addr').textContent = '0x' + ((selectedPixel.y * MEM_SIZE + selectedPixel.x) * 3).toString(16).toUpperCase().padStart(4, '0');
+}
+
+function randomizeMemory() {
+  for (let y = 0; y < MEM_SIZE; y++) {
+    for (let x = 0; x < MEM_SIZE; x++) {
+      memoryData[y][x] = {
+        r: Math.floor(Math.random() * 256),
+        g: Math.floor(Math.random() * 256),
+        b: Math.floor(Math.random() * 256)
+      };
+    }
+  }
+  drawMemoryCanvas();
+}
+
+function clearMemory() {
+  for (let y = 0; y < MEM_SIZE; y++) {
+    for (let x = 0; x < MEM_SIZE; x++) {
+      memoryData[y][x] = { r: 0, g: 0, b: 0 };
+    }
+  }
+  drawMemoryCanvas();
+}
+
+function initMemoryInteraction() {
+  const canvas = document.getElementById('canvas-memory');
+  if (!canvas) return;
+  
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const pixelSize = canvas.width / MEM_SIZE;
+    const x = Math.floor((e.clientX - rect.left) / pixelSize);
+    const y = Math.floor((e.clientY - rect.top) / pixelSize);
+    
+    if (x >= 0 && x < MEM_SIZE && y >= 0 && y < MEM_SIZE) {
+      selectedPixel = { x, y };
+      drawMemoryCanvas();
+    }
+  });
+}
+
+// === SECTION 4: IMAGE FORMATION ===
+let formationData = [];
+let formationScanLine = 0;
+let currentPattern = 1;
+const FORM_SIZE = 20;
+
+const patterns = {
+  1: function(x, y) {
+    // Checkerboard
+    return (x + y) % 2 === 0 ? 
+      { r: 0, g: 180 + Math.sin(x * 0.5) * 50, b: 150 } : 
+      { r: 40, g: 80, b: 120 };
+  },
+  2: function(x, y) {
+    // Gradient circle
+    const cx = FORM_SIZE / 2, cy = FORM_SIZE / 2;
+    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+    const maxDist = Math.sqrt(2) * FORM_SIZE / 2;
+    const t = dist / maxDist;
+    return {
+      r: Math.round(255 * (1 - t)),
+      g: Math.round(100 + 155 * Math.sin(t * Math.PI)),
+      b: Math.round(200 * t)
+    };
+  },
+  3: function(x, y) {
+    // Stripes
+    const stripe = Math.floor(y / 3) % 3;
+    if (stripe === 0) return { r: 255, g: 100, b: 100 };
+    if (stripe === 1) return { r: 100, g: 255, b: 100 };
+    return { r: 100, g: 100, b: 255 };
+  }
+};
+
+function initFormationCanvas() {
+  formationData = [];
+  for (let y = 0; y < FORM_SIZE; y++) {
+    formationData[y] = [];
+    for (let x = 0; x < FORM_SIZE; x++) {
+      formationData[y][x] = { r: 0, g: 0, b: 0 };
+    }
+  }
+  formationScanLine = 0;
+  drawFormationCanvas();
+}
+
+function drawFormationCanvas() {
+  const canvas = document.getElementById('canvas-formation');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = canvas.width / FORM_SIZE;
+  
+  ctx.fillStyle = '#080c10';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw pixels up to current scan line
+  for (let y = 0; y < FORM_SIZE; y++) {
+    for (let x = 0; x < FORM_SIZE; x++) {
+      const pixel = formationData[y][x];
+      const r = clamp(pixel.r, 0, 255);
+      const g = clamp(pixel.g, 0, 255);
+      const b = clamp(pixel.b, 0, 255);
+      
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+      
+      ctx.strokeStyle = 'rgba(0, 255, 200, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+    }
+  }
+  
+  // Highlight current scan line
+  if (formationScanLine < FORM_SIZE) {
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.1)';
+    ctx.fillRect(0, formationScanLine * pixelSize, canvas.width, pixelSize);
+    
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, formationScanLine * pixelSize + pixelSize / 2);
+    ctx.lineTo(canvas.width, formationScanLine * pixelSize + pixelSize / 2);
+    ctx.stroke();
+  }
+  
+  // Update info
+  document.getElementById('scan-line').textContent = formationScanLine;
+  document.getElementById('scan-progress').textContent = Math.round((formationScanLine / FORM_SIZE) * 100) + '%';
+  document.getElementById('scan-status').textContent = formationScanLine >= FORM_SIZE ? 'Complete' : 'Rendering...';
+}
+
+function animateFormation() {
+  if (formationScanLine < FORM_SIZE) {
+    const patternFunc = patterns[currentPattern];
+    
+    for (let x = 0; x < FORM_SIZE; x++) {
+      const color = patternFunc(x, formationScanLine);
+      formationData[formationScanLine][x] = color;
+    }
+    
+    formationScanLine++;
+    drawFormationCanvas();
+  }
+  
+  setTimeout(animateFormation, 100);
+}
+
+function setPattern(num) {
+  currentPattern = num;
+  
+  // Update buttons
+  document.querySelectorAll('[onclick^="setPattern"]').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('btn-pattern' + num).classList.add('active');
+  
+  // Reset
+  initFormationCanvas();
+}
+
+// === SECTION 5: ALGORITHM DEMO ===
+let algoData = [];
+let algoIndex = 0;
+let algoLinePixels = [];
+const ALGO_SIZE = 25;
+
+function initAlgorithmCanvas() {
+  algoData = [];
+  for (let y = 0; y < ALGO_SIZE; y++) {
+    algoData[y] = [];
+    for (let x = 0; x < ALGO_SIZE; x++) {
+      algoData[y][x] = { r: 10, g: 15, b: 25, active: false };
+    }
+  }
+  
+  // Calculate line pixels using Bresenham-like approach
+  algoLinePixels = [];
+  const x1 = 2, y1 = 2, x2 = 22, y2 = 18;
+  
+  const dx = Math.abs(x2 - x1);
+  const dy = Math.abs(y2 - y1);
+  const sx = x1 < x2 ? 1 : -1;
+  const sy = y1 < y2 ? 1 : -1;
+  let err = dx - dy;
+  let x = x1, y = y1;
+  
+  while (true) {
+    algoLinePixels.push({ x, y });
+    
+    if (x === x2 && y === y2) break;
+    
+    const e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; x += sx; }
+    if (e2 < dx) { err += dx; y += sy; }
+  }
+  
+  // Also add a circle
+  const cx = 12, cy = 12, r = 8;
+  for (let angle = 0; angle < 360; angle += 15) {
+    const rad = angle * Math.PI / 180;
+    const px = Math.round(cx + r * Math.cos(rad));
+    const py = Math.round(cy + r * Math.sin(rad));
+    if (px >= 0 && px < ALGO_SIZE && py >= 0 && py < ALGO_SIZE) {
+      algoLinePixels.push({ x: px, y: py, isCircle: true });
+    }
+  }
+  
+  algoIndex = 0;
+  drawAlgorithmCanvas();
+}
+
+function drawAlgorithmCanvas() {
+  const canvas = document.getElementById('canvas-algorithm');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = canvas.width / ALGO_SIZE;
+  
+  ctx.fillStyle = '#080c10';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  let activeCount = 0;
+  
+  for (let y = 0; y < ALGO_SIZE; y++) {
+    for (let x = 0; x < ALGO_SIZE; x++) {
+      const pixel = algoData[y][x];
+      
+      const r = clamp(pixel.r, 0, 255);
+      const g = clamp(pixel.g, 0, 255);
+      const b = clamp(pixel.b, 0, 255);
+      
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+      
+      if (pixel.active) activeCount++;
+    }
+  }
+  
+  // Grid overlay
+  ctx.strokeStyle = 'rgba(0, 255, 200, 0.05)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= ALGO_SIZE; x++) {
+    ctx.beginPath();
+    ctx.moveTo(x * pixelSize, 0);
+    ctx.lineTo(x * pixelSize, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= ALGO_SIZE; y++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y * pixelSize);
+    ctx.lineTo(canvas.width, y * pixelSize);
+    ctx.stroke();
+  }
+  
+  // Update info
+  document.getElementById('algo-pixels').textContent = activeCount;
+  document.getElementById('algo-writes').textContent = activeCount + ' writes';
+}
+
+function playAlgorithmDemo() {
+  if (algoIndex < algoLinePixels.length) {
+    const p = algoLinePixels[algoIndex];
+    
+    if (p.isCircle) {
+      algoData[p.y][p.x] = { r: 255, g: 100, b: 180, active: true };
+    } else {
+      algoData[p.y][p.x] = { r: 0, g: 255, b: 200, active: true };
+    }
+    
+    algoIndex++;
+    drawAlgorithmCanvas();
+    
+    setTimeout(playAlgorithmDemo, 50);
+  }
+}
+
+function resetAlgorithmDemo() {
+  initAlgorithmCanvas();
+}
+
+// === SCROLL PROGRESS ===
+function updateProgress() {
+  const sections = ['intro', 'color', 'memory', 'formation', 'algorithms'];
+  const scrollPos = window.scrollY + window.innerHeight * 0.5;
+  
+  let currentSection = 0;
+  sections.forEach((id, index) => {
+    const el = document.getElementById(id);
+    if (el && scrollPos > el.offsetTop) {
+      currentSection = index + 1;
+    }
+  });
+  
+  const progress = Math.round((currentSection / sections.length) * 100);
+  const fillEl = document.getElementById('progress-fill');
+  const textEl = document.getElementById('progress-text');
+  if (fillEl) fillEl.style.width = progress + '%';
+  if (textEl) textEl.textContent = progress + '%';
+}
+
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('scroll', updateProgress);
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initParticles();
+});
+
+// === INITIALIZE ===
+initParticles();
+animate();
+
+document.addEventListener('DOMContentLoaded', function() {
+  initFramebuffer();
+  drawFramebufferCanvas();
+  initColorSliders();
+  initMemoryCanvas();
+  initMemoryInteraction();
+  initFormationCanvas();
+  animateFormation();
+  initAlgorithmCanvas();
+  updateProgress();
+});
+</script>
+
+</body>
+</html>

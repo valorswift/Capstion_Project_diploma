@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deadlock Avoidance Platform</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+        }
+        
+        /* Matrix Inputs */
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        .matrix-cell {
+            width: 48px;
+            height: 36px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .matrix-cell:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(30, 41, 59, 1);
+        }
+        
+        .cell-need {
+            background: rgba(30, 41, 59, 0.5);
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* Safe Sequence Animation */
+        @keyframes safe-pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .safe-seq-item {
+            animation: safe-pop 0.4s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex">
+
+    <!-- ==============================================
+         SIDEBAR
+         ============================================== -->
+    <aside class="w-64 glass-panel border-r border-slate-700 flex flex-col">
+        <div class="p-6 border-b border-slate-700">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                DeadlockOS
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Banker's Algorithm Visualizer</p>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800 text-white font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"></path></svg>
+                Control Center
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Logs
+            </a>
+        </nav>
+
+        <!-- System Status -->
+        <div class="p-4 border-t border-slate-700">
+            <div id="system-status" class="flex items-center gap-2 text-sm text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                System Idle
+            </div>
+        </div>
+    </aside>
+
+    <!-- ==============================================
+         MAIN CONTENT
+         ============================================== -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        
+        <!-- Header -->
+        <header class="h-16 glass-panel border-b border-slate-700 flex items-center justify-between px-8 z-10">
+            <div>
+                <h2 class="text-lg font-semibold text-white">Resource Allocation State</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="resetSystem()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-md text-sm font-medium transition-colors">
+                    Reset System
+                </button>
+                <button onclick="checkSafety()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-sm font-medium transition-colors shadow-lg shadow-blue-500/20">
+                    Run Safety Algorithm
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="flex-1 overflow-y-auto p-8 bg-slate-900/50">
+            
+            <!-- System Configuration -->
+            <div class="grid grid-cols-3 gap-6 mb-8">
+                <div class="glass-panel rounded-xl p-5 border-l-4 border-blue-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase">Processes</p>
+                    <div class="flex items-center justify-between mt-2">
+                        <p id="stat-processes" class="text-3xl font-bold text-white">5</p>
+                        <input type="range" min="1" max="10" value="5" id="process-count-slider" onchange="updateProcessCount(this.value)" class="w-24">
+                    </div>
+                </div>
+                <div class="glass-panel rounded-xl p-5 border-l-4 border-green-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase">Resource Types</p>
+                    <div class="flex items-center justify-between mt-2">
+                        <p id="stat-resources" class="text-3xl font-bold text-white">3</p>
+                        <input type="range" min="1" max="5" value="3" id="resource-count-slider" onchange="updateResourceCount(this.value)" class="w-24">
+                    </div>
+                </div>
+                <div class="glass-panel rounded-xl p-5 border-l-4 border-amber-500">
+                    <p class="text-xs font-medium text-slate-400 uppercase">System Status</p>
+                    <p id="safety-status" class="text-2xl font-bold text-slate-300 mt-2">Unchecked</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-8">
+                
+                <!-- LEFT COLUMN: INPUT MATRICES -->
+                <div class="space-y-6">
+                    
+                    <!-- Available Vector -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-bold uppercase text-slate-300">Available Vector (Work)</h3>
+                            <span class="text-xs px-2 py-1 bg-green-900/50 text-green-400 rounded border border-green-700">System Resources</span>
+                        </div>
+                        <div id="available-matrix" class="flex gap-2 justify-center">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Max Matrix -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">Max Demand Matrix</h3>
+                        <div class="overflow-x-auto flex justify-center">
+                            <table id="max-matrix" class="border-collapse">
+                                <!-- Generated by JS -->
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Allocation Matrix -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">Allocation Matrix</h3>
+                        <div class="overflow-x-auto flex justify-center">
+                            <table id="allocation-matrix" class="border-collapse">
+                                <!-- Generated by JS -->
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Resource Request Simulation -->
+                    <div class="glass-panel rounded-xl p-6 border border-amber-500/30 bg-amber-900/10">
+                        <h3 class="text-sm font-bold uppercase text-amber-300 mb-4">Simulate Request</h3>
+                        <div class="flex gap-4 items-end">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Process ID</label>
+                                <select id="request-pid" class="bg-slate-800 border-slate-600 rounded px-3 py-2 text-sm w-20">
+                                    <!-- Generated -->
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-xs text-slate-400 mb-1">Request Vector (comma sep)</label>
+                                <input type="text" id="request-vector" placeholder="e.g., 1,0,2" class="w-full bg-slate-800 border-slate-600 rounded px-3 py-2 text-sm">
+                            </div>
+                            <button onclick="handleRequest()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded text-sm font-medium">
+                                Request
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: RESULTS & CALCULATION -->
+                <div class="space-y-6">
+                    
+                    <!-- Need Matrix (Calculated) -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-bold uppercase text-slate-300">Need Matrix (Calculated)</h3>
+                            <span class="text-xs text-slate-500 italic">Max - Allocation</span>
+                        </div>
+                        <div class="overflow-x-auto flex justify-center">
+                            <table id="need-matrix" class="border-collapse opacity-80">
+                                <!-- Generated by JS -->
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Safe Sequence Visualization -->
+                    <div class="glass-panel rounded-xl p-6 min-h-[200px]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-bold uppercase text-slate-300">Safe Sequence</h3>
+                            <span id="safe-sequence-label" class="text-xs text-slate-500">Waiting for execution...</span>
+                        </div>
+                        <div id="safe-sequence-container" class="flex flex-wrap gap-3 items-center justify-center py-6">
+                            <p class="text-slate-500 text-sm">Run Safety Algorithm to see result</p>
+                        </div>
+                    </div>
+
+                    <!-- Execution Log -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">Execution Log</h3>
+                        <div id="execution-log" class="h-64 overflow-y-auto bg-black/30 rounded p-4 font-mono text-xs text-green-400 leading-relaxed">
+                            <div class="opacity-50">> System initialized...</div>
+                            <div class="opacity-50">> Waiting for input...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==============================================
+         JAVASCRIPT ENGINE
+         ============================================== -->
+    <script>
+        // ==========================================
+        // SYSTEM STATE
+        // ==========================================
+        let state = {
+            processes: 5,
+            resources: 3,
+            available: [], // Vector
+            max: [],       // Matrix [Process][Resource]
+            allocation: [],// Matrix [Process][Resource]
+            need: []       // Matrix [Process][Resource]
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            generateRandomState();
+        });
+
+        // ==========================================
+        // MATRIX GENERATION & UI
+        // ==========================================
+
+        function generateRandomState() {
+            const p = state.processes;
+            const r = state.resources;
+
+            // Generate Total System Resources (Random 5-10 per type)
+            const totalResources = Array.from({ length: r }, () => Math.floor(Math.random() * 6) + 5);
+
+            // Generate Available (Random subset of Total)
+            state.available = totalResources.map(t => Math.floor(Math.random() * 3));
+
+            // Generate Allocation (Random, ensuring <= Total - Available roughly)
+            state.allocation = [];
+            for (let i = 0; i < p; i++) {
+                const row = [];
+                for (let j = 0; j < r; j++) {
+                    // Random allocation, keeping some available
+                    const maxAllowed = Math.min(totalResources[j], Math.floor(Math.random() * 4) + 1);
+                    row.push(Math.floor(Math.random() * (maxAllowed + 1)));
+                }
+                state.allocation.push(row);
+            }
+
+            // Generate Max (Allocation + random Need)
+            state.max = [];
+            for (let i = 0; i < p; i++) {
+                const row = [];
+                for (let j = 0; j < r; j++) {
+                    // Max must be >= Allocation
+                    const needPart = Math.floor(Math.random() * 5);
+                    row.push(state.allocation[i][j] + needPart);
+                }
+                state.max.push(row);
+            }
+
+            renderMatrices();
+            calculateNeedMatrix();
+            updateRequestDropdown();
+            resetStatus();
+        }
+
+        function updateProcessCount(val) {
+            state.processes = parseInt(val);
+            document.getElementById('stat-processes').innerText = val;
+            generateRandomState();
+        }
+
+        function updateResourceCount(val) {
+            state.resources = parseInt(val);
+            document.getElementById('stat-resources').innerText = val;
+            generateRandomState();
+        }
+
+        function resetSystem() {
+            generateRandomState();
+            log("System reset to new random state.");
+        }
+
+        function renderMatrices() {
+            const r = state.resources;
+            const p = state.processes;
+            const labels = ['A', 'B', 'C', 'D', 'E'].slice(0, r);
+
+            // Render Available Vector
+            const availDiv = document.getElementById('available-matrix');
+            availDiv.innerHTML = '';
+            state.available.forEach((val, idx) => {
+                availDiv.innerHTML += `
+                    <div class="text-center">
+                        <div class="text-xs text-slate-400 mb-1">${labels[idx]}</div>
+                        <input type="number" value="${val}" min="0" max="20" 
+                               onchange="updateAvailable(${idx}, this.value)"
+                               class="matrix-cell rounded">
+                    </div>
+                `;
+            });
+
+            // Render Max & Allocation Tables
+            renderTable('max-matrix', state.max, labels, 'max');
+            renderTable('allocation-matrix', state.allocation, labels, 'allocation');
+        }
+
+        function renderTable(tableId, data, labels, type) {
+            const table = document.getElementById(tableId);
+            let html = `<thead><tr><th class="px-2 text-xs text-slate-500">PID</th>`;
+            labels.forEach(l => html += `<th class="px-2 text-xs text-slate-400">${l}</th>`);
+            html += `</tr></thead><tbody>`;
+
+            data.forEach((row, i) => {
+                html += `<tr><td class="text-xs text-blue-400 font-bold pr-2">P${i}</td>`;
+                row.forEach((val, j) => {
+                    html += `<td>
+                        <input type="number" value="${val}" min="0" max="20"
+                               onchange="updateMatrix('${type}', ${i}, ${j}, this.value)"
+                               class="matrix-cell rounded">
+                    </td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody>`;
+            table.innerHTML = html;
+        }
+
+        function renderNeedMatrix() {
+            const labels = ['A', 'B', 'C', 'D', 'E'].slice(0, state.resources);
+            const table = document.getElementById('need-matrix');
+            let html = `<thead><tr><th class="px-2 text-xs text-slate-500">PID</th>`;
+            labels.forEach(l => html += `<th class="px-2 text-xs text-slate-400">${l}</th>`);
+            html += `</tr></thead><tbody>`;
+
+            state.need.forEach((row, i) => {
+                html += `<tr><td class="text-xs text-blue-400 font-bold pr-2">P${i}</td>`;
+                row.forEach(val => {
+                    html += `<td>
+                        <div class="matrix-cell cell-need rounded flex items-center justify-center">${val}</div>
+                    </td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody>`;
+            table.innerHTML = html;
+        }
+
+        // ==========================================
+        // STATE UPDATE HANDLERS
+        // ==========================================
+
+        function updateAvailable(idx, val) {
+            state.available[idx] = parseInt(val);
+            calculateNeedMatrix();
+            resetStatus();
+        }
+
+        function updateMatrix(type, i, j, val) {
+            state[type][i][j] = parseInt(val);
+            calculateNeedMatrix();
+            resetStatus();
+        }
+
+        function calculateNeedMatrix() {
+            state.need = [];
+            const p = state.processes;
+            const r = state.resources;
+
+            for (let i = 0; i < p; i++) {
+                const row = [];
+                for (let j = 0; j < r; j++) {
+                    // Need[i,j] = Max[i,j] - Allocation[i,j]
+                    const need = state.max[i][j] - state.allocation[i][j];
+                    row.push(need);
+                }
+                state.need.push(row);
+            }
+            renderNeedMatrix();
+        }
+
+        function updateRequestDropdown() {
+            const select = document.getElementById('request-pid');
+            select.innerHTML = '';
+            for(let i=0; i<state.processes; i++) {
+                select.innerHTML += `<option value="${i}">P${i}</option>`;
+            }
+        }
+
+        function resetStatus() {
+            document.getElementById('safety-status').innerText = "Unchecked";
+            document.getElementById('safety-status').className = "text-2xl font-bold text-slate-300 mt-2";
+            document.getElementById('system-status').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-500"></span> Unchecked`;
+            document.getElementById('safe-sequence-container').innerHTML = `<p class="text-slate-500 text-sm">Run Safety Algorithm to see result</p>`;
+        }
+
+        // ==========================================
+        // BANKER'S ALGORITHM CORE LOGIC
+        // ==========================================
+
+        function checkSafety() {
+            log("--- Starting Safety Algorithm ---");
+            
+            const work = [...state.available]; // Copy of Available
+            const finish = Array(state.processes).fill(false);
+            const safeSequence = [];
+            
+            let changed = true;
+            while(changed) {
+                changed = false;
+                for (let i = 0; i < state.processes; i++) {
+                    if (!finish[i]) {
+                        // Check if Need[i] <= Work
+                        let canAllocate = true;
+                        for (let j = 0; j < state.resources; j++) {
+                            if (state.need[i][j] > work[j]) {
+                                canAllocate = false;
+                                break;
+                            }
+                        }
+
+                        if (canAllocate) {
+                            log(`P${i} can execute. Need <= Work.`);
+                            
+                            // Simulate execution: Work = Work + Allocation
+                            for (let j = 0; j < state.resources; j++) {
+                                work[j] += state.allocation[i][j];
+                            }
+                            
+                            finish[i] = true;
+                            safeSequence.push(i);
+                            changed = true;
+                            
+                            log(`Work updated to: [${work.join(', ')}]`);
+                        }
+                    }
+                }
+            }
+
+            // Final Check
+            const isSafe = finish.every(f => f);
+
+            if (isSafe) {
+                log(">>> SYSTEM IS IN A SAFE STATE <<<");
+                updateSafeUI(true, safeSequence);
+            } else {
+                log("!!! DEADLOCK DETECTED - UNSAFE STATE !!!");
+                updateSafeUI(false, []);
+            }
+        }
+
+        function handleRequest() {
+            const pid = parseInt(document.getElementById('request-pid').value);
+            const vectorStr = document.getElementById('request-vector').value;
+            const request = vectorStr.split(',').map(n => parseInt(n.trim()));
+
+            if (request.length !== state.resources || request.some(isNaN)) {
+                alert("Invalid input. Please enter comma-separated numbers matching resource count.");
+                return;
+            }
+
+            log(`--- Processing Request from P${pid} ---`);
+            log(`Request Vector: [${request.join(', ')}]`);
+
+            // Step 1: Request <= Need
+            let validNeed = true;
+            for(let j=0; j<state.resources; j++) {
+                if (request[j] > state.need[pid][j]) {
+                    validNeed = false;
+                    break;
+                }
+            }
+            if (!validNeed) {
+                log("Error: Process has exceeded its maximum claim.");
+                return;
+            }
+
+            // Step 2: Request <= Available
+            let validAvail = true;
+            for(let j=0; j<state.resources; j++) {
+                if (request[j] > state.available[j]) {
+                    validAvail = false;
+                    break;
+                }
+            }
+            if (!validAvail) {
+                log("Error: Resources not available. P${pid} must wait.");
+                return;
+            }
+
+            // Step 3: Pretend to Allocate
+            log("Resources available. Pretending to allocate...");
+            for(let j=0; j<state.resources; j++) {
+                state.available[j] -= request[j];
+                state.allocation[pid][j] += request[j];
+                state.need[pid][j] -= request[j];
+            }
+
+            // Rerender UI with new state
+            renderMatrices();
+            renderNeedMatrix();
+
+            // Run Safety Check
+            checkSafety();
+        }
+
+        // ==========================================
+        // UI UPDATES
+        // ==========================================
+
+        function updateSafeUI(isSafe, sequence) {
+            const statusDiv = document.getElementById('safety-status');
+            const systemDiv = document.getElementById('system-status');
+            const seqDiv = document.getElementById('safe-sequence-container');
+
+            if (isSafe) {
+                statusDiv.innerText = "SAFE";
+                statusDiv.className = "text-2xl font-bold text-green-400 mt-2";
+                systemDiv.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> System Safe`;
+                
+                // Animate Sequence
+                seqDiv.innerHTML = '';
+                sequence.forEach((pid, idx) => {
+                    setTimeout(() => {
+                        const el = document.createElement('div');
+                        el.className = "safe-seq-item bg-blue-600 text-white font-bold px-4 py-2 rounded shadow-lg";
+                        el.innerText = `P${pid}`;
+                        seqDiv.appendChild(el);
+                    }, idx * 400);
+                });
+
+            } else {
+                statusDiv.innerText = "UNSAFE";
+                statusDiv.className = "text-2xl font-bold text-red-400 mt-2";
+                systemDiv.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> Deadlock Risk`;
+                seqDiv.innerHTML = `<div class="text-red-400 font-bold">No Safe Sequence Found</div>`;
+            }
+        }
+
+        function log(msg) {
+            const logDiv = document.getElementById('execution-log');
+            const el = document.createElement('div');
+            el.innerHTML = `> ${msg}`;
+            logDiv.appendChild(el);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clustering Algorithms - ML Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #00e5ff;
+  --accent-alt: #a855f7;
+  --accent-warm: #f472b6;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #22d3ee;
+  --purple: #c084fc;
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --orange: #f97316;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.04) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.hero {
+  min-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 229, 255, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--accent); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--accent); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--cyan) 50%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 580px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Theory Card */
+.theory-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.theory-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+  opacity: 0.6;
+}
+
+.theory-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at center, rgba(168, 85, 247, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.theory-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.theory-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(244, 114, 182, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.theory-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.theory-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px;
+  align-items: start;
+}
+
+.theory-text {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.theory-text p {
+  margin: 0 0 18px 0;
+}
+
+.theory-text p:last-child {
+  margin-bottom: 0;
+}
+
+.theory-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Conceptual Diagram */
+.concept-diagram {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.diagram-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.diagram-box {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(244, 114, 182, 0.1));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 20px;
+  text-align: center;
+  min-width: 130px;
+}
+
+.diagram-box.highlight {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(244, 114, 182, 0.2));
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.diagram-box-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--purple);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diagram-box-value {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.diagram-arrow {
+  color: var(--muted);
+  font-size: 20px;
+}
+
+/* Examples Grid */
+.examples-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.example-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  transition: all 0.3s ease;
+}
+
+.example-item:hover {
+  border-color: rgba(168, 85, 247, 0.2);
+  background: rgba(168, 85, 247, 0.03);
+}
+
+.example-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.example-icon.customer { background: rgba(168, 85, 247, 0.15); }
+.example-icon.social { background: rgba(34, 211, 238, 0.15); }
+.example-icon.image { background: rgba(244, 114, 182, 0.15); }
+.example-icon.document { background: rgba(34, 197, 94, 0.15); }
+
+.example-text {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.example-label {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.key-concepts {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.key-concepts-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--purple);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-concepts-title::before {
+  content: '';
+  width: 12px;
+  height: 2px;
+  background: var(--purple);
+}
+
+.concept-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.concept-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.15);
+  font-size: 14px;
+  color: var(--text);
+  transition: all 0.3s ease;
+}
+
+.concept-list li:last-child {
+  border-bottom: none;
+}
+
+.concept-list li:hover {
+  padding-left: 8px;
+  color: var(--purple);
+}
+
+.concept-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--purple), var(--accent-warm));
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Algorithm Cards Grid - 2 columns */
+.algo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 28px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  display: block;
+  backdrop-filter: blur(8px);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), transparent, rgba(168, 85, 247, 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card:hover::after {
+  opacity: 1;
+}
+
+.card:hover {
+  transform: translateY(-10px) scale(1.01);
+  border-color: rgba(168, 85, 247, 0.25);
+  box-shadow: 
+    0 30px 80px -20px rgba(168, 85, 247, 0.12),
+    0 0 60px -20px rgba(0, 229, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.card-preview {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at center, #0c1428 0%, #060a14 100%);
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.card-preview-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--purple);
+  background: rgba(4, 6, 13, 0.85);
+  padding: 6px 12px;
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+  z-index: 1;
+  border: 1px solid rgba(168, 85, 247, 0.1);
+}
+
+.card-content {
+  padding: 28px;
+}
+
+.card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.tag-kmeans { 
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(244, 114, 182, 0.18)); 
+  color: var(--purple); 
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+.tag-hierarchical { 
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(59, 130, 246, 0.18)); 
+  color: var(--cyan); 
+  border: 1px solid rgba(34, 211, 238, 0.2);
+}
+
+.card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 24px 0;
+}
+
+.card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  background: linear-gradient(135deg, var(--purple), var(--accent-warm));
+  color: var(--bg);
+  transition: all 0.3s ease;
+}
+
+.card:hover .card-btn {
+  background: linear-gradient(135deg, var(--accent-warm), var(--purple));
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px -4px var(--purple);
+}
+
+.card-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.card:hover .card-btn svg {
+  transform: translateX(4px);
+}
+
+/* Help Button */
+.help-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 32px -8px rgba(0, 229, 255, 0.4),
+    0 0 48px -12px rgba(168, 85, 247, 0.3);
+  transition: all 0.3s ease;
+}
+
+.help-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 12px 40px -8px rgba(0, 229, 255, 0.5),
+    0 0 60px -12px rgba(168, 85, 247, 0.4);
+}
+
+.help-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  opacity: 0.3;
+  filter: blur(10px);
+  z-index: -1;
+}
+
+/* Help Modal */
+.help-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 13, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  padding: 20px;
+}
+
+.help-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.help-modal {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.98), rgba(8, 12, 22, 0.99));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.help-modal-overlay.active .help-modal {
+  transform: translateY(0) scale(1);
+}
+
+.help-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.help-modal-title svg {
+  color: var(--purple);
+}
+
+.help-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.help-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.help-modal-body {
+  padding: 28px;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--purple);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-section-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--purple);
+  border-radius: 2px;
+}
+
+.help-section-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.help-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.help-list li:last-child {
+  border-bottom: none;
+}
+
+.help-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--purple), var(--cyan));
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Scroll reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 40vh;
+  }
+  
+  .theory-card {
+    padding: 28px 24px;
+  }
+  
+  .theory-content {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  
+  .card-preview {
+    height: 160px;
+  }
+  
+  .algo-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .examples-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .diagram-flow {
+    flex-direction: column;
+  }
+  
+  .diagram-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .help-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="../unsupervisedLearning.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="ml_lab.html">Machine Learning</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="unsupervised.html">Unsupervised</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Clustering</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Unsupervised Learning Module</div>
+    <h1 class="main-title">Clustering Algorithms</h1>
+    <p class="subtitle">
+      // Part of unsupervised learning, used to group similar data points<br>
+      // together without labeled outputs. Clustering automatically discovers
+      // patterns and natural groupings within datasets.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <!-- Theory Card -->
+    <div class="theory-card reveal">
+      <div class="theory-header">
+        <div class="theory-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="10"/>
+            <circle cx="12" cy="12" r="4"/>
+            <circle cx="12" cy="5" r="2"/>
+            <circle cx="19" cy="12" r="2"/>
+            <circle cx="12" cy="19" r="2"/>
+            <circle cx="5" cy="12" r="2"/>
+          </svg>
+        </div>
+        <h2 class="theory-title">Understanding Clustering in Machine Learning</h2>
+      </div>
+      
+      <div class="theory-content">
+        <div class="theory-text">
+          <p>
+            <strong>Clustering is a type of unsupervised learning</strong> that works with unlabeled datasets. Unlike supervised learning, there are no predefined categories or target variables—instead, the algorithm discovers natural groupings in the data.
+          </p>
+          <p>
+            The goal is to group similar data points together based on <strong>feature similarity and distance measurement</strong>. Points within the same cluster share similar characteristics, while points in different clusters are dissimilar. Distance metrics like Euclidean distance quantify how similar or different data points are.
+          </p>
+          
+          <!-- Conceptual Diagram -->
+          <div class="concept-diagram">
+            <div class="diagram-flow">
+              <div class="diagram-box">
+                <div class="diagram-box-title">Input</div>
+                <div class="diagram-box-value">Dataset</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Process</div>
+                <div class="diagram-box-value">Similarity</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Output</div>
+                <div class="diagram-box-value">Clusters</div>
+              </div>
+            </div>
+          </div>
+          
+          <p><strong>Real-World Applications:</strong></p>
+          <div class="examples-grid">
+            <div class="example-item">
+              <div class="example-icon customer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+              <div>
+                <div class="example-text">Customer Segmentation</div>
+                <div class="example-label">Marketing Analytics</div>
+              </div>
+            </div>
+            <div class="example-item">
+              <div class="example-icon social">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2">
+                  <circle cx="18" cy="5" r="3"/>
+                  <circle cx="6" cy="12" r="3"/>
+                  <circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+              </div>
+              <div>
+                <div class="example-text">Social Network Analysis</div>
+                <div class="example-label">Community Detection</div>
+              </div>
+            </div>
+            <div class="example-item">
+              <div class="example-icon image">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+              <div>
+                <div class="example-text">Image Segmentation</div>
+                <div class="example-label">Computer Vision</div>
+              </div>
+            </div>
+            <div class="example-item">
+              <div class="example-icon document">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <div class="example-text">Document Grouping</div>
+                <div class="example-label">Text Mining</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="key-concepts">
+          <div class="key-concepts-title">Key Concepts</div>
+          <ul class="concept-list">
+            <li>Unlabeled Data</li>
+            <li>Feature Similarity</li>
+            <li>Distance Metrics</li>
+            <li>Cluster Groups</li>
+            <li>Pattern Discovery</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Algorithm Cards - 2 columns -->
+    <div class="algo-grid">
+      
+      <!-- K-Means Clustering -->
+      <a href="k_means_cluster.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-kmeans"></canvas>
+          <div class="card-preview-overlay">K-MEANS</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-kmeans">Centroid-Based</span>
+          <h3>K-Means Clustering</h3>
+          <p>
+            A popular algorithm that divides data into K groups by iteratively 
+            assigning points to the nearest cluster center and updating centroids.
+          </p>
+          <span class="card-btn">
+            Open Algorithm
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <!-- Hierarchical Clustering -->
+      <a href="heir_cluster.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-hierarchical"></canvas>
+          <div class="card-preview-overlay">TREE</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-hierarchical">Agglomerative</span>
+          <h3>Hierarchical Clustering</h3>
+          <p>
+            A method that builds a tree-like hierarchy of clusters by 
+            progressively merging smaller clusters or splitting larger ones.
+          </p>
+          <span class="card-btn">
+            Open Algorithm
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+      
+    </div>
+    
+  </section>
+
+  <footer>
+    <p>// Clustering algorithms for pattern discovery in unlabeled data</p>
+  </footer>
+  
+</div>
+
+<!-- Help Button -->
+<button class="help-btn" id="helpBtn" aria-label="Help">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+</button>
+
+<!-- Help Modal -->
+<div class="help-modal-overlay" id="helpModal">
+  <div class="help-modal">
+    <div class="help-modal-header">
+      <h3 class="help-modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Clustering Lab Guide
+      </h3>
+      <button class="help-modal-close" id="closeModal" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="help-modal-body">
+      <div class="help-section">
+        <h4 class="help-section-title">What are Clustering Algorithms?</h4>
+        <p class="help-section-text">
+          Clustering algorithms are unsupervised learning methods that group similar data points together without using labeled outputs. They discover natural patterns and structures in data based on similarity measures.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Clustering vs Classification</h4>
+        <ul class="help-list">
+          <li><strong>Clustering</strong> works with unlabeled data and discovers natural groupings</li>
+          <li><strong>Classification</strong> requires labeled data and predicts predefined categories</li>
+          <li>Clustering is exploratory; classification is predictive</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How to Explore This Page</h4>
+        <ul class="help-list">
+          <li>Read the theory section to understand clustering fundamentals</li>
+          <li>Review the conceptual diagram showing the clustering process</li>
+          <li>Explore real-world application examples</li>
+          <li>Click on algorithm cards to open interactive visualizations</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Algorithm Cards</h4>
+        <ul class="help-list">
+          <li><strong>K-Means</strong> - Visualizes iterative centroid-based clustering</li>
+          <li><strong>Hierarchical</strong> - Shows dendrogram tree structure formation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+bgCanvas.width = width;
+bgCanvas.height = height;
+
+let mouseX = width / 2;
+let mouseY = height / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const nodes = [];
+const nodeCount = 50;
+
+function initNodes() {
+  nodes.length = 0;
+  
+  for (let i = 0; i < nodeCount; i++) {
+    nodes.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'cyan' : 'purple'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, width, height);
+  
+  const time = Date.now() * 0.001;
+  
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 120) {
+        const alpha = (1 - dist / 120) * 0.15;
+        const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+        
+        if (nodes[i].type === 'cyan') {
+          bgCtx.strokeStyle = 'rgba(34, 211, 238, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(168, 85, 247, ' + pulseAlpha + ')';
+        }
+        
+        bgCtx.beginPath();
+        bgCtx.moveTo(nodes[i].x, nodes[i].y);
+        bgCtx.lineTo(nodes[j].x, nodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  
+  nodes.forEach(node => {
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.03;
+    
+    if (node.x < 0 || node.x > width) node.vx *= -1;
+    if (node.y < 0 || node.y > height) node.vy *= -1;
+    
+    const dx = mouseX - node.x;
+    const dy = mouseY - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 150) {
+      node.x -= dx * 0.01;
+      node.y -= dy * 0.01;
+    }
+    
+    const pulseRadius = node.radius + Math.sin(node.pulse) * 0.5;
+    const glowRadius = pulseRadius + 4;
+    
+    const glow = bgCtx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, glowRadius
+    );
+    
+    if (node.type === 'cyan') {
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.4)');
+      glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+      glow.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    }
+    
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+    bgCtx.fill();
+    
+    bgCtx.fillStyle = node.type === 'cyan' ? '#22d3ee' : '#a855f7';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pulseRadius), 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  gradient.addColorStop(0, 'rgba(168, 85, 247, 0.04)');
+  gradient.addColorStop(0.5, 'rgba(0, 229, 255, 0.02)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, width, height);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === K-MEANS PREVIEW ===
+function initPreviewKMeans() {
+  const canvas = document.getElementById('preview-kmeans');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const points = [];
+  const centroids = [];
+  const k = 4;
+  const numPoints = 50;
+  let time = 0;
+  let iteration = 0;
+  
+  // Cluster centers
+  const clusterCenters = [
+    { x: canvas.width * 0.25, y: canvas.height * 0.3 },
+    { x: canvas.width * 0.75, y: canvas.height * 0.25 },
+    { x: canvas.width * 0.2, y: canvas.height * 0.75 },
+    { x: canvas.width * 0.8, y: canvas.height * 0.7 }
+  ];
+  
+  const colors = ['#a855f7', '#f472b6', '#22d3ee', '#3b82f6'];
+  
+  // Generate clustered points
+  for (let i = 0; i < numPoints; i++) {
+    const clusterIdx = Math.floor(i / (numPoints / 4));
+    const center = clusterCenters[Math.min(clusterIdx, 3)];
+    
+    points.push({
+      x: center.x + (Math.random() - 0.5) * 60,
+      y: center.y + (Math.random() - 0.5) * 50,
+      cluster: -1,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+  
+  // Initialize centroids randomly
+  for (let i = 0; i < k; i++) {
+    centroids.push({
+      x: 30 + Math.random() * (canvas.width - 60),
+      y: 30 + Math.random() * (canvas.height - 60),
+      color: colors[i],
+      targetX: clusterCenters[i].x,
+      targetY: clusterCenters[i].y
+    });
+  }
+  
+  function draw() {
+    time += 0.018;
+    
+    // Reassign clusters periodically
+    if (Math.floor(time * 8) % 15 === 0) {
+      iteration++;
+      
+      // Assign points to nearest centroid
+      points.forEach(p => {
+        let minDist = Infinity;
+        centroids.forEach((c, ci) => {
+          const dist = Math.sqrt((p.x - c.x) ** 2 + (p.y - c.y) ** 2);
+          if (dist < minDist) {
+            minDist = dist;
+            p.cluster = ci;
+          }
+        });
+      });
+      
+      // Update centroid targets
+      centroids.forEach((c, ci) => {
+        const clusterPoints = points.filter(p => p.cluster === ci);
+        if (clusterPoints.length > 0) {
+          c.targetX = clusterPoints.reduce((s, p) => s + p.x, 0) / clusterPoints.length;
+          c.targetY = clusterPoints.reduce((s, p) => s + p.y, 0) / clusterPoints.length;
+        }
+      });
+    }
+    
+    // Smooth centroid movement
+    centroids.forEach(c => {
+      c.x += (c.targetX - c.x) * 0.03;
+      c.y += (c.targetY - c.y) * 0.03;
+    });
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw cluster regions
+    centroids.forEach((c, ci) => {
+      ctx.fillStyle = c.color + '10';
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 55, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    // Draw connection lines
+    points.forEach(p => {
+      if (p.cluster >= 0) {
+        ctx.strokeStyle = centroids[p.cluster].color + '25';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(centroids[p.cluster].x, centroids[p.cluster].y);
+        ctx.stroke();
+      }
+    });
+    
+    // Draw points
+    points.forEach(p => {
+      const jitterX = Math.sin(time * 2 + p.phase) * 0.5;
+      const jitterY = Math.cos(time * 1.5 + p.phase) * 0.5;
+      
+      if (p.cluster >= 0) {
+        ctx.fillStyle = centroids[p.cluster].color;
+      } else {
+        ctx.fillStyle = '#5c7090';
+      }
+      
+      ctx.beginPath();
+      ctx.arc(p.x + jitterX, p.y + jitterY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    // Draw centroids
+    centroids.forEach((c, ci) => {
+      const pulse = Math.sin(time * 3 + ci) * 3;
+      
+      // Outer ring
+      ctx.strokeStyle = c.color + '50';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 12 + pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Inner core
+      ctx.fillStyle = c.color;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Cross
+      ctx.strokeStyle = '#060a14';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(c.x - 3, c.y);
+      ctx.lineTo(c.x + 3, c.y);
+      ctx.moveTo(c.x, c.y - 3);
+      ctx.lineTo(c.x, c.y + 3);
+      ctx.stroke();
+    });
+    
+    // Info labels
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.7)';
+    ctx.textAlign = 'left';
+    ctx.fillText('K = ' + k, 14, 20);
+    
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.fillText('ITER ' + iteration, canvas.width - 14, 20);
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.textAlign = 'center';
+    ctx.fillText('K-MEANS CLUSTERING', canvas.width / 2, canvas.height - 14);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === HIERARCHICAL PREVIEW ===
+function initPreviewHierarchical() {
+  const canvas = document.getElementById('preview-hierarchical');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  let time = 0;
+  
+  // Dendrogram structure
+  const leaves = [
+    { x: 35, label: 'A' },
+    { x: 70, label: 'B' },
+    { x: 105, label: 'C' },
+    { x: 155, label: 'D' },
+    { x: 190, label: 'E' },
+    { x: 225, label: 'F' },
+    { x: canvas.width - 60, label: 'G' },
+    { x: canvas.width - 25, label: 'H' }
+  ];
+  
+  const merges = [
+    { i: 0, j: 1, level: 1, color: '#a855f7' },
+    { i: 1, j: 2, level: 2, color: '#a855f7' },
+    { i: 3, j: 4, level: 1, color: '#22d3ee' },
+    { i: 4, j: 5, level: 2, color: '#22d3ee' },
+    { i: 6, j: 7, level: 1, color: '#f472b6' },
+    { i: 2, j: 5, level: 3, color: '#22d3ee' },
+    { i: 5, j: 7, level: 4, color: '#22c55e' }
+  ];
+  
+  function draw() {
+    time += 0.015;
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const leafY = canvas.height - 40;
+    const levelHeight = 25;
+    
+    // Calculate dynamic positions
+    const positions = {};
+    leaves.forEach((leaf, idx) => {
+      positions[idx] = { x: leaf.x, y: leafY };
+    });
+    
+    // Draw leaf nodes
+    leaves.forEach((leaf, idx) => {
+      const pulse = Math.sin(time * 3 + idx) * 1;
+      
+      // Vertical line from leaf
+      ctx.strokeStyle = 'rgba(92, 112, 144, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(leaf.x, leafY + 10);
+      ctx.lineTo(leaf.x, leafY - 5);
+      ctx.stroke();
+      
+      // Leaf node
+      ctx.fillStyle = '#1e3a5f';
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(leaf.x, leafY + 10 + pulse, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Label
+      ctx.font = 'bold 9px JetBrains Mono';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(leaf.label, leaf.x, leafY + 10 + pulse);
+    });
+    
+    // Draw merge levels with animation
+    const visibleLevel = Math.floor(time * 1.5) % 5;
+    
+    merges.forEach((merge, idx) => {
+      const levelVisible = merge.level <= visibleLevel + 1;
+      if (!levelVisible) return;
+      
+      const alpha = Math.min(1, (time * 1.5 - merge.level + 1) * 0.5);
+      const y1 = leafY - merge.level * levelHeight;
+      const y2 = leafY - (merge.level - 1) * levelHeight;
+      
+      // Find x positions for this merge
+      let x1, x2;
+      if (merge.level === 1) {
+        x1 = leaves[merge.i].x;
+        x2 = leaves[merge.j].x;
+      } else {
+        // Use center of previous merges
+        x1 = (leaves[0].x + leaves[1].x + leaves[2].x) / 3;
+        x2 = canvas.width - 60;
+        if (merge.level >= 3) {
+          x1 = canvas.width / 2 - 40;
+          x2 = canvas.width / 2 + 40;
+        }
+      }
+      
+      ctx.strokeStyle = merge.color + Math.floor(alpha * 80).toString(16).padStart(2, '0');
+      ctx.lineWidth = 1.5;
+      
+      // Horizontal line
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y1);
+      ctx.stroke();
+      
+      // Vertical connectors
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x1, y2);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(x2, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      
+      // Merge node
+      const midX = (x1 + x2) / 2;
+      const nodePulse = Math.sin(time * 4 + idx) * 2;
+      
+      ctx.fillStyle = merge.color + Math.floor(alpha * 40).toString(16).padStart(2, '0');
+      ctx.beginPath();
+      ctx.arc(midX, y1 + nodePulse, 12, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.strokeStyle = merge.color;
+      ctx.beginPath();
+      ctx.arc(midX, y1 + nodePulse, 5, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    
+    // Title
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.textAlign = 'center';
+    ctx.fillText('HIERARCHICAL CLUSTERING', canvas.width / 2, 20);
+    
+    // Level indicator
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(34, 211, 238, 0.7)';
+    ctx.fillText('LEVEL: ' + (visibleLevel + 1), 14, 20);
+    
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.7)';
+    ctx.fillText('N = ' + leaves.length, canvas.width - 14, 20);
+    
+    // Dendrogram label
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.textAlign = 'center';
+    ctx.fillText('DENDROGRAM', canvas.width / 2, canvas.height - 10);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === HELP MODAL ===
+function initHelpModal() {
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const closeModal = document.getElementById('closeModal');
+  
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('active');
+  });
+  
+  closeModal.addEventListener('click', () => {
+    helpModal.classList.remove('active');
+  });
+  
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.classList.remove('active');
+    }
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && helpModal.classList.contains('active')) {
+      helpModal.classList.remove('active');
+    }
+  });
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  bgCanvas.width = width;
+  bgCanvas.height = height;
+  initNodes();
+  
+  initPreviewKMeans();
+  initPreviewHierarchical();
+});
+
+// === INITIALIZE ===
+initNodes();
+animate();
+initScrollReveal();
+initHelpModal();
+
+requestAnimationFrame(function() {
+  initPreviewKMeans();
+  initPreviewHierarchical();
+});
+</script>
+
+</body>
+</html> 

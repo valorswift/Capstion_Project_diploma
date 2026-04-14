@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Maze DFS Visualization</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --glass-bg: rgba(20, 20, 20, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --accent-primary: #6c5ce7;
+            --accent-secondary: #00cec9;
+            --accent-success: #00b894;
+            --accent-danger: #d63031;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* Toggle Button */
+        #toggle-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 44px;
+            height: 44px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        #toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
+        }
+
+        #toggle-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        /* Professional UI Panel */
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 80px; /* Positioned to the right of the toggle button initially */
+            width: 320px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 50;
+            
+            /* Animation State: Visible */
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+            
+            /* Smooth Transition properties */
+            transition: opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                        transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* Hidden State */
+        #ui-panel.hidden {
+            opacity: 0;
+            transform: translateX(-40px) scale(0.95);
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 1.1rem;
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 12px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .value-display {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-secondary);
+            font-feature-settings: "tnum";
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            margin-top: -6px;
+            -webkit-appearance: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            background: var(--accent-secondary);
+        }
+
+        input[type="range"]:focus {
+            outline: none;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 4px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0));
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        button:hover::after {
+            opacity: 1;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #btn-gen { background: var(--accent-primary); box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3); }
+        #btn-run { background: var(--accent-success); box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3); }
+        #btn-reset { 
+            background: rgba(255,255,255,0.05); 
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+        }
+        #btn-reset:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 8px;
+            padding-top: 16px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        #status-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(8px);
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-main);
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #status-bar.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #loader {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent-secondary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+    <!-- Import Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Toggle Button -->
+    <div id="toggle-btn" title="Toggle Settings">
+        <!-- Gear Icon -->
+        <svg viewBox="0 0 24 24">
+            <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+        </svg>
+    </div>
+
+    <div id="ui-panel">
+        <h1>Depth First Search</h1>
+        
+        <div class="control-group">
+            <div class="label-row">
+                <label>Maze Size</label>
+                <span id="sizeVal" class="value-display">15</span>
+            </div>
+            <input type="range" id="sizeInput" min="5" max="40" value="15">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <label>Animation Speed</label>
+                <span id="speedVal" class="value-display">50%</span>
+            </div>
+            <input type="range" id="speedInput" min="1" max="100" value="50">
+        </div>
+
+        <div class="button-row">
+            <button id="btn-gen">Generate Maze</button>
+            <button id="btn-run" disabled>Start Search</button>
+        </div>
+        <button id="btn-reset">Reset Camera</button>
+
+        <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:var(--accent-success); color:var(--accent-success)"></div>Start</div>
+            <div class="legend-item"><div class="dot" style="background:var(--accent-danger); color:var(--accent-danger)"></div>End</div>
+            <div class="legend-item"><div class="dot" style="background:var(--accent-secondary); color:var(--accent-secondary)"></div>Agent</div>
+            <div class="legend-item"><div class="dot" style="background:#f1c40f; color:#f1c40f"></div>Path</div>
+            <div class="legend-item"><div class="dot" style="background:#485460; color:#485460"></div>Visited</div>
+            <div class="legend-item"><div class="dot" style="background:var(--accent-primary); color:var(--accent-primary)"></div>Backtrack</div>
+        </div>
+    </div>
+
+    <div id="status-bar">Ready</div>
+    <div id="loader">
+        <div class="spinner"></div>
+        <div style="font-size: 0.9rem; color: #ccc;">Generating Maze Structure...</div>
+    </div>
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Configuration ---
+        const CELL_SIZE = 2; 
+        const WALL_HEIGHT = 1.2;
+        const WALL_THICKNESS = 0.15;
+        
+        const COLOR_WALL = 0x303030;
+        const COLOR_FLOOR = 0x1e1e1e;
+        const COLOR_START = 0x00b894;
+        const COLOR_END = 0xd63031;
+        const COLOR_VISITED = 0x2d3436;
+        const COLOR_PATH = 0xf1c40f;
+        const COLOR_AGENT = 0x00cec9;
+        const COLOR_BACKTRACK = 0x6c5ce7;
+
+        // --- State ---
+        let cols, rows;
+        let grid = []; 
+        let stack = []; 
+        let isSearching = false;
+        let animationId;
+        
+        let scene, camera, renderer, controls;
+        let mazeGroup = new THREE.Group();
+        let agentMesh;
+        let floorTiles = []; 
+        let gridHelper;
+
+        // UI Elements
+        const sizeInput = document.getElementById('sizeInput');
+        const sizeVal = document.getElementById('sizeVal');
+        const speedInput = document.getElementById('speedInput');
+        const speedVal = document.getElementById('speedVal');
+        const btnGen = document.getElementById('btn-gen');
+        const btnRun = document.getElementById('btn-run');
+        const btnReset = document.getElementById('btn-reset');
+        const statusBar = document.getElementById('status-bar');
+        const loader = document.getElementById('loader');
+        const toggleBtn = document.getElementById('toggle-btn');
+        const uiPanel = document.getElementById('ui-panel');
+
+        // --- Initialization ---
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x121212);
+            scene.fog = new THREE.Fog(0x121212, 40, 180);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
+            camera.position.set(0, 40, 30);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(20, 60, 20);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            const d = 50;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            scene.add(dirLight);
+
+            gridHelper = new THREE.GridHelper(200, 100, 0x333333, 0x222222);
+            gridHelper.position.y = -0.05;
+            scene.add(gridHelper);
+
+            scene.add(mazeGroup);
+
+            window.addEventListener('resize', onWindowResize);
+            
+            // Toggle Logic
+            toggleBtn.addEventListener('click', () => {
+                uiPanel.classList.toggle('hidden');
+            });
+
+            sizeInput.addEventListener('input', (e) => sizeVal.innerText = e.target.value);
+            speedInput.addEventListener('input', (e) => speedVal.innerText = e.target.value + '%');
+            btnGen.addEventListener('click', generateNewMaze);
+            btnRun.addEventListener('click', startDFS);
+            btnReset.addEventListener('click', resetCamera);
+
+            generateNewMaze();
+            animate();
+        }
+
+        // --- Maze Logic ---
+        class Cell {
+            constructor(c, r) {
+                this.c = c;
+                this.r = r;
+                this.walls = [true, true, true, true]; 
+                this.visited = false; 
+            }
+            checkNeighbors() {
+                let neighbors = [];
+                let top    = grid[index(this.c, this.r - 1)];
+                let right  = grid[index(this.c + 1, this.r)];
+                let bottom = grid[index(this.c, this.r + 1)];
+                let left   = grid[index(this.c - 1, this.r)];
+                if (top && !top.visited) neighbors.push(top);
+                if (right && !right.visited) neighbors.push(right);
+                if (bottom && !bottom.visited) neighbors.push(bottom);
+                if (left && !left.visited) neighbors.push(left);
+                if (neighbors.length > 0) {
+                    let r = Math.floor(Math.random() * neighbors.length);
+                    return neighbors[r];
+                }
+                return undefined;
+            }
+        }
+
+        function index(c, r) {
+            if (c < 0 || r < 0 || c >= cols || r >= rows) return -1;
+            return c + r * cols;
+        }
+
+        function removeWalls(a, b) {
+            let x = a.c - b.c;
+            if (x === 1) { a.walls[3] = false; b.walls[1] = false; }
+            if (x === -1) { a.walls[1] = false; b.walls[3] = false; }
+            let y = a.r - b.r;
+            if (y === 1) { a.walls[0] = false; b.walls[2] = false; }
+            if (y === -1) { a.walls[2] = false; b.walls[0] = false; }
+        }
+
+        async function generateNewMaze() {
+            if(isSearching) return; 
+            loader.style.display = 'flex';
+            await new Promise(r => setTimeout(r, 10)); 
+
+            cols = parseInt(sizeInput.value);
+            rows = cols; 
+            grid = []; stack = []; floorTiles = [];
+            
+            while(mazeGroup.children.length > 0){ 
+                const obj = mazeGroup.children[0];
+                if(obj.geometry) obj.geometry.dispose();
+                if(obj.material) obj.material.dispose();
+                mazeGroup.remove(obj); 
+            }
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    grid.push(new Cell(c, r));
+                }
+            }
+
+            let current = grid[0];
+            current.visited = true;
+            stack.push(current);
+            while(stack.length > 0) {
+                let next = current.checkNeighbors();
+                if(next) {
+                    next.visited = true;
+                    stack.push(current);
+                    removeWalls(current, next);
+                    current = next;
+                } else {
+                    current = stack.pop();
+                }
+            }
+
+            buildMaze3D();
+            createAgent();
+
+            const dist = Math.max(rows, cols) * CELL_SIZE * 1.5;
+            camera.position.set(0, dist * 0.8, dist * 0.5);
+            controls.target.set(0,0,0);
+            controls.update();
+
+            btnRun.disabled = false;
+            btnGen.disabled = false;
+            isSearching = false;
+            showStatus("Maze Generated.");
+            loader.style.display = 'none';
+        }
+
+        function buildMaze3D() {
+            const wallGeo = new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS);
+            const wallMat = new THREE.MeshStandardMaterial({ color: COLOR_WALL, roughness: 0.2, metalness: 0.1 });
+            const floorGeo = new THREE.PlaneGeometry(CELL_SIZE - 0.1, CELL_SIZE - 0.1);
+            const floorMat = new THREE.MeshStandardMaterial({ color: COLOR_FLOOR, roughness: 0.8 });
+
+            const offsetX = (cols * CELL_SIZE) / 2;
+            const offsetZ = (rows * CELL_SIZE) / 2;
+
+            for (let i = 0; i < grid.length; i++) {
+                let cell = grid[i];
+                let x = cell.c * CELL_SIZE - offsetX + CELL_SIZE/2;
+                let z = cell.r * CELL_SIZE - offsetZ + CELL_SIZE/2;
+
+                let floor = new THREE.Mesh(floorGeo, floorMat.clone());
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.set(x, 0, z);
+                floor.receiveShadow = true;
+                floor.userData = { gridIndex: i, originalColor: COLOR_FLOOR }; 
+                mazeGroup.add(floor);
+                floorTiles[i] = floor;
+
+                if (cell.walls[0]) createWall(x, z - CELL_SIZE/2, wallGeo, wallMat);
+                if (cell.walls[1]) createWall(x + CELL_SIZE/2, z, wallGeo, wallMat, true);
+                if (cell.walls[2]) createWall(x, z + CELL_SIZE/2, wallGeo, wallMat);
+                if (cell.walls[3]) createWall(x - CELL_SIZE/2, z, wallGeo, wallMat, true);
+            }
+
+            floorTiles[0].material.color.setHex(COLOR_START);
+            floorTiles[grid.length - 1].material.color.setHex(COLOR_END);
+        }
+
+        function createWall(x, z, geo, mat, rotate = false) {
+            let w = new THREE.Mesh(geo, mat);
+            w.position.set(x, WALL_HEIGHT/2, z);
+            if(rotate) w.rotation.y = Math.PI / 2;
+            w.castShadow = true; w.receiveShadow = true;
+            mazeGroup.add(w);
+        }
+
+        function createAgent() {
+            if(agentMesh) mazeGroup.remove(agentMesh);
+            const geo = new THREE.SphereGeometry(CELL_SIZE * 0.25, 16, 16);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: COLOR_AGENT, 
+                emissive: COLOR_AGENT, 
+                emissiveIntensity: 0.5,
+                roughness: 0.1,
+                metalness: 0.5
+            });
+            agentMesh = new THREE.Mesh(geo, mat);
+            agentMesh.castShadow = true;
+            const light = new THREE.PointLight(COLOR_AGENT, 1, 10);
+            agentMesh.add(light);
+            const startPos = getCellPosition(0);
+            agentMesh.position.set(startPos.x, 0.5, startPos.z);
+            mazeGroup.add(agentMesh);
+        }
+
+        // --- DFS Search Logic ---
+
+        async function startDFS() {
+            if(isSearching) return;
+            isSearching = true;
+            btnRun.disabled = true;
+            btnGen.disabled = true;
+
+            for(let i=1; i<floorTiles.length-1; i++){
+                floorTiles[i].material.color.setHex(COLOR_FLOOR);
+                floorTiles[i].material.emissive.setHex(0x000000);
+            }
+
+            let visited = new Set();
+            let parentMap = new Map(); 
+            let searchStack = [0]; 
+            let found = false;
+            let finalPath = [];
+
+            const speedInputVal = parseInt(speedInput.value);
+            // Calculate movement duration based on speed (100 = very fast, 1 = slow)
+            // Base duration 0.4s at speed 1, down to 0.02s at speed 100
+            const moveDuration = Math.max(0.02, 0.4 - (speedInputVal * 0.0038));
+
+            showStatus("Searching...");
+
+            while (searchStack.length > 0) {
+                let currentIdx = searchStack.pop();
+                let currentCell = grid[currentIdx];
+                
+                // Immediate Color Change Logic before movement starts (optional, but looks responsive)
+                // We actually change color AS we move to keep flow
+                
+                // Move Agent (Non-blocking visual start)
+                const worldPos = getCellPosition(currentIdx);
+                const movePromise = animateAgentMove(worldPos.x, worldPos.z, moveDuration);
+
+                // Process Logic while moving
+                if (currentIdx === grid.length - 1) {
+                    found = true;
+                    await movePromise; // Wait to arrive before finishing
+                    break;
+                }
+
+                if (!visited.has(currentIdx)) {
+                    visited.add(currentIdx);
+                    if(currentIdx !== 0) {
+                        floorTiles[currentIdx].material.color.setHex(COLOR_VISITED);
+                        floorTiles[currentIdx].material.emissive.setHex(0x051015);
+                        floorTiles[currentIdx].material.emissiveIntensity = 0.2;
+                    }
+
+                    let neighbors = getAccessibleNeighbors(currentCell);
+                    
+                    for (let nIdx of neighbors) {
+                        if (!visited.has(nIdx)) {
+                            parentMap.set(nIdx, currentIdx);
+                            searchStack.push(nIdx);
+                        }
+                    }
+                } else {
+                    // Backtracking
+                    if(currentIdx !== 0) {
+                        floorTiles[currentIdx].material.color.setHex(COLOR_BACKTRACK);
+                        floorTiles[currentIdx].material.emissive.setHex(0x1a1025);
+                        floorTiles[currentIdx].material.emissiveIntensity = 0.3;
+                    }
+                }
+
+                // CRITICAL FIX: We ONLY wait for the movement to finish. 
+                // We do NOT add an extra sleep(). This eliminates the "stop".
+                await movePromise;
+            }
+
+            if (found) {
+                showStatus("Goal Reached! Reconstructing Path...");
+                let curr = grid.length - 1;
+                while (curr !== 0) {
+                    finalPath.push(curr);
+                    curr = parentMap.get(curr);
+                }
+                finalPath.push(0);
+                finalPath.reverse();
+
+                for (let idx of finalPath) {
+                    floorTiles[idx].material.color.setHex(COLOR_PATH);
+                    floorTiles[idx].material.emissive.setHex(0x554400);
+                    floorTiles[idx].material.emissiveIntensity = 0.5;
+                    const tile = floorTiles[idx];
+                    tile.scale.set(1.2, 1.2, 1.2);
+                    setTimeout(() => tile.scale.set(1, 1, 1), 150);
+                    // Small delay for path drawing effect
+                    await sleep(20); 
+                }
+                
+                const endPos = getCellPosition(grid.length-1);
+                await animateAgentMove(endPos.x, endPos.z, 0.5);
+                showStatus("Search Complete.");
+            } else {
+                showStatus("No Solution.");
+            }
+
+            isSearching = false;
+            btnGen.disabled = false;
+        }
+
+        function getAccessibleNeighbors(cell) {
+            let neighbors = [];
+            if (!cell.walls[0]) neighbors.push(index(cell.c, cell.r - 1));
+            if (!cell.walls[1]) neighbors.push(index(cell.c + 1, cell.r));
+            if (!cell.walls[2]) neighbors.push(index(cell.c, cell.r + 1));
+            if (!cell.walls[3]) neighbors.push(index(cell.c - 1, cell.r));
+            return neighbors;
+        }
+
+        function getCellPosition(idx) {
+            const c = idx % cols;
+            const r = Math.floor(idx / cols);
+            const offsetX = (cols * CELL_SIZE) / 2;
+            const offsetZ = (rows * CELL_SIZE) / 2;
+            return {
+                x: c * CELL_SIZE - offsetX + CELL_SIZE/2,
+                z: r * CELL_SIZE - offsetZ + CELL_SIZE/2
+            };
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function animateAgentMove(x, z, durationSec) {
+            const startPos = agentMesh.position.clone();
+            const endPos = new THREE.Vector3(x, 0.5, z);
+            const startTime = Date.now();
+
+            return new Promise(resolve => {
+                function update() {
+                    const now = Date.now();
+                    let progress = Math.min((now - startTime) / (durationSec * 1000), 1);
+                    // Ease out cubic
+                    progress = 1 - Math.pow(1 - progress, 3);
+                    
+                    agentMesh.position.lerpVectors(startPos, endPos, progress);
+                    
+                    // Hop Animation
+                    const hopHeight = 0.5;
+                    agentMesh.position.y = 0.5 + Math.sin(progress * Math.PI) * hopHeight;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        resolve();
+                    }
+                }
+                update();
+            });
+        }
+
+        function showStatus(msg) {
+            statusBar.innerText = msg;
+            statusBar.classList.add('visible');
+            clearTimeout(window.statusTimeout);
+            window.statusTimeout = setTimeout(() => {
+                if(!isSearching) statusBar.classList.remove('visible');
+            }, 4000);
+        }
+
+        function resetCamera() {
+            const dist = Math.max(rows, cols) * CELL_SIZE * 1.5;
+            camera.position.set(0, dist * 0.8, dist * 0.5);
+            controls.target.set(0,0,0);
+            controls.update();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            if(agentMesh && !isSearching) {
+                 agentMesh.position.y = 0.5 + Math.sin(Date.now() * 0.005) * 0.1;
+            }
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>

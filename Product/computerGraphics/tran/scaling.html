@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2D Scaling | Computer Graphics</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #050a10;
+  --bg-elevated: #0a1420;
+  --card: #0e1a28;
+  --border: #1a2a40;
+  --accent: #ffc040;
+  --accent-alt: #ff5277;
+  --text: #e8f0f8;
+  --muted: #6080a0;
+  --cyan: #00d4ff;
+  --green: #00ffa3;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.04) 2px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 10, 16, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.nav-links {
+  display: flex;
+  gap: 12px;
+}
+
+.nav-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.nav-link.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.hero {
+  min-height: 65vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(255, 192, 64, 0.1);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 192, 64, 0.2);
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.main-title {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  color: var(--text);
+}
+
+.hero-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 650px;
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.hero-nav {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: #e0a030;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 192, 64, 0.25);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.section {
+  padding: 80px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: 48px;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 0 0 12px 0;
+}
+
+.section-desc {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.two-col.reverse {
+  direction: rtl;
+}
+
+.two-col.reverse > * {
+  direction: ltr;
+}
+
+.canvas-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.canvas-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.canvas-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.canvas-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.canvas-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.canvas-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.canvas-body {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+}
+
+.canvas-body canvas {
+  border-radius: 8px;
+}
+
+.info-panel {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.info-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.content-block {
+  padding: 24px;
+}
+
+.content-block h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.content-block p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 16px 0;
+}
+
+.formula-box {
+  background: rgba(255, 192, 64, 0.05);
+  border: 1px solid rgba(255, 192, 64, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.formula-small {
+  font-size: 16px;
+}
+
+.formula-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.key-points {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+
+.key-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.key-points li:last-child {
+  border-bottom: none;
+}
+
+.key-point-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.key-point-icon.gold { background: rgba(255, 192, 64, 0.15); color: var(--accent); }
+.key-point-icon.red { background: rgba(255, 82, 119, 0.15); color: var(--accent-alt); }
+.key-point-icon.blue { background: rgba(0, 212, 255, 0.15); color: var(--cyan); }
+.key-point-icon.green { background: rgba(0, 255, 163, 0.15); color: var(--green); }
+
+.key-point-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px;
+  background: var(--bg);
+  border-radius: 12px;
+  margin-top: 20px;
+  border: 1px solid var(--border);
+}
+
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slider-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 600;
+  min-width: 50px;
+  text-align: right;
+}
+
+.slider-input {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 3px solid var(--bg);
+  box-shadow: 0 2px 10px rgba(255, 192, 64, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.comparison-section {
+  margin-top: 40px;
+  padding: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.comparison-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.comparison-item {
+  text-align: center;
+}
+
+.comparison-canvas {
+  width: 100%;
+  height: 200px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.comparison-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.comparison-desc {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.applications-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.app-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.app-card:hover {
+  border-color: rgba(255, 192, 64, 0.3);
+  transform: translateY(-4px);
+}
+
+.app-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 192, 64, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: var(--accent);
+}
+
+.app-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.app-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.algo-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.algo-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.algo-card:hover {
+  border-color: rgba(255, 192, 64, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(255, 192, 64, 0.08);
+}
+
+.algo-card h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.algo-card p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.algo-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(255, 192, 64, 0.1);
+  color: var(--accent);
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  margin-top: 80px;
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
+@media (max-width: 900px) {
+  .two-col {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .two-col.reverse {
+    direction: ltr;
+  }
+  
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .applications-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .algo-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .nav-links {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 40px;
+  }
+  
+  .canvas-body {
+    min-height: 300px;
+  }
+  
+  .slider-container {
+    padding: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#050a10" stroke-width="2.5">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">CG Lab</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="transformations.html">Transformations</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Scaling</span>
+    </div>
+    <div class="nav-links">
+      <a href="translation.html" class="nav-link">Translation</a>
+      <a href="rotation.html" class="nav-link">Rotation</a>
+      <a href="scaling.html" class="nav-link active">Scaling</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-badge">Transformation Module</div>
+    <h1 class="main-title">Scaling Transformation</h1>
+    <p class="hero-subtitle">
+      // Scaling changes the size of an object by increasing or decreasing<br>
+      // its dimensions using scale factors along each coordinate axis.
+    </p>
+    <div class="hero-nav">
+      <button class="btn btn-primary" onclick="scrollToSection('concept')">
+        Start Learning
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
+      <a href="transformations.html" class="btn btn-ghost">Back to Overview</a>
+    </div>
+  </section>
+
+  <!-- Section 1: What is Scaling -->
+  <section class="section" id="concept">
+    <div class="section-header">
+      <div class="section-number">01 / Definition</div>
+      <h2 class="section-title">What is Scaling?</h2>
+      <p class="section-desc">
+        Scaling is a transformation that changes the size of an object by multiplying its coordinates with scale factors, while maintaining its shape proportions.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">SCALING_VISUALIZATION</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-concept" width="380" height="380"></canvas>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Definition</h3>
+        <p>
+          Scaling multiplies each coordinate of an object by a scale factor. 
+          This transformation can enlarge or shrink an object while preserving its basic shape.
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">P' = S × P</div>
+          <div class="formula-label">Scaling operation</div>
+        </div>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon gold">sx</div>
+            <div class="key-point-text">
+              <strong>Scale X:</strong> Horizontal scaling factor
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon gold">sy</div>
+            <div class="key-point-text">
+              <strong>Scale Y:</strong> Vertical scaling factor
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">O</div>
+            <div class="key-point-text">
+              <strong>Origin:</strong> Scaling is performed relative to the origin
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Scaling Formula -->
+  <section class="section" id="formula">
+    <div class="section-header">
+      <div class="section-number">02 / Mathematics</div>
+      <h2 class="section-title">Scaling Formula</h2>
+      <p class="section-desc">
+        The mathematical representation of scaling transformation using coordinate multiplication.
+      </p>
+    </div>
+    
+    <div class="two-col reverse">
+      <div class="content-block">
+        <h3>Coordinate Transformation</h3>
+        <p>
+          Each point (x, y) is transformed to a new position (x', y') by multiplying 
+          with the respective scale factors:
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula formula-small">x' = x × sx</div>
+          <div class="formula formula-small">y' = y × sy</div>
+          <div class="formula-label">Scaling equations</div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Scale Factor Values</h3>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon gold">>1</div>
+            <div class="key-point-text">
+              <strong>Enlargement:</strong> Object grows larger (s > 1)
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">=1</div>
+            <div class="key-point-text">
+              <strong>No Change:</strong> Object stays the same (s = 1)
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon red"><1</div>
+            <div class="key-point-text">
+              <strong>Reduction:</strong> Object shrinks (0 < s < 1)
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon green">-</div>
+            <div class="key-point-text">
+              <strong>Reflection:</strong> Negative values mirror the object
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">FORMULA_DEMO</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-formula" width="380" height="380"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Original Point</span>
+            <span class="info-value" id="formula-original">(2, 2)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Scale Factors</span>
+            <span class="info-value" id="formula-scale">sx=1.5, sy=1.5</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Scaled Point</span>
+            <span class="info-value" id="formula-scaled">(3, 3)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Interactive Demo -->
+  <section class="section" id="interactive">
+    <div class="section-header">
+      <div class="section-number">03 / Interactive Demo</div>
+      <h2 class="section-title">Interactive Scaling</h2>
+      <p class="section-desc">
+        Use the sliders to control the scale factors and observe how the object transforms in real-time.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">INTERACTIVE_SCALING</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn" onclick="resetScaling()">Reset</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-interactive" width="380" height="380"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Scale X (sx)</span>
+            <span class="info-value" id="info-sx">1.00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Scale Y (sy)</span>
+            <span class="info-value" id="info-sy">1.00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Original Size</span>
+            <span class="info-value">2 × 2 units</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Scaled Size</span>
+            <span class="info-value" id="info-size">2.00 × 2.00</span>
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <div class="slider-container">
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">Scale X (sx)</span>
+              <span class="slider-value" id="slider-sx-value">1.00</span>
+            </div>
+            <input type="range" class="slider-input" id="slider-sx" min="0.1" max="3" value="1" step="0.1">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">Scale Y (sy)</span>
+              <span class="slider-value" id="slider-sy-value">1.00</span>
+            </div>
+            <input type="range" class="slider-input" id="slider-sy" min="0.1" max="3" value="1" step="0.1">
+          </div>
+        </div>
+        
+        <div class="content-block" style="margin-top: 24px;">
+          <h3>How It Works</h3>
+          <p>
+            Drag the sliders to adjust the scale factors. The original square is shown as a dashed outline, 
+            while the scaled version is filled. Notice how the object grows or shrinks relative to the origin.
+          </p>
+          
+          <div class="formula-box">
+            <div class="formula" style="font-size: 14px;">
+              sx > 1 → Enlarge horizontally<br>
+              sx < 1 → Shrink horizontally<br>
+              sy > 1 → Enlarge vertically<br>
+              sy < 1 → Shrink vertically
+            </div>
+            <div class="formula-label">Scale factor effects</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Uniform vs Non-Uniform -->
+  <section class="section" id="types">
+    <div class="section-header">
+      <div class="section-number">04 / Scaling Types</div>
+      <h2 class="section-title">Uniform vs Non-Uniform Scaling</h2>
+      <p class="section-desc">
+        Understanding the difference between proportional and disproportional scaling.
+      </p>
+    </div>
+    
+    <div class="comparison-section">
+      <h3 class="comparison-title">Comparison of Scaling Types</h3>
+      <div class="comparison-grid">
+        <div class="comparison-item">
+          <canvas id="canvas-uniform" class="comparison-canvas"></canvas>
+          <div class="comparison-label">UNIFORM SCALING</div>
+          <p class="comparison-desc">
+            When <strong>sx = sy</strong>, the object scales proportionally. 
+            The shape remains similar, only the size changes. Aspect ratio is preserved.
+          </p>
+        </div>
+        <div class="comparison-item">
+          <canvas id="canvas-nonuniform" class="comparison-canvas"></canvas>
+          <div class="comparison-label">NON-UNIFORM SCALING</div>
+          <p class="comparison-desc">
+            When <strong>sx ≠ sy</strong>, the object stretches or compresses. 
+            The shape changes, creating distortion in one direction.
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="two-col" style="margin-top: 48px;">
+      <div class="content-block">
+        <h3>Uniform Scaling</h3>
+        <p>
+          When both scale factors are equal (sx = sy = s), the object maintains its proportions. 
+          This is commonly used for zooming and resizing images without distortion.
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula formula-small">x' = x × s</div>
+          <div class="formula formula-small">y' = y × s</div>
+          <div class="formula-label">Uniform scaling (sx = sy = s)</div>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Non-Uniform Scaling</h3>
+        <p>
+          When scale factors differ (sx ≠ sy), the object stretches or compresses along one axis. 
+          This creates distortion but is useful for special effects and transformations.
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula formula-small">x' = x × sx</div>
+          <div class="formula formula-small">y' = y × sy</div>
+          <div class="formula-label">Non-uniform scaling (sx ≠ sy)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Applications -->
+  <section class="section" id="applications">
+    <div class="section-header">
+      <div class="section-number">05 / Applications</div>
+      <h2 class="section-title">Real-World Applications</h2>
+      <p class="section-desc">
+        Scaling transformations are fundamental in many computer graphics applications.
+      </p>
+    </div>
+    
+    <div class="applications-grid">
+      <div class="app-card">
+        <div class="app-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <path d="M21 15l-5-5L5 21"/>
+          </svg>
+        </div>
+        <h4 class="app-title">Graphics Software</h4>
+        <p class="app-desc">Resizing images, logos, and design elements in tools like Photoshop and Illustrator.</p>
+      </div>
+      
+      <div class="app-card">
+        <div class="app-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <line x1="11" y1="8" x2="11" y2="14"/>
+            <line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </div>
+        <h4 class="app-title">Zoom In/Out</h4>
+        <p class="app-desc">Implementing zoom functionality in maps, image viewers, and document readers.</p>
+      </div>
+      
+      <div class="app-card">
+        <div class="app-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+            <polyline points="2 17 12 22 22 17"/>
+            <polyline points="2 12 12 17 22 12"/>
+          </svg>
+        </div>
+        <h4 class="app-title">Game Development</h4>
+        <p class="app-desc">Scaling game objects, UI elements, and creating size-based animations.</p>
+      </div>
+    </div>
+    
+    <!-- Zoom Animation Demo -->
+    <div class="canvas-container" style="margin-top: 48px;">
+      <div class="canvas-header">
+        <span class="canvas-title">ZOOM_ANIMATION_DEMO</span>
+      </div>
+      <div class="canvas-body" style="min-height: 300px;">
+        <canvas id="canvas-zoom" width="500" height="300"></canvas>
+      </div>
+      <div class="info-panel">
+        <div class="info-row">
+          <span class="info-label">Animation</span>
+          <span class="info-value">Zoom In / Zoom Out Cycle</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Current Scale</span>
+          <span class="info-value" id="zoom-scale">1.00</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Matrix Representation -->
+  <section class="section" id="matrix">
+    <div class="section-header">
+      <div class="section-number">06 / Matrix Form</div>
+      <h2 class="section-title">Matrix Representation</h2>
+      <p class="section-desc">
+        Scaling can be represented as a transformation matrix in homogeneous coordinates.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">MATRIX_VISUALIZATION</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-matrix" width="380" height="280"></canvas>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Scaling Matrix</h3>
+        <p>
+          In homogeneous coordinates, scaling is represented as a 3×3 matrix that can be 
+          combined with other transformations:
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula" style="font-size: 14px;">
+            [x']   [sx  0   0] [x]<br>
+            [y'] = [0   sy  0] [y]<br>
+            [1 ]   [0   0   1] [1]
+          </div>
+          <div class="formula-label">Scaling matrix in homogeneous coordinates</div>
+        </div>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon gold">M</div>
+            <div class="key-point-text">
+              <strong>Matrix Form:</strong> Enables transformation composition
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">C</div>
+            <div class="key-point-text">
+              <strong>Combination:</strong> Multiple scalings multiply together
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon green">I</div>
+            <div class="key-point-text">
+              <strong>Identity:</strong> Scale factors of 1 produce no change
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7: Next Steps -->
+  <section class="section" id="next">
+    <div class="section-header">
+      <div class="section-number">07 / Next Steps</div>
+      <h2 class="section-title">Continue Learning</h2>
+      <p class="section-desc">
+        Explore other transformation types and learn how to combine them.
+      </p>
+    </div>
+    
+    <div class="algo-cards">
+      <a href="translation.html" class="algo-card">
+        <h4>Translation</h4>
+        <p>Learn how to move objects by adding translation vectors to coordinates.</p>
+        <span class="algo-tag">Position</span>
+      </a>
+      
+      <a href="rotation.html" class="algo-card">
+        <h4>Rotation</h4>
+        <p>Discover how to rotate objects around a pivot point using trigonometry.</p>
+        <span class="algo-tag">Orientation</span>
+      </a>
+      
+      <a href="composite.html" class="algo-card">
+        <h4>Composite Transformations</h4>
+        <p>Combine multiple transformations into a single matrix operation.</p>
+        <span class="algo-tag">Advanced</span>
+      </a>
+      
+      <a href="transformations.html" class="algo-card">
+        <h4>Transformation Overview</h4>
+        <p>Return to the main transformations page for the complete module list.</p>
+        <span class="algo-tag">Overview</span>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <p>// 2D Scaling Transformation - Computer Graphics Lab</p>
+  </footer>
+  
+</div>
+
+<script>
+// === BACKGROUND CANVAS ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const particles = [];
+const particleCount = 35;
+
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      size: Math.random() * 3 + 1,
+      opacity: Math.random() * 0.12 + 0.03
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#050a10';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  // Grid
+  bgCtx.strokeStyle = 'rgba(255, 192, 64, 0.015)';
+  bgCtx.lineWidth = 1;
+  
+  const gridSize = 50;
+  for (let x = 0; x < bgWidth; x += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(x, 0);
+    bgCtx.lineTo(x, bgHeight);
+    bgCtx.stroke();
+  }
+  for (let y = 0; y < bgHeight; y += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, y);
+    bgCtx.lineTo(bgWidth, y);
+    bgCtx.stroke();
+  }
+  
+  // Scaling boxes animation
+  for (let i = 0; i < 4; i++) {
+    const baseX = (i / 4) * bgWidth + bgWidth / 8;
+    const baseY = bgHeight * 0.5 + Math.sin(time * 0.5 + i * 1.5) * 50;
+    const baseSize = 30;
+    const scale = 0.5 + Math.abs(Math.sin(time + i)) * 1;
+    
+    bgCtx.strokeStyle = 'rgba(255, 192, 64, 0.04)';
+    bgCtx.lineWidth = 1;
+    bgCtx.strokeRect(
+      baseX - baseSize * scale / 2,
+      baseY - baseSize * scale / 2,
+      baseSize * scale,
+      baseSize * scale
+    );
+  }
+  
+  // Particles
+  particles.forEach((p, idx) => {
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    if (p.x < 0) p.x = bgWidth;
+    if (p.x > bgWidth) p.x = 0;
+    if (p.y < 0) p.y = bgHeight;
+    if (p.y > bgHeight) p.y = 0;
+    
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 120) {
+      p.x -= dx * 0.01;
+      p.y -= dy * 0.01;
+    }
+    
+    const pulse = Math.sin(time * 2 + idx * 0.5) * 0.3 + 0.7;
+    
+    bgCtx.fillStyle = 'rgba(255, 192, 64, ' + (p.opacity * pulse) + ')';
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  // Mouse glow
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 150);
+  gradient.addColorStop(0, 'rgba(255, 192, 64, 0.03)');
+  gradient.addColorStop(1, 'rgba(255, 192, 64, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animateBackground() {
+  mouseX += (targetMouseX - mouseX) * 0.06;
+  mouseY += (targetMouseY - mouseY) * 0.06;
+  drawBackground();
+  requestAnimationFrame(animateBackground);
+}
+
+// === CANVAS UTILITIES ===
+function drawGrid(ctx, canvas, scale) {
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  
+  ctx.fillStyle = '#080c14';
+  ctx.fillRect(0, 0, w, h);
+  
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255, 192, 64, 0.08)';
+  ctx.lineWidth = 1;
+  
+  for (let x = cx % scale; x < w; x += scale) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+  
+  for (let y = cy % scale; y < h; y += scale) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  
+  // Axes
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 1;
+  
+  ctx.beginPath();
+  ctx.moveTo(0, cy);
+  ctx.lineTo(w, cy);
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(cx, 0);
+  ctx.lineTo(cx, h);
+  ctx.stroke();
+  
+  // Origin
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Labels
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.font = '10px JetBrains Mono';
+  ctx.fillText('X', w - 15, cy - 8);
+  ctx.fillText('Y', cx + 8, 15);
+  ctx.fillText('O', cx + 5, cy + 15);
+  
+  return { cx, cy };
+}
+
+// === CONCEPT CANVAS ===
+function initConceptCanvas() {
+  const canvas = document.getElementById('canvas-concept');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const scale = 30;
+  
+  let t = 0;
+  
+  function draw() {
+    t += 0.015;
+    
+    const { cx, cy } = drawGrid(ctx, canvas, scale);
+    
+    const baseSize = 2;
+    const scaleFactor = 1 + Math.sin(t) * 0.4;
+    const scaledSize = baseSize * scaleFactor;
+    
+    // Original square
+    const ox = cx - baseSize * scale / 2;
+    const oy = cy - baseSize * scale / 2;
+    
+    ctx.strokeStyle = 'rgba(255, 192, 64, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(ox, oy, baseSize * scale, baseSize * scale);
+    ctx.setLineDash([]);
+    
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.1)';
+    ctx.fillRect(ox, oy, baseSize * scale, baseSize * scale);
+    
+    // Scaled square
+    const sx = cx - scaledSize * scale / 2;
+    const sy = cy - scaledSize * scale / 2;
+    
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.3)';
+    ctx.fillRect(sx, sy, scaledSize * scale, scaledSize * scale);
+    
+    ctx.strokeStyle = '#ffc040';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(sx, sy, scaledSize * scale, scaledSize * scale);
+    
+    // Labels
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.5)';
+    ctx.font = '11px JetBrains Mono';
+    ctx.fillText('Original', ox + 5, oy - 8);
+    ctx.fillText('Scaled (s=' + scaleFactor.toFixed(2) + ')', sx + 5, sy - 8);
+    
+    // Corner markers for original
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.4)';
+    [[ox, oy], [ox + baseSize * scale, oy], [ox, oy + baseSize * scale], [ox + baseSize * scale, oy + baseSize * scale]].forEach(([px, py]) => {
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  
+  draw();
+}
+
+// === FORMULA CANVAS ===
+function initFormulaCanvas() {
+  const canvas = document.getElementById('canvas-formula');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const scale = 30;
+  
+  let t = 0;
+  
+  function draw() {
+    t += 0.02;
+    
+    const { cx, cy } = drawGrid(ctx, canvas, scale);
+    
+    const originalPoint = { x: 2, y: 2 };
+    const sx = 1.5 + Math.sin(t) * 0.3;
+    const sy = 1.5 + Math.cos(t * 0.8) * 0.3;
+    
+    const scaledPoint = {
+      x: originalPoint.x * sx,
+      y: originalPoint.y * sy
+    };
+    
+    // Original point
+    const ox = cx + originalPoint.x * scale;
+    const oy = cy - originalPoint.y * scale;
+    
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.8)';
+    ctx.beginPath();
+    ctx.arc(ox, oy, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.6)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('P(' + originalPoint.x + ',' + originalPoint.y + ')', ox + 10, oy - 5);
+    
+    // Scaled point
+    const px = cx + scaledPoint.x * scale;
+    const py = cy - scaledPoint.y * scale;
+    
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.8)';
+    ctx.beginPath();
+    ctx.arc(px, py, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.8)';
+    ctx.fillText("P'(" + scaledPoint.x.toFixed(1) + ',' + scaledPoint.y.toFixed(1) + ')', px + 12, py - 5);
+    
+    // Line connecting points
+    ctx.strokeStyle = 'rgba(255, 192, 64, 0.3)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(px, py);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Update info
+    document.getElementById('formula-scale').textContent = 'sx=' + sx.toFixed(2) + ', sy=' + sy.toFixed(2);
+    document.getElementById('formula-scaled').textContent = '(' + scaledPoint.x.toFixed(1) + ', ' + scaledPoint.y.toFixed(1) + ')';
+    
+    requestAnimationFrame(draw);
+  }
+  
+  draw();
+}
+
+// === INTERACTIVE CANVAS ===
+let scaleFactors = { sx: 1, sy: 1 };
+
+function initInteractiveCanvas() {
+  const canvas = document.getElementById('canvas-interactive');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const scale = 30;
+  
+  function draw() {
+    const { cx, cy } = drawGrid(ctx, canvas, scale);
+    
+    const baseSize = 2;
+    const scaledSizeX = baseSize * scaleFactors.sx;
+    const scaledSizeY = baseSize * scaleFactors.sy;
+    
+    // Original square (from origin)
+    ctx.strokeStyle = 'rgba(255, 192, 64, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(cx, cy - baseSize * scale, baseSize * scale, baseSize * scale);
+    ctx.setLineDash([]);
+    
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.05)';
+    ctx.fillRect(cx, cy - baseSize * scale, baseSize * scale, baseSize * scale);
+    
+    // Scaled square
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.25)';
+    ctx.fillRect(cx, cy - scaledSizeY * scale, scaledSizeX * scale, scaledSizeY * scale);
+    
+    ctx.strokeStyle = '#ffc040';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx, cy - scaledSizeY * scale, scaledSizeX * scale, scaledSizeY * scale);
+    
+    // Labels
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.5)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('Original', cx + 5, cy - baseSize * scale - 8);
+    ctx.fillText('Scaled', cx + 5, cy - scaledSizeY * scale - 8);
+    
+    // Scale arrows
+    if (scaleFactors.sx !== 1 || scaleFactors.sy !== 1) {
+      ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)';
+      ctx.lineWidth = 1;
+      
+      // X arrow
+      ctx.beginPath();
+      ctx.moveTo(cx + baseSize * scale, cy - baseSize * scale / 2);
+      ctx.lineTo(cx + scaledSizeX * scale, cy - baseSize * scale / 2);
+      ctx.stroke();
+      
+      // Y arrow
+      ctx.beginPath();
+      ctx.moveTo(cx + baseSize * scale / 2, cy - baseSize * scale);
+      ctx.lineTo(cx + baseSize * scale / 2, cy - scaledSizeY * scale);
+      ctx.stroke();
+    }
+    
+    // Update info
+    document.getElementById('info-sx').textContent = scaleFactors.sx.toFixed(2);
+    document.getElementById('info-sy').textContent = scaleFactors.sy.toFixed(2);
+    document.getElementById('info-size').textContent = scaledSizeX.toFixed(2) + ' × ' + scaledSizeY.toFixed(2);
+    
+    requestAnimationFrame(draw);
+  }
+  
+  draw();
+}
+
+function resetScaling() {
+  scaleFactors.sx = 1;
+  scaleFactors.sy = 1;
+  document.getElementById('slider-sx').value = 1;
+  document.getElementById('slider-sy').value = 1;
+  document.getElementById('slider-sx-value').textContent = '1.00';
+  document.getElementById('slider-sy-value').textContent = '1.00';
+}
+
+// === SLIDERS ===
+function initSliders() {
+  const sliderSx = document.getElementById('slider-sx');
+  const sliderSy = document.getElementById('slider-sy');
+  
+  if (sliderSx) {
+    sliderSx.addEventListener('input', function() {
+      scaleFactors.sx = parseFloat(this.value);
+      document.getElementById('slider-sx-value').textContent = scaleFactors.sx.toFixed(2);
+    });
+  }
+  
+  if (sliderSy) {
+    sliderSy.addEventListener('input', function() {
+      scaleFactors.sy = parseFloat(this.value);
+      document.getElementById('slider-sy-value').textContent = scaleFactors.sy.toFixed(2);
+    });
+  }
+}
+
+// === UNIFORM VS NON-UNIFORM CANVASES ===
+function initComparisonCanvases() {
+  // Uniform
+  const uniformCanvas = document.getElementById('canvas-uniform');
+  if (uniformCanvas) {
+    const rect = uniformCanvas.parentElement.getBoundingClientRect();
+    uniformCanvas.width = rect.width || 300;
+    uniformCanvas.height = 200;
+    
+    const ctx = uniformCanvas.getContext('2d');
+    let t = 0;
+    
+    function drawUniform() {
+      t += 0.025;
+      
+      const w = uniformCanvas.width;
+      const h = uniformCanvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const baseSize = 25;
+      const s = 1 + Math.sin(t) * 0.5;
+      
+      ctx.fillStyle = '#080c14';
+      ctx.fillRect(0, 0, w, h);
+      
+      // Grid
+      ctx.strokeStyle = 'rgba(255, 192, 64, 0.1)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 20) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 20) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+      
+      // Original
+      ctx.strokeStyle = 'rgba(255, 192, 64, 0.3)';
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(cx - baseSize/2, cy - baseSize/2, baseSize, baseSize);
+      ctx.setLineDash([]);
+      
+      // Scaled (uniform)
+      const scaledSize = baseSize * s;
+      ctx.fillStyle = 'rgba(255, 192, 64, 0.3)';
+      ctx.fillRect(cx - scaledSize/2, cy - scaledSize/2, scaledSize, scaledSize);
+      ctx.strokeStyle = '#ffc040';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - scaledSize/2, cy - scaledSize/2, scaledSize, scaledSize);
+      
+      ctx.fillStyle = 'rgba(255, 192, 64, 0.8)';
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText('sx = sy = ' + s.toFixed(2), 10, 20);
+      
+      requestAnimationFrame(drawUniform);
+    }
+    
+    drawUniform();
+  }
+  
+  // Non-uniform
+  const nonuniformCanvas = document.getElementById('canvas-nonuniform');
+  if (nonuniformCanvas) {
+    const rect = nonuniformCanvas.parentElement.getBoundingClientRect();
+    nonuniformCanvas.width = rect.width || 300;
+    nonuniformCanvas.height = 200;
+    
+    const ctx = nonuniformCanvas.getContext('2d');
+    let t = 0;
+    
+    function drawNonuniform() {
+      t += 0.025;
+      
+      const w = nonuniformCanvas.width;
+      const h = nonuniformCanvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const baseSize = 25;
+      const sx = 1 + Math.sin(t) * 0.6;
+      const sy = 1 + Math.cos(t * 0.7) * 0.4;
+      
+      ctx.fillStyle = '#080c14';
+      ctx.fillRect(0, 0, w, h);
+      
+      // Grid
+      ctx.strokeStyle = 'rgba(255, 82, 119, 0.1)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 20) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 20) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+      
+      // Original
+      ctx.strokeStyle = 'rgba(255, 82, 119, 0.3)';
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(cx - baseSize/2, cy - baseSize/2, baseSize, baseSize);
+      ctx.setLineDash([]);
+      
+      // Scaled (non-uniform)
+      const scaledW = baseSize * sx;
+      const scaledH = baseSize * sy;
+      ctx.fillStyle = 'rgba(255, 82, 119, 0.3)';
+      ctx.fillRect(cx - scaledW/2, cy - scaledH/2, scaledW, scaledH);
+      ctx.strokeStyle = '#ff5277';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - scaledW/2, cy - scaledH/2, scaledW, scaledH);
+      
+      ctx.fillStyle = 'rgba(255, 82, 119, 0.8)';
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText('sx=' + sx.toFixed(2) + ' sy=' + sy.toFixed(2), 10, 20);
+      
+      requestAnimationFrame(drawNonuniform);
+    }
+    
+    drawNonuniform();
+  }
+}
+
+// === ZOOM ANIMATION CANVAS ===
+function initZoomCanvas() {
+  const canvas = document.getElementById('canvas-zoom');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  let t = 0;
+  
+  function draw() {
+    t += 0.02;
+    
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(0, 0, w, h);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(255, 192, 64, 0.08)';
+    ctx.lineWidth = 1;
+    
+    for (let x = 0; x < w; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    for (let y = 0; y < h; y += 30) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+    
+    const cx = w / 2;
+    const cy = h / 2;
+    const baseSize = 40;
+    const zoomScale = 1 + Math.sin(t) * 0.8;
+    
+    // Multiple scaled squares for zoom effect
+    for (let i = 3; i >= 0; i--) {
+      const alpha = 0.1 + i * 0.05;
+      const s = zoomScale * (1 - i * 0.15);
+      const size = baseSize * s;
+      
+      ctx.strokeStyle = 'rgba(255, 192, 64, ' + alpha + ')';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(cx - size/2, cy - size/2, size, size);
+    }
+    
+    // Main scaled square
+    const mainSize = baseSize * zoomScale;
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.2)';
+    ctx.fillRect(cx - mainSize/2, cy - mainSize/2, mainSize, mainSize);
+    
+    ctx.strokeStyle = '#ffc040';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - mainSize/2, cy - mainSize/2, mainSize, mainSize);
+    
+    // Zoom text
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.6)';
+    ctx.font = '12px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(zoomScale > 1 ? 'ZOOM IN' : 'ZOOM OUT', cx, 30);
+    
+    // Scale indicator
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('Scale: ' + zoomScale.toFixed(2) + 'x', cx, h - 15);
+    
+    document.getElementById('zoom-scale').textContent = zoomScale.toFixed(2);
+    
+    requestAnimationFrame(draw);
+  }
+  
+  draw();
+}
+
+// === MATRIX CANVAS ===
+function initMatrixCanvas() {
+  const canvas = document.getElementById('canvas-matrix');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  let t = 0;
+  
+  function draw() {
+    t += 0.02;
+    
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const sx = 1.5 + Math.sin(t) * 0.3;
+    const sy = 1.5 + Math.cos(t * 0.8) * 0.3;
+    
+    // Draw matrix
+    ctx.font = 'bold 18px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    
+    // Matrix brackets
+    ctx.strokeStyle = 'rgba(255, 192, 64, 0.5)';
+    ctx.lineWidth = 2;
+    
+    // Left bracket
+    ctx.beginPath();
+    ctx.moveTo(cx - 110, cy - 60);
+    ctx.lineTo(cx - 120, cy - 60);
+    ctx.lineTo(cx - 120, cy + 60);
+    ctx.lineTo(cx - 110, cy + 60);
+    ctx.stroke();
+    
+    // Right bracket
+    ctx.beginPath();
+    ctx.moveTo(cx + 110, cy - 60);
+    ctx.lineTo(cx + 120, cy - 60);
+    ctx.lineTo(cx + 120, cy + 60);
+    ctx.lineTo(cx + 110, cy + 60);
+    ctx.stroke();
+    
+    // Matrix values
+    const values = [
+      [sx.toFixed(2), '0', '0'],
+      ['0', sy.toFixed(2), '0'],
+      ['0', '0', '1']
+    ];
+    
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        const x = cx - 60 + col * 60;
+        const y = cy - 35 + row * 35;
+        
+        if ((row === 0 && col === 0) || (row === 1 && col === 1)) {
+          ctx.fillStyle = '#ffc040';
+        } else {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        }
+        
+        ctx.fillText(values[row][col], x, y);
+      }
+    }
+    
+    // Labels
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillStyle = 'rgba(255, 192, 64, 0.5)';
+    ctx.fillText('sx', cx - 60, cy - 55);
+    ctx.fillText('sy', cx, cy - 20);
+    
+    requestAnimationFrame(draw);
+  }
+  
+  draw();
+}
+
+// === SCROLL ===
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// === EVENTS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initParticles();
+  
+  setTimeout(function() {
+    initComparisonCanvases();
+  }, 100);
+});
+
+// === INIT ===
+initParticles();
+animateBackground();
+
+document.addEventListener('DOMContentLoaded', function() {
+  initConceptCanvas();
+  initFormulaCanvas();
+  initInteractiveCanvas();
+  initSliders();
+  initComparisonCanvases();
+  initZoomCanvas();
+  initMatrixCanvas();
+});
+</script>
+
+</body>
+</html>

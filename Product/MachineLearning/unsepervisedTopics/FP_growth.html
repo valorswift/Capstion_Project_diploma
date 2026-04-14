@@ -1,0 +1,2642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FP-Growth Algorithm - ML Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #10b981;
+  --accent-alt: #06b6d4;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --emerald: #10b981;
+  --cyan: #06b6d4;
+  --amber: #f59e0b;
+  --rose: #f472b6;
+  --violet: #8b5cf6;
+  --orange: #f97316;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 25% 25%, rgba(16, 185, 129, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 75%, rgba(6, 182, 212, 0.03) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--emerald), var(--cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--emerald), var(--cyan));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--emerald);
+}
+
+.hero {
+  min-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--emerald);
+  background: rgba(16, 185, 129, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--emerald);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--emerald); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--emerald); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--emerald) 50%, var(--cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 620px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Theory Card */
+.theory-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.theory-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--emerald), var(--cyan), var(--emerald));
+  opacity: 0.6;
+}
+
+.theory-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.theory-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.theory-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.theory-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.theory-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px;
+  align-items: start;
+}
+
+.theory-text {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.theory-text p {
+  margin: 0 0 18px 0;
+}
+
+.theory-text p:last-child {
+  margin-bottom: 0;
+}
+
+.theory-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Conceptual Diagram */
+.concept-diagram {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.diagram-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.diagram-box {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.1));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+  min-width: 110px;
+}
+
+.diagram-box.highlight {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2));
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.diagram-box-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--emerald);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diagram-box-value {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.diagram-arrow {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* Key Concepts */
+.key-concepts {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.key-concepts-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--emerald);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-concepts-title::before {
+  content: '';
+  width: 12px;
+  height: 2px;
+  background: var(--emerald);
+}
+
+.concept-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.concept-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.15);
+  font-size: 13px;
+  color: var(--muted);
+  transition: all 0.3s ease;
+}
+
+.concept-list li:last-child {
+  border-bottom: none;
+}
+
+.concept-list li:hover {
+  padding-left: 8px;
+  color: var(--text);
+}
+
+.concept-list li strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.concept-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--emerald), var(--cyan));
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* Simulator Section */
+.simulator-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 60px;
+}
+
+.simulator-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--emerald), var(--cyan), var(--emerald));
+  opacity: 0.6;
+}
+
+.simulator-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simulator-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.simulator-title svg {
+  color: var(--emerald);
+}
+
+.simulator-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--emerald);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* Fixed height simulator body */
+.simulator-body {
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  gap: 0;
+  min-height: 500px;
+}
+
+/* Control Panel */
+.control-panel {
+  padding: 24px;
+  border-right: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.control-section {
+  margin-bottom: 24px;
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--emerald);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.control-select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(10, 16, 32, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c7090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.control-select:hover, .control-select:focus {
+  border-color: var(--emerald);
+  outline: none;
+}
+
+.control-slider-group {
+  margin-bottom: 16px;
+}
+
+.control-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.control-slider-label span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.control-slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--emerald);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.control-slider {
+  width: 100%;
+  height: 6px;
+  background: rgba(92, 112, 144, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.control-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--emerald), var(--cyan));
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.control-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.control-btn.primary {
+  background: linear-gradient(135deg, var(--emerald), var(--cyan));
+  color: var(--bg);
+}
+
+.control-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 4px 20px -4px var(--emerald);
+  transform: translateY(-2px);
+}
+
+.control-btn.secondary {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--emerald);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.control-btn.secondary:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Visualization Panel */
+.viz-panel {
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.viz-section {
+  background: rgba(10, 16, 32, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.viz-section-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.viz-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--emerald);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.viz-section-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.viz-canvas-wrap {
+  padding: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.viz-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: #060a14;
+}
+
+/* Transaction Panel */
+.transaction-panel {
+  margin-top: 16px;
+  background: rgba(10, 16, 32, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  max-height: 140px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.transaction-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.transaction-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.transaction-item {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--text);
+}
+
+/* Steps Panel - Fixed height */
+.steps-panel {
+  padding: 24px;
+  border-left: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  height: 500px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.steps-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.steps-header::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--cyan);
+  border-radius: 2px;
+}
+
+.step-card {
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--emerald);
+  margin-bottom: 6px;
+}
+
+.step-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.step-text {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Metrics Display */
+.metrics-display {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.metrics-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-name {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.metric-value.highlight {
+  color: var(--emerald);
+}
+
+/* Pattern Results */
+.pattern-results {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  max-height: 150px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.pattern-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.pattern-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.05);
+  font-size: 12px;
+}
+
+.pattern-item:last-child {
+  border-bottom: none;
+}
+
+.pattern-items {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--cyan);
+  background: rgba(6, 182, 212, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.pattern-support {
+  color: var(--emerald);
+  font-weight: 600;
+}
+
+/* Advantages Section */
+.advantages-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.advantages-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--emerald), var(--cyan), var(--emerald));
+  opacity: 0.6;
+}
+
+.advantages-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.advantages-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.advantages-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.advantages-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.advantage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  transition: all 0.3s ease;
+}
+
+.advantage-item:hover {
+  border-color: rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.03);
+}
+
+.advantage-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.advantage-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* Help Button */
+.help-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--emerald), var(--cyan));
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 32px -8px rgba(16, 185, 129, 0.4),
+    0 0 48px -12px rgba(6, 182, 212, 0.3);
+  transition: all 0.3s ease;
+}
+
+.help-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 12px 40px -8px rgba(16, 185, 129, 0.5),
+    0 0 60px -12px rgba(6, 182, 212, 0.4);
+}
+
+.help-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--emerald), var(--cyan));
+  opacity: 0.3;
+  filter: blur(10px);
+  z-index: -1;
+}
+
+/* Help Modal */
+.help-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 13, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  padding: 20px;
+}
+
+.help-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.help-modal {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.98), rgba(8, 12, 22, 0.99));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.help-modal-overlay.active .help-modal {
+  transform: translateY(0) scale(1);
+}
+
+.help-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--emerald), var(--cyan), var(--emerald));
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.help-modal-title svg {
+  color: var(--emerald);
+}
+
+.help-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.help-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.help-modal-body {
+  padding: 28px;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--emerald);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-section-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--emerald);
+  border-radius: 2px;
+}
+
+.help-section-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.help-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.help-list li:last-child {
+  border-bottom: none;
+}
+
+.help-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--emerald), var(--cyan));
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+/* Scroll reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Custom scrollbar */
+.steps-panel::-webkit-scrollbar,
+.transaction-panel::-webkit-scrollbar,
+.pattern-results::-webkit-scrollbar,
+.help-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.steps-panel::-webkit-scrollbar-track,
+.transaction-panel::-webkit-scrollbar-track,
+.pattern-results::-webkit-scrollbar-track,
+.help-modal::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.steps-panel::-webkit-scrollbar-thumb,
+.transaction-panel::-webkit-scrollbar-thumb,
+.pattern-results::-webkit-scrollbar-thumb,
+.help-modal::-webkit-scrollbar-thumb {
+  background: rgba(92, 112, 144, 0.3);
+  border-radius: 3px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .simulator-body {
+    grid-template-columns: 240px 1fr 260px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .theory-content {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  
+  .simulator-body {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  
+  .control-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .steps-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    height: auto;
+    min-height: 400px;
+  }
+  
+  .advantages-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 35vh;
+  }
+  
+  .theory-card {
+    padding: 28px 24px;
+  }
+  
+  .simulator-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .diagram-flow {
+    flex-direction: column;
+  }
+  
+  .diagram-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .help-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="As_Holder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="ml_lab.html">Machine Learning</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="unsupervised.html">Unsupervised</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="association.html">Association</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>FP-Growth Algorithm</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Association Rule Mining</div>
+    <h1 class="main-title">FP-Growth Algorithm</h1>
+    <p class="subtitle">
+      // An efficient association rule mining algorithm that discovers frequent<br>
+      // itemsets using a compressed FP-Tree structure without repeatedly scanning the dataset.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <!-- Theory Card -->
+    <div class="theory-card reveal">
+      <div class="theory-header">
+        <div class="theory-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round">
+            <path d="M12 2v4"/>
+            <path d="M12 18v4"/>
+            <path d="M4.93 4.93l2.83 2.83"/>
+            <path d="M16.24 16.24l2.83 2.83"/>
+            <path d="M2 12h4"/>
+            <path d="M18 12h4"/>
+            <path d="M4.93 19.07l2.83-2.83"/>
+            <path d="M16.24 7.76l2.83-2.83"/>
+            <circle cx="12" cy="12" r="4"/>
+          </svg>
+        </div>
+        <h2 class="theory-title">Understanding FP-Growth Algorithm</h2>
+      </div>
+      
+      <div class="theory-content">
+        <div class="theory-text">
+          <p>
+            <strong>FP-Growth (Frequent Pattern Growth) is an efficient algorithm</strong> for mining frequent itemsets without candidate generation. Unlike Apriori, which requires multiple database scans, FP-Growth compresses the database into a compact FP-Tree structure.
+          </p>
+          <p>
+            The <strong>Apriori algorithm's main inefficiency</strong> comes from generating and testing candidate itemsets, requiring multiple database scans. FP-Growth eliminates this by using a tree structure that allows pattern mining in a single scan after tree construction.
+          </p>
+          
+          <!-- Conceptual Diagram -->
+          <div class="concept-diagram">
+            <div class="diagram-flow">
+              <div class="diagram-box">
+                <div class="diagram-box-title">Input</div>
+                <div class="diagram-box-value">Transactions</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Build</div>
+                <div class="diagram-box-value">FP-Tree</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Compress</div>
+                <div class="diagram-box-value">Patterns</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Mine</div>
+                <div class="diagram-box-value">Frequent Itemsets</div>
+              </div>
+            </div>
+          </div>
+          
+          <p><strong>Key Advantage:</strong> FP-Growth avoids generating candidate itemsets and reduces dataset scanning to just two passes - one for counting item frequencies and one for building the tree. Pattern mining then uses the tree structure directly.</p>
+        </div>
+        
+        <div class="key-concepts">
+          <div class="key-concepts-title">Key Concepts</div>
+          <ul class="concept-list">
+            <li>
+              <div>
+                <strong>FP-Tree</strong>
+                A compressed representation of the transaction database that preserves itemset association information.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Header Table</strong>
+                Stores frequent items with their support counts and links to tree nodes for efficient traversal.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Conditional Pattern Base</strong>
+                Sub-database of paths in the FP-Tree that end with a specific item.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Frequent Pattern Mining</strong>
+                Extracting itemsets that appear in at least a minimum number of transactions.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Tree Traversal</strong>
+                Following node links to discover patterns and build conditional trees.
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Simulator -->
+    <div class="simulator-card reveal">
+      <div class="simulator-header">
+        <h3 class="simulator-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4"/>
+            <path d="M12 18v4"/>
+            <circle cx="12" cy="12" r="4"/>
+          </svg>
+          Interactive FP-Growth Simulator
+        </h3>
+        <span class="simulator-badge">STEP-BY-STEP</span>
+      </div>
+      
+      <div class="simulator-body">
+        <!-- Control Panel -->
+        <div class="control-panel">
+          <div class="control-section">
+            <label class="control-label">Dataset Type</label>
+            <select class="control-select" id="datasetSelect">
+              <option value="market">Market Basket Dataset</option>
+              <option value="retail">Retail Transactions</option>
+              <option value="random">Random Dataset</option>
+            </select>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Min Support</span>
+                <span class="control-slider-value" id="supportValueDisplay">30%</span>
+              </div>
+              <input type="range" class="control-slider" id="supportSlider" min="10" max="60" step="5" value="30">
+            </div>
+            
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Transactions</span>
+                <span class="control-slider-value" id="transValueDisplay">10</span>
+              </div>
+              <input type="range" class="control-slider" id="transSlider" min="5" max="20" step="1" value="10">
+            </div>
+            
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Animation Speed</span>
+                <span class="control-slider-value" id="speedValueDisplay">1.0x</span>
+              </div>
+              <input type="range" class="control-slider" id="speedSlider" min="0.5" max="3" step="0.25" value="1">
+            </div>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-buttons">
+              <button class="control-btn primary" id="generateBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                </svg>
+                Generate Dataset
+              </button>
+              <button class="control-btn secondary" id="buildBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4"/>
+                  <path d="M12 18v4"/>
+                  <circle cx="12" cy="12" r="4"/>
+                </svg>
+                Build FP-Tree
+              </button>
+              <button class="control-btn secondary" id="mineBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                Mine Patterns
+              </button>
+              <button class="control-btn secondary" id="resetBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="1 4 1 10 7 10"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Visualization Panel -->
+        <div class="viz-panel">
+          <div class="viz-section">
+            <div class="viz-section-header">
+              <span class="viz-section-title">FP-Tree Visualization</span>
+              <span class="viz-section-info" id="treeInfo">Generate dataset to begin</span>
+            </div>
+            <div class="viz-canvas-wrap">
+              <canvas class="viz-canvas" id="treeCanvas"></canvas>
+            </div>
+          </div>
+          
+          <div class="transaction-panel" id="transPanel">
+            <div class="transaction-title">Transactions</div>
+            <div class="transaction-list" id="transList"></div>
+          </div>
+        </div>
+        
+        <!-- Steps Panel -->
+        <div class="steps-panel">
+          <div class="steps-header">Algorithm Progress</div>
+          
+          <div class="step-card" id="currentStep">
+            <div class="step-num" id="stepNum">READY</div>
+            <div class="step-title" id="stepTitle">Generate Dataset</div>
+            <div class="step-text" id="stepText">
+              Select dataset type and parameters, then click "Generate Dataset" to create transaction data for FP-Growth analysis.
+            </div>
+          </div>
+          
+          <div class="metrics-display">
+            <div class="metrics-title">Current Metrics</div>
+            <div class="metric-row">
+              <span class="metric-name">Transactions</span>
+              <span class="metric-value highlight" id="metricTrans">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Unique Items</span>
+              <span class="metric-value" id="metricItems">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Tree Depth</span>
+              <span class="metric-value" id="metricDepth">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Min Support</span>
+              <span class="metric-value" id="metricSupport">30%</span>
+            </div>
+          </div>
+          
+          <div class="pattern-results" id="patternResults" style="display: none;">
+            <div class="pattern-title">Frequent Itemsets Found</div>
+            <div id="patternList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advantages Section -->
+    <div class="advantages-card reveal">
+      <div class="advantages-header">
+        <div class="advantages-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3 class="advantages-title">Advantages of FP-Growth</h3>
+      </div>
+      
+      <div class="advantages-grid">
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Only requires two database scans - one for counting and one for tree construction, making it significantly faster than Apriori.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="3" y1="9" x2="21" y2="9"/>
+              <line x1="9" y1="21" x2="9" y2="9"/>
+            </svg>
+          </div>
+          <div class="advantage-text">No candidate generation needed - patterns are discovered directly from the compressed tree structure.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+              <path d="M12 20V10"/>
+              <path d="M18 20V4"/>
+              <path d="M6 20v-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">FP-Tree compresses data efficiently, often resulting in a much smaller structure than the original database.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Scales well to large datasets where Apriori's multiple scans become prohibitively expensive.</div>
+        </div>
+      </div>
+    </div>
+    
+  </section>
+
+  <footer style="padding: 40px 20px; text-align: center; border-top: 1px solid var(--border);">
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);">
+      // FP-Growth algorithm visualization for machine learning education
+    </p>
+  </footer>
+  
+</div>
+
+<!-- Help Button -->
+<button class="help-btn" id="helpBtn" aria-label="Help">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+</button>
+
+<!-- Help Modal -->
+<div class="help-modal-overlay" id="helpModal">
+  <div class="help-modal">
+    <div class="help-modal-header">
+      <h3 class="help-modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        FP-Growth Algorithm Guide
+      </h3>
+      <button class="help-modal-close" id="closeModal" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="help-modal-body">
+      <div class="help-section">
+        <h4 class="help-section-title">What is FP-Growth?</h4>
+        <p class="help-section-text">
+          FP-Growth (Frequent Pattern Growth) is an efficient algorithm for mining frequent itemsets from transaction databases. It uses a compressed data structure called FP-Tree to avoid the costly candidate generation process of Apriori.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How FP-Tree Works</h4>
+        <p class="help-section-text">
+          The FP-Tree is a compact representation that stores frequent itemsets in a tree structure. Each node represents an item with its support count. Items are ordered by frequency, and common prefixes are shared among transactions, providing compression.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Why FP-Growth is Faster Than Apriori</h4>
+        <ul class="help-list">
+          <li>Apriori requires multiple database scans (one per itemset size)</li>
+          <li>FP-Growth needs only two scans: one for counting, one for tree building</li>
+          <li>Apriori generates many candidate itemsets that must be tested</li>
+          <li>FP-Growth mines patterns directly from the tree without candidate generation</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How Frequent Patterns Are Mined</h4>
+        <p class="help-section-text">
+          Starting from the least frequent item, FP-Growth builds conditional pattern bases by tracing paths in the tree. These are used to construct conditional FP-Trees, from which frequent itemsets are extracted recursively.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How to Use the Simulator</h4>
+        <ul class="help-list">
+          <li>Select a dataset type from the dropdown</li>
+          <li>Adjust minimum support and number of transactions</li>
+          <li>Click "Generate Dataset" to create transaction data</li>
+          <li>Click "Build FP-Tree" to watch tree construction</li>
+          <li>Click "Mine Patterns" to discover frequent itemsets</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const bgNodes = [];
+const bgNodeCount = 40;
+
+function initBgNodes() {
+  bgNodes.length = 0;
+  
+  for (let i = 0; i < bgNodeCount; i++) {
+    bgNodes.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.2,
+      vy: (Math.random() - 0.5) * 0.2,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'emerald' : 'cyan'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < bgNodes.length; i++) {
+    for (let j = i + 1; j < bgNodes.length; j++) {
+      const dx = bgNodes[i].x - bgNodes[j].x;
+      const dy = bgNodes[i].y - bgNodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 90) {
+        const alpha = (1 - dist / 90) * 0.1;
+        const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 1.2 + i * 0.3));
+        
+        if (bgNodes[i].type === 'emerald') {
+          bgCtx.strokeStyle = 'rgba(16, 185, 129, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(6, 182, 212, ' + pulseAlpha + ')';
+        }
+        
+        bgCtx.beginPath();
+        bgCtx.moveTo(bgNodes[i].x, bgNodes[i].y);
+        bgCtx.lineTo(bgNodes[j].x, bgNodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  
+  bgNodes.forEach(node => {
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.02;
+    
+    if (node.x < 0 || node.x > bgWidth) node.vx *= -1;
+    if (node.y < 0 || node.y > bgHeight) node.vy *= -1;
+    
+    const dx = mouseX - node.x;
+    const dy = mouseY - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 100) {
+      node.x -= dx * 0.006;
+      node.y -= dy * 0.006;
+    }
+    
+    const pulseRadius = node.radius + Math.sin(node.pulse) * 0.4;
+    const glowRadius = Math.max(1, pulseRadius + 3);
+    
+    const glow = bgCtx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, glowRadius
+    );
+    
+    if (node.type === 'emerald') {
+      glow.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+      glow.addColorStop(1, 'rgba(16, 185, 129, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(6, 182, 212, 0.3)');
+      glow.addColorStop(1, 'rgba(6, 182, 212, 0)');
+    }
+    
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+    bgCtx.fill();
+    
+    bgCtx.fillStyle = node.type === 'emerald' ? '#10b981' : '#06b6d4';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pulseRadius), 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 150);
+  gradient.addColorStop(0, 'rgba(16, 185, 129, 0.025)');
+  gradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.015)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animateBg() {
+  mouseX += (targetMouseX - mouseX) * 0.05;
+  mouseY += (targetMouseY - mouseY) * 0.05;
+  
+  drawBackground();
+  requestAnimationFrame(animateBg);
+}
+
+// === ITEM COLORS ===
+const itemColors = {
+  'Milk': '#10b981',
+  'Bread': '#06b6d4',
+  'Butter': '#f59e0b',
+  'Eggs': '#f472b6',
+  'Cheese': '#8b5cf6',
+  'Apples': '#ef4444',
+  'Bananas': '#eab308',
+  'Coffee': '#78350f',
+  'Tea': '#059669',
+  'Juice': '#ea580c'
+};
+
+function getItemColor(item) {
+  return itemColors[item] || '#6366f1';
+}
+
+// === FP-GROWTH SIMULATOR ===
+let treeCanvas = null;
+let treeCtx = null;
+
+let transactions = [];
+let frequentItems = [];
+let fpTree = null;
+let headerTable = {};
+let frequentPatterns = [];
+let uniqueItems = new Set();
+
+let minSupport = 0.3;
+let numTransactions = 10;
+let animationSpeed = 1;
+
+let isRunning = false;
+let currentStep = 0;
+let animationId = null;
+let treeBuildProgress = 0;
+let currentTransIndex = 0;
+
+// Market basket items
+const allItems = ['Milk', 'Bread', 'Butter', 'Eggs', 'Cheese', 'Apples', 'Bananas', 'Coffee', 'Tea', 'Juice'];
+
+function initSimulator() {
+  treeCanvas = document.getElementById('treeCanvas');
+  
+  if (!treeCanvas) return;
+  
+  treeCtx = treeCanvas.getContext('2d');
+  
+  resizeCanvas();
+}
+
+function resizeCanvas() {
+  if (!treeCanvas) return;
+  
+  const rect = treeCanvas.parentElement.getBoundingClientRect();
+  treeCanvas.width = Math.max(1, rect.width - 8);
+  treeCanvas.height = Math.max(1, rect.height - 8);
+  
+  drawTree();
+}
+
+// === DATASET GENERATION ===
+function generateDataset(type) {
+  transactions = [];
+  uniqueItems.clear();
+  
+  switch (type) {
+    case 'market':
+      generateMarketBasket();
+      break;
+    case 'retail':
+      generateRetail();
+      break;
+    case 'random':
+      generateRandom();
+      break;
+  }
+  
+  resetState();
+  displayTransactions();
+  
+  document.getElementById('treeInfo').textContent = transactions.length + ' transactions generated';
+  document.getElementById('buildBtn').disabled = false;
+  
+  updateStepDisplay('READY', 'Dataset Generated',
+    transactions.length + ' transactions created with ' + uniqueItems.size + ' unique items. Click "Build FP-Tree" to begin.');
+  
+  updateMetrics();
+  drawTree();
+}
+
+function generateMarketBasket() {
+  const patterns = [
+    ['Milk', 'Bread', 'Butter'],
+    ['Milk', 'Bread'],
+    ['Bread', 'Butter', 'Eggs'],
+    ['Milk', 'Eggs'],
+    ['Bread', 'Eggs'],
+    ['Milk', 'Bread', 'Eggs'],
+    ['Butter', 'Eggs'],
+    ['Milk', 'Butter'],
+    ['Bread', 'Butter'],
+    ['Milk', 'Bread', 'Butter', 'Eggs']
+  ];
+  
+  for (let i = 0; i < numTransactions; i++) {
+    const pattern = patterns[i % patterns.length];
+    const items = [...pattern];
+    
+    // Add some random items occasionally
+    if (Math.random() > 0.7) {
+      const extraItem = allItems[Math.floor(Math.random() * allItems.length)];
+      if (!items.includes(extraItem)) {
+        items.push(extraItem);
+      }
+    }
+    
+    transactions.push(items);
+    items.forEach(item => uniqueItems.add(item));
+  }
+}
+
+function generateRetail() {
+  const categories = {
+    dairy: ['Milk', 'Cheese', 'Butter', 'Eggs'],
+    bakery: ['Bread'],
+    fruits: ['Apples', 'Bananas'],
+    beverages: ['Coffee', 'Tea', 'Juice']
+  };
+  
+  for (let i = 0; i < numTransactions; i++) {
+    const items = [];
+    
+    // Select random categories
+    const numCats = 1 + Math.floor(Math.random() * 3);
+    const cats = Object.keys(categories).sort(() => Math.random() - 0.5).slice(0, numCats);
+    
+    cats.forEach(cat => {
+      const catItems = categories[cat];
+      const numItems = 1 + Math.floor(Math.random() * catItems.length);
+      catItems.sort(() => Math.random() - 0.5).slice(0, numItems).forEach(item => {
+        if (!items.includes(item)) items.push(item);
+      });
+    });
+    
+    if (items.length > 0) {
+      transactions.push(items);
+      items.forEach(item => uniqueItems.add(item));
+    }
+  }
+}
+
+function generateRandom() {
+  for (let i = 0; i < numTransactions; i++) {
+    const numItems = 2 + Math.floor(Math.random() * 4);
+    const items = [];
+    
+    for (let j = 0; j < numItems; j++) {
+      const item = allItems[Math.floor(Math.random() * allItems.length)];
+      if (!items.includes(item)) {
+        items.push(item);
+        uniqueItems.add(item);
+      }
+    }
+    
+    if (items.length > 0) {
+      transactions.push(items);
+    }
+  }
+}
+
+function displayTransactions() {
+  const list = document.getElementById('transList');
+  list.innerHTML = '';
+  
+  transactions.forEach((trans, i) => {
+    const item = document.createElement('div');
+    item.className = 'transaction-item';
+    item.textContent = 'T' + (i + 1) + ': {' + trans.join(', ') + '}';
+    list.appendChild(item);
+  });
+}
+
+function resetState() {
+  frequentItems = [];
+  fpTree = { itemName: null, count: 0, children: [], parent: null };
+  headerTable = {};
+  frequentPatterns = [];
+  currentStep = 0;
+  isRunning = false;
+  treeBuildProgress = 0;
+  currentTransIndex = 0;
+  
+  document.getElementById('mineBtn').disabled = true;
+  document.getElementById('patternResults').style.display = 'none';
+  document.getElementById('patternList').innerHTML = '';
+}
+
+// === FP-TREE CONSTRUCTION ===
+function countItemFrequency() {
+  const counts = {};
+  
+  transactions.forEach(trans => {
+    trans.forEach(item => {
+      counts[item] = (counts[item] || 0) + 1;
+    });
+  });
+  
+  return counts;
+}
+
+function filterAndSortItems(itemCounts) {
+  const minCount = Math.ceil(minSupport * transactions.length);
+  
+  // Filter by minimum support
+  const filtered = Object.entries(itemCounts)
+    .filter(([item, count]) => count >= minCount)
+    .sort((a, b) => b[1] - a[1]); // Sort by frequency descending
+  
+  return filtered;
+}
+
+function buildFPTree() {
+  if (transactions.length === 0) return;
+  
+  isRunning = true;
+  currentStep = 1;
+  
+  document.getElementById('buildBtn').disabled = true;
+  document.getElementById('generateBtn').disabled = true;
+  
+  runBuildStep();
+}
+
+function runBuildStep() {
+  const stepDelay = 500 / animationSpeed;
+  
+  switch (currentStep) {
+    case 1:
+      stepCountFrequency();
+      break;
+    case 2:
+      stepFilterSort();
+      break;
+    case 3:
+      stepBuildTree();
+      return;
+    case 4:
+      finishBuild();
+      return;
+  }
+  
+  currentStep++;
+  
+  if (animationId) clearTimeout(animationId);
+  animationId = setTimeout(runBuildStep, stepDelay);
+}
+
+function stepCountFrequency() {
+  const counts = countItemFrequency();
+  
+  let infoText = 'Item frequencies: ';
+  Object.entries(counts).slice(0, 5).forEach(([item, count]) => {
+    infoText += item + '=' + count + ' ';
+  });
+  
+  updateStepDisplay('STEP 1', 'Count Item Frequencies',
+    'Scanning all transactions to count item occurrences. ' + infoText);
+  
+  drawTree();
+}
+
+function stepFilterSort() {
+  const counts = countItemFrequency();
+  frequentItems = filterAndSortItems(counts);
+  
+  const minCount = Math.ceil(minSupport * transactions.length);
+  
+  updateStepDisplay('STEP 2', 'Filter and Sort Items',
+    'Filtered ' + frequentItems.length + ' items meeting min support (' + minCount + ' transactions). ' +
+    'Items sorted by frequency: ' + frequentItems.slice(0, 4).map(([item]) => item).join(', '));
+  
+  updateMetrics();
+  drawTree();
+}
+
+function stepBuildTree() {
+  // Initialize header table
+  frequentItems.forEach(([item, count]) => {
+    headerTable[item] = { count: count, nodes: [] };
+  });
+  
+  // Build tree transaction by transaction with animation
+  buildTreeAnimated();
+}
+
+function buildTreeAnimated() {
+  if (currentTransIndex >= transactions.length) {
+    finishBuild();
+    return;
+  }
+  
+  const counts = countItemFrequency();
+  const sortedItems = filterAndSortItems(counts);
+  const itemOrder = sortedItems.map(([item]) => item);
+  
+  // Get current transaction and sort by frequency
+  const trans = transactions[currentTransIndex];
+  const sortedTrans = trans
+    .filter(item => itemOrder.includes(item))
+    .sort((a, b) => itemOrder.indexOf(a) - itemOrder.indexOf(b));
+  
+  // Insert into tree
+  insertIntoTree(fpTree, sortedTrans, headerTable);
+  
+  treeBuildProgress = (currentTransIndex + 1) / transactions.length;
+  
+  updateStepDisplay('STEP 3', 'Building FP-Tree (' + (currentTransIndex + 1) + '/' + transactions.length + ')',
+    'Inserting transaction {' + sortedTrans.join(', ') + '} into tree. Progress: ' + 
+    Math.round(treeBuildProgress * 100) + '%');
+  
+  updateMetrics();
+  drawTree();
+  
+  currentTransIndex++;
+  
+  const delay = 300 / animationSpeed;
+  if (animationId) clearTimeout(animationId);
+  animationId = setTimeout(buildTreeAnimated, delay);
+}
+
+function insertIntoTree(root, items, header) {
+  let current = root;
+  
+  items.forEach(item => {
+    // Find existing child with this item
+    let child = current.children.find(c => c.itemName === item);
+    
+    if (child) {
+      child.count++;
+    } else {
+      child = {
+        itemName: item,
+        count: 1,
+        children: [],
+        parent: current
+      };
+      current.children.push(child);
+      
+      // Add to header table
+      if (header[item]) {
+        header[item].nodes.push(child);
+      }
+    }
+    
+    current = child;
+  });
+}
+
+function finishBuild() {
+  isRunning = false;
+  
+  updateStepDisplay('COMPLETE', 'FP-Tree Built',
+    'FP-Tree construction complete. Tree has ' + countNodes(fpTree) + ' nodes and depth ' + getTreeDepth(fpTree) + '.');
+  
+  document.getElementById('generateBtn').disabled = false;
+  document.getElementById('mineBtn').disabled = false;
+  
+  updateMetrics();
+  drawTree();
+}
+
+function countNodes(node) {
+  if (!node) return 0;
+  let count = node.itemName ? 1 : 0;
+  node.children.forEach(child => {
+    count += countNodes(child);
+  });
+  return count;
+}
+
+function getTreeDepth(node, depth = 0) {
+  if (!node || node.children.length === 0) return depth;
+  let maxDepth = depth;
+  node.children.forEach(child => {
+    maxDepth = Math.max(maxDepth, getTreeDepth(child, depth + 1));
+  });
+  return maxDepth;
+}
+
+// === PATTERN MINING ===
+function minePatterns() {
+  if (!fpTree || frequentItems.length === 0) return;
+  
+  isRunning = true;
+  currentStep = 1;
+  frequentPatterns = [];
+  
+  document.getElementById('mineBtn').disabled = true;
+  document.getElementById('generateBtn').disabled = true;
+  
+  runMineStep();
+}
+
+function runMineStep() {
+  const stepDelay = 400 / animationSpeed;
+  
+  switch (currentStep) {
+    case 1:
+      stepMineIntro();
+      break;
+    case 2:
+      stepMinePatterns();
+      return;
+    case 3:
+      finishMine();
+      return;
+  }
+  
+  currentStep++;
+  
+  if (animationId) clearTimeout(animationId);
+  animationId = setTimeout(runMineStep, stepDelay);
+}
+
+function stepMineIntro() {
+  updateStepDisplay('STEP 4', 'Starting Pattern Mining',
+    'Mining frequent patterns from FP-Tree. Processing ' + frequentItems.length + ' items from header table.');
+  
+  drawTree();
+}
+
+function stepMinePatterns() {
+  // Mine patterns for each item in header table (starting from least frequent)
+  const itemsToMine = [...frequentItems].reverse();
+  
+  itemsToMine.forEach(([item, count]) => {
+    // Single item is always frequent
+    if (!frequentPatterns.find(p => p.items.join(',') === item)) {
+      frequentPatterns.push({
+        items: [item],
+        support: count / transactions.length
+      });
+    }
+    
+    // Find conditional pattern base
+    const conditionalPatterns = findConditionalPatterns(item);
+    
+    // Generate patterns from conditional patterns
+    conditionalPatterns.forEach(pattern => {
+      const newPattern = [item, ...pattern.items];
+      const support = pattern.support;
+      
+      if (support >= minSupport) {
+        if (!frequentPatterns.find(p => p.items.join(',') === newPattern.sort().join(','))) {
+          frequentPatterns.push({
+            items: newPattern.sort(),
+            support: support
+          });
+        }
+      }
+    });
+  });
+  
+  updateStepDisplay('STEP 5', 'Extracting Patterns',
+    'Found ' + frequentPatterns.length + ' frequent itemsets from conditional pattern bases.');
+  
+  updateMetrics();
+  drawTree();
+  
+  finishMine();
+}
+
+function findConditionalPatterns(item) {
+  const patterns = [];
+  const nodes = headerTable[item]?.nodes || [];
+  
+  nodes.forEach(node => {
+    // Find path from root to this node
+    const path = [];
+    let current = node.parent;
+    
+    while (current && current.itemName) {
+      path.unshift({ item: current.itemName, count: node.count });
+      current = current.parent;
+    }
+    
+    if (path.length > 0) {
+      patterns.push({
+        items: path.map(p => p.item),
+        count: node.count,
+        support: node.count / transactions.length
+      });
+    }
+  });
+  
+  // Combine patterns and find frequent combinations
+  const combinedPatterns = [];
+  const itemCounts = {};
+  
+  patterns.forEach(pattern => {
+    pattern.items.forEach(item => {
+      itemCounts[item] = (itemCounts[item] || 0) + pattern.count;
+    });
+  });
+  
+  // Filter by support
+  Object.entries(itemCounts).forEach(([item, count]) => {
+    if (count / transactions.length >= minSupport) {
+      combinedPatterns.push({
+        items: [item],
+        support: count / transactions.length
+      });
+    }
+  });
+  
+  return combinedPatterns;
+}
+
+function finishMine() {
+  isRunning = false;
+  
+  // Display patterns
+  displayPatterns();
+  
+  updateStepDisplay('COMPLETE', 'Pattern Mining Complete',
+    'Found ' + frequentPatterns.length + ' frequent itemsets. Results shown in the panel below.');
+  
+  document.getElementById('generateBtn').disabled = false;
+  
+  updateMetrics();
+  drawTree();
+}
+
+function displayPatterns() {
+  const results = document.getElementById('patternResults');
+  const list = document.getElementById('patternList');
+  
+  results.style.display = 'block';
+  list.innerHTML = '';
+  
+  // Sort by support descending
+  const sorted = [...frequentPatterns].sort((a, b) => b.support - a.support);
+  
+  sorted.slice(0, 10).forEach(pattern => {
+    const item = document.createElement('div');
+    item.className = 'pattern-item';
+    item.innerHTML = '<span class="pattern-items">{' + pattern.items.join(', ') + '}</span>' +
+                     '<span class="pattern-support">' + (pattern.support * 100).toFixed(0) + '%</span>';
+    list.appendChild(item);
+  });
+  
+  if (sorted.length > 10) {
+    const more = document.createElement('div');
+    more.className = 'pattern-item';
+    more.innerHTML = '<span style="color: var(--muted);">... and ' + (sorted.length - 10) + ' more</span>';
+    list.appendChild(more);
+  }
+}
+
+function updateMetrics() {
+  document.getElementById('metricTrans').textContent = transactions.length;
+  document.getElementById('metricItems').textContent = frequentItems.length;
+  document.getElementById('metricDepth').textContent = getTreeDepth(fpTree);
+  document.getElementById('metricSupport').textContent = Math.round(minSupport * 100) + '%';
+}
+
+function updateStepDisplay(step, title, text) {
+  document.getElementById('stepNum').textContent = step;
+  document.getElementById('stepTitle').textContent = title;
+  document.getElementById('stepText').textContent = text;
+}
+
+// === TREE DRAWING ===
+function drawTree() {
+  if (!treeCtx) return;
+  
+  const w = treeCanvas.width;
+  const h = treeCanvas.height;
+  
+  // Clear
+  treeCtx.fillStyle = '#060a14';
+  treeCtx.fillRect(0, 0, w, h);
+  
+  // Draw header table
+  drawHeaderTable(w, h);
+  
+  if (!fpTree || fpTree.children.length === 0) {
+    // Draw placeholder
+    treeCtx.fillStyle = '#5c7090';
+    treeCtx.font = '12px JetBrains Mono';
+    treeCtx.textAlign = 'center';
+    treeCtx.fillText('Build FP-Tree to see visualization', w / 2, h / 2);
+    return;
+  }
+  
+  // Calculate positions
+  const treeWidth = w - 120;
+  const treeHeight = h - 60;
+  const startY = 40;
+  
+  // Draw tree
+  drawTreeNode(fpTree, w / 2, startY, treeWidth / 2, 0, treeHeight);
+}
+
+function drawHeaderTable(w, h) {
+  if (frequentItems.length === 0) return;
+  
+  const tableX = w - 110;
+  const tableY = 20;
+  const rowHeight = 20;
+  
+  treeCtx.fillStyle = 'rgba(16, 185, 129, 0.1)';
+  treeCtx.fillRect(tableX - 5, tableY - 5, 105, Math.min(frequentItems.length + 1, 8) * rowHeight + 10);
+  
+  treeCtx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
+  treeCtx.strokeRect(tableX - 5, tableY - 5, 105, Math.min(frequentItems.length + 1, 8) * rowHeight + 10);
+  
+  treeCtx.font = '9px JetBrains Mono';
+  treeCtx.fillStyle = '#10b981';
+  treeCtx.textAlign = 'left';
+  treeCtx.fillText('HEADER TABLE', tableX, tableY + 8);
+  
+  frequentItems.slice(0, 7).forEach(([item, count], i) => {
+    const y = tableY + (i + 1) * rowHeight + 8;
+    const color = getItemColor(item);
+    
+    treeCtx.fillStyle = color;
+    treeCtx.beginPath();
+    treeCtx.arc(tableX + 5, y - 3, 4, 0, Math.PI * 2);
+    treeCtx.fill();
+    
+    treeCtx.fillStyle = '#e8ecf4';
+    treeCtx.fillText(item + ':' + count, tableX + 15, y);
+  });
+  
+  if (frequentItems.length > 7) {
+    treeCtx.fillStyle = '#5c7090';
+    treeCtx.fillText('+' + (frequentItems.length - 7) + ' more', tableX + 5, tableY + 8 * rowHeight + 8);
+  }
+}
+
+function drawTreeNode(node, x, y, spread, depth, maxDepth) {
+  if (!node || depth > 8) return;
+  
+  const levelHeight = maxDepth / Math.max(getTreeDepth(fpTree), 1);
+  
+  // Draw node
+  if (node.itemName) {
+    const color = getItemColor(node.itemName);
+    const radius = Math.max(12, 8 + node.count * 2);
+    
+    // Glow
+    const glow = treeCtx.createRadialGradient(x, y, 0, x, y, radius + 8);
+    glow.addColorStop(0, color + '40');
+    glow.addColorStop(1, color + '00');
+    treeCtx.fillStyle = glow;
+    treeCtx.beginPath();
+    treeCtx.arc(x, y, radius + 8, 0, Math.PI * 2);
+    treeCtx.fill();
+    
+    // Node circle
+    treeCtx.fillStyle = color;
+    treeCtx.beginPath();
+    treeCtx.arc(x, y, radius, 0, Math.PI * 2);
+    treeCtx.fill();
+    
+    // Label
+    treeCtx.fillStyle = '#ffffff';
+    treeCtx.font = 'bold 9px JetBrains Mono';
+    treeCtx.textAlign = 'center';
+    treeCtx.textBaseline = 'middle';
+    treeCtx.fillText(node.itemName, x, y - 4);
+    
+    treeCtx.font = '8px JetBrains Mono';
+    treeCtx.fillText(node.count, x, y + 7);
+  } else {
+    // Root node
+    treeCtx.fillStyle = '#5c7090';
+    treeCtx.font = '9px JetBrains Mono';
+    treeCtx.textAlign = 'center';
+    treeCtx.fillText('NULL', x, y);
+  }
+  
+  // Draw children
+  const childCount = node.children.length;
+  if (childCount > 0) {
+    const childSpread = spread * 0.7;
+    const childY = y + levelHeight + 40;
+    const startX = x - (childCount - 1) * childSpread / 2;
+    
+    node.children.forEach((child, i) => {
+      const childX = startX + i * childSpread;
+      
+      // Draw edge
+      treeCtx.strokeStyle = 'rgba(92, 112, 144, 0.4)';
+      treeCtx.lineWidth = 1.5;
+      treeCtx.beginPath();
+      treeCtx.moveTo(x, y + (node.itemName ? 14 : 5));
+      treeCtx.lineTo(childX, childY - 14);
+      treeCtx.stroke();
+      
+      // Draw child
+      drawTreeNode(child, childX, childY, childSpread, depth + 1, maxDepth);
+    });
+  }
+}
+
+// === HELP MODAL ===
+function initHelpModal() {
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const closeModal = document.getElementById('closeModal');
+  
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('active');
+  });
+  
+  closeModal.addEventListener('click', () => {
+    helpModal.classList.remove('active');
+  });
+  
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.classList.remove('active');
+    }
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && helpModal.classList.contains('active')) {
+      helpModal.classList.remove('active');
+    }
+  });
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initBgNodes();
+  
+  resizeCanvas();
+});
+
+// === CONTROL BINDINGS ===
+document.addEventListener('DOMContentLoaded', function() {
+  const datasetSelect = document.getElementById('datasetSelect');
+  const supportSlider = document.getElementById('supportSlider');
+  const transSlider = document.getElementById('transSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const generateBtn = document.getElementById('generateBtn');
+  const buildBtn = document.getElementById('buildBtn');
+  const mineBtn = document.getElementById('mineBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  
+  supportSlider.addEventListener('input', function() {
+    minSupport = parseInt(this.value) / 100;
+    document.getElementById('supportValueDisplay').textContent = this.value + '%';
+  });
+  
+  transSlider.addEventListener('input', function() {
+    numTransactions = parseInt(this.value);
+    document.getElementById('transValueDisplay').textContent = numTransactions;
+  });
+  
+  speedSlider.addEventListener('input', function() {
+    animationSpeed = parseFloat(this.value);
+    document.getElementById('speedValueDisplay').textContent = this.value + 'x';
+  });
+  
+  generateBtn.addEventListener('click', function() {
+    if (!isRunning) {
+      generateDataset(datasetSelect.value);
+    }
+  });
+  
+  buildBtn.addEventListener('click', buildFPTree);
+  mineBtn.addEventListener('click', minePatterns);
+  
+  resetBtn.addEventListener('click', function() {
+    if (animationId) {
+      clearTimeout(animationId);
+      animationId = null;
+    }
+    
+    transactions = [];
+    resetState();
+    
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('buildBtn').disabled = true;
+    document.getElementById('transList').innerHTML = '';
+    document.getElementById('treeInfo').textContent = 'Generate dataset to begin';
+    
+    updateStepDisplay('READY', 'Reset Complete',
+      'All data cleared. Generate a new dataset to begin FP-Growth analysis.');
+    
+    updateMetrics();
+    drawTree();
+  });
+  
+  // Initialize
+  initSimulator();
+});
+
+// === INITIALIZE ===
+initBgNodes();
+animateBg();
+initScrollReveal();
+initHelpModal();
+</script>
+
+</body>
+</html>

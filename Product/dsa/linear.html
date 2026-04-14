@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linear Structures | PROTO A</title>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      
+      /* Structure Accents */
+      --c-array: #818cf8;   /* Indigo */
+      --c-stack: #34d399;   /* Emerald */
+      --c-queue: #38bdf8;   /* Sky */
+      --c-list: #fbbf24;    /* Amber */
+      
+      --bg-body: #0a0a0f;
+      --bg-card: #16161f;
+      --bg-elevated: #1c1c28;
+      --text-main: #f1f5f9;
+      --text-muted: #64748b;
+      --text-dim: #475569;
+      --border: #1e1e2e;
+      
+      --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.15);
+      --radius-lg: 20px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Tech Grid Background */
+    body::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: 
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+      mask-image: radial-gradient(circle at center, black 30%, transparent 100%);
+    }
+
+    /* --- Navigation --- */
+    .topbar {
+      height: 64px; width: 100%;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 24px; position: sticky; top: 0;
+      background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+    
+    .nav-btn {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      padding: 8px 16px; border-radius: 8px;
+      color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.9rem; font-weight: 500;
+      transition: var(--transition);
+    }
+    .nav-btn:hover { color: var(--text-main); border-color: var(--border-light); }
+    
+    .icon-btn {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; transition: var(--transition);
+    }
+    .icon-btn:hover { background: var(--bg-elevated); color: var(--text-main); }
+
+    /* --- Main Layout --- */
+    .container {
+      max-width: 1100px; margin: 0 auto;
+      padding: 60px 24px;
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; z-index: 1;
+    }
+
+    .hero-text {
+      text-align: center; margin-bottom: 50px;
+    }
+    
+    .breadcrumb {
+      font-size: 0.8rem; color: var(--text-dim); margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .breadcrumb span { color: var(--primary); }
+
+    .hero-title {
+      font-size: 3rem; font-weight: 800; letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+    
+    .hero-sub {
+      font-size: 1rem; color: var(--text-muted); max-width: 500px; margin: 0 auto;
+    }
+
+    /* --- Cards Grid --- */
+    .cards-grid {
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px; width: 100%;
+    }
+
+    /* --- Module Card --- */
+    .module-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+      display: flex; flex-direction: column;
+      cursor: pointer; transition: var(--transition);
+      position: relative;
+    }
+
+    .module-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--card-accent);
+      box-shadow: 0 10px 30px -10px var(--card-accent-shadow);
+    }
+
+    /* Dynamic Card Colors */
+    .m-array { --card-accent: var(--c-array); --card-accent-shadow: rgba(129, 140, 248, 0.3); }
+    .m-stack { --card-accent: var(--c-stack); --card-accent-shadow: rgba(52, 211, 153, 0.3); }
+    .m-queue { --card-accent: var(--c-queue); --card-accent-shadow: rgba(56, 189, 248, 0.3); }
+    .m-list { --card-accent: var(--c-list); --card-accent-shadow: rgba(251, 191, 36, 0.3); }
+
+    /* Preview Area */
+    .card-preview {
+      height: 180px; background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+
+    /* Live Badge */
+    .preview-badge {
+      position: absolute; top: 12px; right: 12px;
+      padding: 4px 10px; background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px); border-radius: 4px;
+      font-size: 0.65rem; font-weight: 700; color: #10b981;
+      text-transform: uppercase; display: flex; align-items: center; gap: 4px;
+    }
+
+    /* --- ANIMATIONS --- */
+    
+    /* 1. Array Animation (Scanning) */
+    .array-viz {
+      display: flex; gap: 8px; align-items: center; height: 80px;
+    }
+    .arr-block {
+      width: 20px; height: 60px; background: var(--border);
+      border-radius: 4px; position: relative; overflow: hidden;
+    }
+    .arr-block::after {
+      content: ''; position: absolute; inset: 0;
+      background: var(--c-array);
+      transform: translateY(100%);
+      animation: arrScan 3s infinite;
+    }
+    .arr-block:nth-child(1)::after { animation-delay: 0.1s; }
+    .arr-block:nth-child(2)::after { animation-delay: 0.3s; }
+    .arr-block:nth-child(3)::after { animation-delay: 0.5s; }
+    .arr-block:nth-child(4)::after { animation-delay: 0.7s; }
+    .arr-block:nth-child(5)::after { animation-delay: 0.9s; }
+    
+    @keyframes arrScan {
+      0%, 100% { transform: translateY(100%); }
+      50% { transform: translateY(0%); }
+    }
+
+    /* 2. Stack Animation (Push/Pop) */
+    .stack-viz {
+      width: 60px; height: 80px; 
+      border-left: 2px dashed var(--border); border-bottom: 2px dashed var(--border);
+      display: flex; flex-direction: column-reverse; align-items: flex-start;
+      padding: 4px; gap: 4px;
+    }
+    .stk-block {
+      width: 50px; height: 15px; background: var(--c-stack);
+      border-radius: 3px;
+      animation: stackPush 2.5s ease-in-out infinite;
+      opacity: 0;
+    }
+    .stk-block:nth-child(1) { animation-delay: 0s; }
+    .stk-block:nth-child(2) { animation-delay: 0.5s; }
+    .stk-block:nth-child(3) { animation-delay: 1s; }
+    
+    @keyframes stackPush {
+      0%, 20% { opacity: 0; transform: translateY(-20px); }
+      30%, 70% { opacity: 1; transform: translateY(0); }
+      80%, 100% { opacity: 0; transform: scale(0.8); }
+    }
+
+    /* 3. Queue Animation (Slide) */
+    .queue-viz {
+      width: 100px; height: 40px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      display: flex; align-items: center;
+      position: relative; overflow: hidden;
+    }
+    .q-block {
+      width: 24px; height: 24px; background: var(--c-queue);
+      border-radius: 4px; position: absolute; left: -30px;
+      animation: qMove 3s linear infinite;
+    }
+    
+    @keyframes qMove {
+      0% { left: -30px; opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { left: 110px; opacity: 0; }
+    }
+
+    /* 4. Linked List Animation (Chain) */
+    .list-viz {
+      display: flex; align-items: center; gap: 0;
+    }
+    .node-box {
+      width: 30px; height: 30px; border: 2px solid var(--c-list);
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      background: transparent;
+    }
+    .node-link {
+      width: 20px; height: 2px; background: var(--border);
+      position: relative;
+    }
+    .node-link::after {
+      content: ''; position: absolute; right: 0; top: -3px;
+      border: 4px solid transparent; border-left-color: var(--border);
+    }
+    
+    /* Traversal Dot */
+    .list-viz::after {
+      content: ''; position: absolute;
+      width: 10px; height: 10px; background: var(--c-list);
+      border-radius: 50%; box-shadow: 0 0 10px var(--c-list);
+      animation: listTraverse 3s ease-in-out infinite;
+    }
+    
+    @keyframes listTraverse {
+      0%, 100% { left: 0; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      95% { left: 160px; opacity: 0; }
+    }
+
+    /* Content Area */
+    .card-content { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+    
+    .card-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; color: var(--card-accent); }
+    .card-desc {
+      font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;
+      margin-bottom: 16px; flex: 1;
+    }
+
+    .card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 12px; border-top: 1px solid var(--border);
+    }
+    
+    .btn-open {
+      background: transparent; border: none; padding: 6px 12px;
+      border-radius: 6px; color: var(--text-muted); font-weight: 600;
+      display: flex; align-items: center; gap: 6px; font-size: 0.8rem;
+      cursor: pointer; transition: var(--transition);
+    }
+    .btn-open i { transition: transform 0.2s; }
+    .module-card:hover .btn-open { color: var(--card-accent); }
+    .module-card:hover .btn-open i { transform: translateX(3px); }
+
+    .meta-tag {
+      font-size: 0.7rem; padding: 4px 8px; border-radius: 4px;
+      background: rgba(255,255,255,0.05); color: var(--text-dim);
+    }
+
+    @media(max-width: 768px) {
+      .hero-title { font-size: 2.2rem; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="topbar">
+    <button class="nav-btn" onclick="window.location.href='dsa.html'">
+      <i class="ri-arrow-left-line"></i> Back to Structures
+    </button>
+    
+    <button class="icon-btn" onclick="toggleTheme()" aria-label="Theme">
+      <i class="ri-palette-line"></i>
+    </button>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+    <div class="hero-text">
+      <div class="breadcrumb">
+        Data Structures <i class="ri-arrow-right-s-line"></i> <span>Linear</span>
+      </div>
+      <h1 class="hero-title">Linear Structures</h1>
+      <p class="hero-sub">Elements are arranged sequentially, one after the other. Select a structure to begin simulation.</p>
+    </div>
+
+    <div class="cards-grid">
+      
+      <!-- Array Card -->
+      <div class="module-card m-array" onclick="openPage('array.html')">
+        <div class="card-preview">
+          <div class="array-viz">
+            <div class="arr-block"></div><div class="arr-block"></div>
+            <div class="arr-block"></div><div class="arr-block"></div>
+            <div class="arr-block"></div>
+          </div>
+          <div class="preview-badge">Interactive</div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">Array</h2>
+          <p class="card-desc">Contiguous memory block with index-based access. Visualize traversal, insertion, and searching.</p>
+          <div class="card-footer">
+            <span class="meta-tag">O(1) Access</span>
+            <button class="btn-open">
+              Open <i class="ri-arrow-right-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stack Card -->
+      <div class="module-card m-stack" onclick="openPage('stack.html')">
+        <div class="card-preview">
+          <div class="stack-viz">
+            <div class="stk-block"></div><div class="stk-block"></div><div class="stk-block"></div>
+          </div>
+          <div class="preview-badge">LIFO</div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">Stack</h2>
+          <p class="card-desc">Last In, First Out structure. Visualize push and pop operations in real-time.</p>
+          <div class="card-footer">
+            <span class="meta-tag">O(1) Ops</span>
+            <button class="btn-open">
+              Open <i class="ri-arrow-right-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Queue Card -->
+      <div class="module-card m-queue" onclick="openPage('queue.html')">
+        <div class="card-preview">
+          <div class="queue-viz">
+            <div class="q-block"></div>
+          </div>
+          <div class="preview-badge">FIFO</div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">Queue</h2>
+          <p class="card-desc">First In, First Out structure. Simulate enqueue and dequeue operations.</p>
+          <div class="card-footer">
+            <span class="meta-tag">O(1) Ops</span>
+            <button class="btn-open">
+              Open <i class="ri-arrow-right-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Linked List Card -->
+      <div class="module-card m-list" onclick="openPage('Linkedlist.html')">
+        <div class="card-preview">
+          <div class="list-viz">
+            <div class="node-box"></div><div class="node-link"></div>
+            <div class="node-box"></div><div class="node-link"></div>
+            <div class="node-box"></div>
+          </div>
+          <div class="preview-badge">Dynamic</div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">Linked List</h2>
+          <p class="card-desc">Nodes connected via pointers. Explore insertion, deletion, and traversal logic.</p>
+          <div class="card-footer">
+            <span class="meta-tag">Dynamic Size</span>
+            <button class="btn-open">
+              Open <i class="ri-arrow-right-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function openPage(url) {
+      window.location.href = url;
+    }
+    
+    // Simple theme cycling for demonstration
+    function toggleTheme() {
+       // Placeholder: In a real app, this would toggle dark/light classes or color themes
+       const colors = ['#6366f1', '#34d399', '#38bdf8', '#fbbf24'];
+       const randomColor = colors[Math.floor(Math.random() * colors.length)];
+       document.documentElement.style.setProperty('--primary', randomColor);
+    }
+  </script>
+</body>
+</body>
+</html>

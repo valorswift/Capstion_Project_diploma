@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supervised Learning</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #00e5ff;
+  --accent-alt: #a855f7;
+  --accent-warm: #f472b6;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #22d3ee;
+  --purple: #c084fc;
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --amber: #f59e0b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.04) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.hero {
+  min-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 229, 255, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--accent); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--accent); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--cyan) 50%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 520px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 28px;
+}
+
+.card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  display: block;
+  backdrop-filter: blur(8px);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), transparent, rgba(168, 85, 247, 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card:hover::after {
+  opacity: 1;
+}
+
+.card:hover {
+  transform: translateY(-10px) scale(1.01);
+  border-color: rgba(0, 229, 255, 0.25);
+  box-shadow: 
+    0 30px 80px -20px rgba(0, 229, 255, 0.12),
+    0 0 60px -20px rgba(168, 85, 247, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.card-preview {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at center, #0c1428 0%, #060a14 100%);
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.card-preview-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  background: rgba(4, 6, 13, 0.85);
+  padding: 6px 12px;
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+  z-index: 1;
+  border: 1px solid rgba(0, 229, 255, 0.1);
+}
+
+.card-content {
+  padding: 28px;
+}
+
+.card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.tag-classification { 
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(34, 197, 94, 0.18)); 
+  color: var(--cyan); 
+  border: 1px solid rgba(34, 211, 238, 0.2);
+}
+.tag-regression { 
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(249, 115, 22, 0.18)); 
+  color: var(--amber); 
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 24px 0;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  color: var(--bg);
+  transition: all 0.3s ease;
+}
+
+.card:hover .card-btn {
+  background: linear-gradient(135deg, var(--cyan), var(--accent));
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px -4px var(--accent);
+}
+
+.card-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.card:hover .card-btn svg {
+  transform: translateX(4px);
+}
+
+.card-meta {
+  text-align: right;
+}
+
+.card-meta-difficulty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.difficulty-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.difficulty-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s ease;
+}
+
+.difficulty-dots span.active {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.comparison-section {
+  margin-top: 80px;
+  padding: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.comparison-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-alt), transparent);
+}
+
+.comparison-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  text-align: center;
+  color: var(--text);
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.comparison-item {
+  text-align: center;
+  padding: 24px 20px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.comparison-item:hover {
+  border-color: rgba(0, 229, 255, 0.2);
+  background: rgba(0, 229, 255, 0.03);
+}
+
+.comparison-item h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.comparison-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.comparison-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Scroll reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 40vh;
+  }
+  
+  .card-preview {
+    height: 160px;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .comparison-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .comparison-section {
+    padding: 28px 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="ml_lab.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="ml_lab.html">Machine Learning</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Supervised</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Machine Learning Paradigm</div>
+    <h1 class="main-title">Supervised Learning</h1>
+    <p class="subtitle">
+      // Train models on labeled datasets to learn input-output mappings<br>
+      // enabling accurate predictions on unseen data through pattern recognition.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <div class="grid">
+      
+      <!-- Classification Algorithms -->
+      <a href="classification.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-classification"></canvas>
+          <div class="card-preview-overlay">CLASSIFIER</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-classification">Category Prediction</span>
+          <h3>Classification Algorithms</h3>
+          <p>
+            Predict discrete class labels by learning decision boundaries from 
+            labeled training data. Applications include spam detection, image recognition, and diagnosis.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Open Algorithms
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-difficulty">
+                <span>Beginner</span>
+                <div class="difficulty-dots">
+                  <span class="active"></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- Regression Algorithms -->
+      <a href="regression.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-regression"></canvas>
+          <div class="card-preview-overlay">PREDICTOR</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-regression">Continuous Prediction</span>
+          <h3>Regression Algorithms</h3>
+          <p>
+            Predict continuous numerical values by modeling relationships between 
+            input features and target outcomes. Used for forecasting, pricing, and trend analysis.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Open Algorithms
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-difficulty">
+                <span>Beginner</span>
+                <div class="difficulty-dots">
+                  <span class="active"></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+
+    <div class="comparison-section reveal">
+      <h3 class="comparison-title">Supervised Learning Comparison</h3>
+      <div class="comparison-grid">
+        <div class="comparison-item">
+          <h4 style="color: var(--cyan);">Classification</h4>
+          <div class="comparison-value">Discrete Categories</div>
+          <div class="comparison-label">Spam, Disease, Objects</div>
+        </div>
+        <div class="comparison-item">
+          <h4 style="color: var(--amber);">Regression</h4>
+          <div class="comparison-value">Continuous Values</div>
+          <div class="comparison-label">Price, Temperature, Sales</div>
+        </div>
+      </div>
+    </div>
+    
+  </section>
+
+  <footer>
+    <p>// Labeled data drives intelligent predictions</p>
+  </footer>
+  
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+bgCanvas.width = width;
+bgCanvas.height = height;
+
+let mouseX = width / 2;
+let mouseY = height / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const nodes = [];
+const nodeCount = 50;
+
+function initNodes() {
+  nodes.length = 0;
+  
+  for (let i = 0; i < nodeCount; i++) {
+    nodes.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'cyan' : 'purple'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, width, height);
+  
+  const time = Date.now() * 0.001;
+  
+  // Neural network style connections
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 120) {
+        const alpha = (1 - dist / 120) * 0.15;
+        const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+        
+        if (nodes[i].type === 'cyan') {
+          bgCtx.strokeStyle = 'rgba(34, 211, 238, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(168, 85, 247, ' + pulseAlpha + ')';
+        }
+        
+        bgCtx.beginPath();
+        bgCtx.moveTo(nodes[i].x, nodes[j].y);
+        bgCtx.lineTo(nodes[j].x, nodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  
+  // Draw and update nodes
+  nodes.forEach(node => {
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.03;
+    
+    if (node.x < 0 || node.x > width) node.vx *= -1;
+    if (node.y < 0 || node.y > height) node.vy *= -1;
+    
+    // Mouse interaction
+    const dx = mouseX - node.x;
+    const dy = mouseY - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 150) {
+      node.x -= dx * 0.01;
+      node.y -= dy * 0.01;
+    }
+    
+    const pulseRadius = node.radius + Math.sin(node.pulse) * 0.5;
+    const glowRadius = Math.max(1, pulseRadius + 4);
+    
+    // Glow
+    const glow = bgCtx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, glowRadius
+    );
+    
+    if (node.type === 'cyan') {
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.4)');
+      glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+      glow.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    }
+    
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+    bgCtx.fill();
+    
+    // Core
+    bgCtx.fillStyle = node.type === 'cyan' ? '#22d3ee' : '#a855f7';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pulseRadius), 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  // Central mouse glow
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  gradient.addColorStop(0, 'rgba(0, 229, 255, 0.04)');
+  gradient.addColorStop(0.5, 'rgba(168, 85, 247, 0.02)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, width, height);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === CLASSIFICATION PREVIEW ===
+function initPreviewClassification() {
+  const canvas = document.getElementById('preview-classification');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const points = [];
+  const numPoints = 35;
+  let time = 0;
+  
+  // Generate two distinct clusters
+  for (let i = 0; i < numPoints; i++) {
+    const isClassA = i < numPoints / 2;
+    const centerX = isClassA ? canvas.width * 0.28 : canvas.width * 0.72;
+    const centerY = canvas.height * 0.5;
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * 45;
+    
+    points.push({
+      x: centerX + Math.cos(angle) * radius,
+      y: centerY + Math.sin(angle) * radius,
+      classA: isClassA,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+  
+  function draw() {
+    time += 0.02;
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Animated decision boundary
+    const boundaryX = canvas.width / 2 + Math.sin(time * 0.8) * 25;
+    
+    // Left region (Class A)
+    const leftGrad = ctx.createLinearGradient(0, 0, boundaryX, 0);
+    leftGrad.addColorStop(0, 'rgba(34, 211, 238, 0.12)');
+    leftGrad.addColorStop(1, 'rgba(34, 211, 238, 0.02)');
+    ctx.fillStyle = leftGrad;
+    ctx.fillRect(0, 0, boundaryX, canvas.height);
+    
+    // Right region (Class B)
+    const rightGrad = ctx.createLinearGradient(boundaryX, 0, canvas.width, 0);
+    rightGrad.addColorStop(0, 'rgba(168, 85, 247, 0.02)');
+    rightGrad.addColorStop(1, 'rgba(168, 85, 247, 0.12)');
+    ctx.fillStyle = rightGrad;
+    ctx.fillRect(boundaryX, 0, canvas.width - boundaryX, canvas.height);
+    
+    // Decision boundary with glow
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.lineDashOffset = -time * 20;
+    ctx.beginPath();
+    ctx.moveTo(boundaryX, 0);
+    ctx.lineTo(boundaryX, canvas.height);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+    
+    // Draw points
+    points.forEach((p, i) => {
+      const jitterX = Math.sin(time * 2 + p.phase) * 2;
+      const jitterY = Math.cos(time * 1.5 + p.phase) * 2;
+      const px = p.x + jitterX;
+      const py = p.y + jitterY;
+      
+      // Point glow
+      const glow = ctx.createRadialGradient(px, py, 0, px, py, 14);
+      if (p.classA) {
+        glow.addColorStop(0, 'rgba(34, 211, 238, 0.6)');
+        glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+      } else {
+        glow.addColorStop(0, 'rgba(168, 85, 247, 0.6)');
+        glow.addColorStop(1, 'rgba(168, 85, 247, 0)');
+      }
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(px, py, 14, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Point core
+      ctx.fillStyle = p.classA ? '#22d3ee' : '#a855f7';
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Inner highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      ctx.arc(px - 1.5, py - 1.5, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    // Labels
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillStyle = 'rgba(34, 211, 238, 0.9)';
+    ctx.textAlign = 'left';
+    ctx.fillText('CLASS A', 16, 22);
+    
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.9)';
+    ctx.textAlign = 'right';
+    ctx.fillText('CLASS B', canvas.width - 16, 22);
+    
+    // Accuracy display
+    let correct = 0;
+    points.forEach(p => {
+      if ((p.classA && p.x < boundaryX) || (!p.classA && p.x > boundaryX)) {
+        correct++;
+      }
+    });
+    const accuracy = Math.round((correct / points.length) * 100);
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.textAlign = 'center';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('ACC: ' + accuracy + '%', canvas.width / 2, canvas.height - 14);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === REGRESSION PREVIEW ===
+function initPreviewRegression() {
+  const canvas = document.getElementById('preview-regression');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const points = [];
+  const numPoints = 25;
+  let time = 0;
+  
+  // Generate points along a curve with noise
+  for (let i = 0; i < numPoints; i++) {
+    const t = i / (numPoints - 1);
+    const x = 40 + t * (canvas.width - 80);
+    const baseY = canvas.height * 0.7 - t * canvas.height * 0.5;
+    const noise = (Math.random() - 0.5) * 30;
+    
+    points.push({
+      x: x,
+      y: baseY + noise,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+  
+  function draw() {
+    time += 0.02;
+    
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw axes
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(30, 20);
+    ctx.lineTo(30, canvas.height - 20);
+    ctx.lineTo(canvas.width - 20, canvas.height - 20);
+    ctx.stroke();
+    
+    // Axis labels
+    ctx.font = '9px JetBrains Mono';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.textAlign = 'center';
+    ctx.fillText('X', canvas.width - 20, canvas.height - 8);
+    ctx.save();
+    ctx.translate(12, canvas.height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Y', 0, 0);
+    ctx.restore();
+    
+    // Animated regression line
+    const slope = -0.6 + Math.sin(time * 0.5) * 0.1;
+    const intercept = canvas.height * 0.75;
+    
+    // Draw confidence band
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.05)';
+    ctx.beginPath();
+    ctx.moveTo(30, intercept + slope * 30 - 25);
+    for (let x = 30; x <= canvas.width - 30; x += 5) {
+      const y = intercept + slope * (x - 30) - 25;
+      ctx.lineTo(x, y);
+    }
+    for (let x = canvas.width - 30; x >= 30; x -= 5) {
+      const y = intercept + slope * (x - 30) + 25;
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    
+    // Regression line with glow
+    ctx.shadowColor = 'rgba(245, 158, 11, 0.6)';
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(30, intercept);
+    ctx.lineTo(canvas.width - 30, intercept + slope * (canvas.width - 60));
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    
+    // Draw data points
+    points.forEach((p, i) => {
+      const jitter = Math.sin(time * 1.5 + p.phase) * 1.5;
+      const px = p.x;
+      const py = p.y + jitter;
+      
+      // Residual line to regression
+      const lineY = intercept + slope * (p.x - 30);
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px, lineY);
+      ctx.stroke();
+      
+      // Point glow
+      const glow = ctx.createRadialGradient(px, py, 0, px, py, 12);
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.5)');
+      glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(px, py, 12, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Point core
+      ctx.fillStyle = '#22d3ee';
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    // Calculate R²
+    const meanY = points.reduce((s, p) => s + p.y, 0) / points.length;
+    let ssTot = 0, ssRes = 0;
+    points.forEach(p => {
+      const predY = intercept + slope * (p.x - 30);
+      ssTot += (p.y - meanY) ** 2;
+      ssRes += (p.y - predY) ** 2;
+    });
+    const r2 = Math.max(0, 1 - ssRes / ssTot);
+    
+    // Stats display
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.9)';
+    ctx.textAlign = 'left';
+    ctx.fillText('REGRESSION', 16, 22);
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.textAlign = 'right';
+    ctx.fillText('R2: ' + r2.toFixed(3), canvas.width - 16, canvas.height - 14);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  bgCanvas.width = width;
+  bgCanvas.height = height;
+  initNodes();
+  
+  initPreviewClassification();
+  initPreviewRegression();
+});
+
+// === INITIALIZE ===
+initNodes();
+animate();
+initScrollReveal();
+
+requestAnimationFrame(function() {
+  initPreviewClassification();
+  initPreviewRegression();
+});
+</script>
+
+</body>
+</html>

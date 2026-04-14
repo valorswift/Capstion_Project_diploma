@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFS Maze Visualizer | PROTO C (Fixed)</title>
+    <!-- Remix Icon -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    
+    <style>
+        /* --- Theme Variables --- */
+        :root {
+            --bg-body: #0f172a;
+            --bg-sidebar: rgba(15, 23, 42, 0.95);
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+            
+            --primary: #38bdf8; /* Sky Blue */
+            --primary-glow: rgba(56, 189, 248, 0.4);
+            --secondary: #a855f7; /* Purple */
+            
+            --color-wall: #1e293b;
+            --color-start: #10b981; /* Emerald */
+            --color-end: #ef4444;   /* Red */
+            --color-visited: rgba(56, 189, 248, 0.15);
+            --color-path: #ec4899;   /* HOT PINK */
+            --color-current: #facc15; /* Yellow */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Inter", system-ui, -apple-system, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-body);
+            background-image: 
+                radial-gradient(circle at top right, #1e293b, transparent 40%),
+                radial-gradient(circle at bottom left, #0f172a, transparent 40%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- Layout --- */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 320px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+            z-index: 10;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-main), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        /* --- Control Groups --- */
+        .control-group {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-group h3 {
+            font-size: 0.85rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        label { font-size: 0.85rem; color: var(--text-muted); }
+
+        input[type="number"], input[type="range"] {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            width: 60px;
+            text-align: center;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            outline: none;
+            appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px; height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        /* --- Buttons --- */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.2s;
+            color: white;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, var(--primary), #0284c7); box-shadow: 0 4px 15px var(--primary-glow); }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px var(--primary-glow); }
+        
+        .btn-secondary { background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+        .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.1); border-color: var(--text-muted); }
+        
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover:not(:disabled) { transform: translateY(-2px); }
+
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+        /* --- Metrics --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .stat-card {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+        .stat-value { font-size: 1.1rem; font-weight: 700; color: var(--text-main); font-family: 'Fira Code', monospace; }
+
+        .status-box {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+        .status-dot.running { background: var(--color-current); box-shadow: 0 0 8px var(--color-current); animation: pulse 1s infinite; }
+        .status-dot.done { background: var(--color-path); box-shadow: 0 0 8px var(--color-path); }
+        .status-dot.fail { background: #ef4444; }
+
+        /* --- Legend --- */
+        .legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-box { width: 12px; height: 12px; border-radius: 3px; }
+
+        /* --- Grid Area --- */
+        .grid-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(var(--cols), 1fr);
+            gap: 2px;
+            background: rgba(0,0,0,0.2);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background: #1e293b;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Cell States */
+        .wall { 
+            background: #0f172a; 
+            border: 1px solid #334155;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .start { 
+            background: var(--color-start); 
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            border-color: #34d399;
+            z-index: 2;
+        }
+
+        .end { 
+            background: var(--color-end); 
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+            border-color: #f87171;
+            z-index: 2;
+        }
+
+        .visited { 
+            background: var(--color-visited);
+            border-color: rgba(56, 189, 248, 0.3);
+            animation: popIn 0.3s ease forwards;
+        }
+
+        .current { 
+            background: var(--color-current) !important;
+            box-shadow: 0 0 20px var(--color-current), inset 0 0 10px rgba(255,255,255,0.5);
+            border-color: #fff !important;
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        .path { 
+            background: var(--color-path) !important;
+            border-color: #fbcfe8 !important;
+            box-shadow: 0 0 15px var(--color-path), 0 0 5px #fff;
+            animation: pathPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            z-index: 5;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; border-radius: 50%; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes pathPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.25); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes pulse { 0% { opacity: 0.5; box-shadow: 0 0 0 rgba(250, 204, 21, 0); } 50% { opacity: 1; box-shadow: 0 0 10px rgba(250, 204, 21, 0.5); } 100% { opacity: 0.5; box-shadow: 0 0 0 rgba(250, 204, 21, 0); } }
+
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <h1><i class="ri-arrow-down-double-line"></i> DFS Visualizer</h1>
+        
+        <div class="status-box">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Ready</span>
+        </div>
+
+        <!-- Grid Settings -->
+        <div class="control-group">
+            <h3>Grid Settings</h3>
+            <div class="input-row">
+                <label>Rows</label>
+                <input type="number" id="rowsInput" value="15" min="5" max="40">
+            </div>
+            <div class="input-row">
+                <label>Cols</label>
+                <input type="number" id="colsInput" value="15" min="5" max="40">
+            </div>
+            <button class="btn-secondary" id="resizeBtn" style="padding: 8px; font-size: 0.85rem;">
+                <i class="ri-ruler-line"></i> Apply Size
+            </button>
+        </div>
+
+        <!-- Maze Settings -->
+        <div class="control-group">
+            <h3>Maze Generation</h3>
+            <div class="input-row" style="flex-direction: column; align-items: flex-start; gap: 5px;">
+                <div style="display:flex; justify-content:space-between; width:100%">
+                    <label>Wall Density</label>
+                    <span id="densityVal" style="font-size:0.75rem; color:var(--primary)">20%</span>
+                </div>
+                <input type="range" id="densitySlider" min="0" max="60" value="20">
+            </div>
+            <button class="btn-secondary" id="randomMazeBtn">
+                <i class="ri-shuffle-line"></i> Random Walls
+            </button>
+            <button class="btn-primary" id="perfectMazeBtn">
+                <i class="ri-layout-masonry-line"></i> Perfect Maze
+            </button>
+        </div>
+
+        <!-- Simulation Controls -->
+        <div class="btn-group">
+            <button class="btn-primary" id="toggleBtn" onclick="toggleSearch()">
+                <i class="ri-play-fill"></i> Start Search
+            </button>
+            <button class="btn-secondary" id="clearPathBtn">
+                <i class="ri-eraser-line"></i> Clear Path
+            </button>
+            <button class="btn-danger" id="resetBtn">
+                <i class="ri-refresh-line"></i> Full Reset
+            </button>
+        </div>
+
+        <!-- Stats -->
+        <div class="control-group">
+            <h3>Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Visited</div>
+                    <div class="stat-value" id="visitedCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Steps</div>
+                    <div class="stat-value" id="steps">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Stack</div>
+                    <div class="stat-value" id="stackSize">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Time</div>
+                    <div class="stat-value" id="time">0</div>
+                </div>
+            </div>
+            <div style="margin-top: 10px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">
+                    <span>Speed</span>
+                </div>
+                <input type="range" id="speedSlider" min="1" max="100" value="50">
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-box start"></div>Start</div>
+            <div class="legend-item"><div class="legend-box end"></div>Goal</div>
+            <div class="legend-item"><div class="legend-box wall"></div>Wall</div>
+            <div class="legend-item"><div class="legend-box visited"></div>Visited</div>
+            <div class="legend-item"><div class="legend-box current"></div>Current</div>
+            <div class="legend-item"><div class="legend-box path"></div>Path</div>
+        </div>
+    </aside>
+
+    <!-- GRID AREA -->
+    <main class="grid-area" id="gridArea">
+        <div class="grid" id="grid"></div>
+    </main>
+
+</div>
+
+<script>
+const gridElement = document.getElementById("grid");
+const gridArea = document.getElementById("gridArea");
+
+// Inputs
+const rowsInput = document.getElementById("rowsInput");
+const colsInput = document.getElementById("colsInput");
+const densitySlider = document.getElementById("densitySlider");
+const densityVal = document.getElementById("densityVal");
+
+// Buttons
+const resizeBtn = document.getElementById("resizeBtn");
+const randomMazeBtn = document.getElementById("randomMazeBtn");
+const perfectMazeBtn = document.getElementById("perfectMazeBtn");
+const toggleBtn = document.getElementById("toggleBtn");
+const clearPathBtn = document.getElementById("clearPathBtn");
+const resetBtn = document.getElementById("resetBtn");
+const speedSlider = document.getElementById("speedSlider");
+
+// Stats
+const statusText = document.getElementById("statusText");
+const statusDot = document.getElementById("statusDot");
+const visitedEl = document.getElementById("visitedCount");
+const stepsEl = document.getElementById("steps");
+const stackSizeEl = document.getElementById("stackSize");
+const timeEl = document.getElementById("time");
+
+// State
+let runId = 0; 
+let rows = 15;
+let cols = 15;
+let grid = []; // DOM Elements
+let visited = new Set();
+let parentMap = new Map(); // Key: "r,c", Value: "pr,pc"
+let stack = [];
+let isRunning = false;
+let steps = 0;
+let startTime = 0;
+let speed = 50; // ms delay
+
+const start = [0, 0];
+let end = [14, 14]; 
+
+// --- INIT & RESIZE ---
+
+function updateCellSize() {
+    const availW = gridArea.clientWidth - 40; 
+    const availH = gridArea.clientHeight - 40;
+    
+    const cellW = Math.floor(availW / cols);
+    const cellH = Math.floor(availH / rows);
+    const size = Math.min(cellW, cellH, 50); 
+    
+    document.documentElement.style.setProperty('--cell-size', `${size}px`);
+    document.documentElement.style.setProperty('--cols', cols);
+}
+
+window.addEventListener('resize', updateCellSize);
+
+function createGrid(r, c, keepWalls = false) {
+    rows = r;
+    cols = c;
+    end = [rows-1, cols-1];
+    
+    gridElement.innerHTML = "";
+    grid = [];
+    visited.clear();
+    parentMap.clear();
+    
+    updateCellSize();
+
+    for (let i = 0; i < r * c; i++) {
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+        grid.push(cell);
+        gridElement.appendChild(cell);
+    }
+
+    getCell(start[0], start[1]).classList.add("start");
+    getCell(end[0], end[1]).classList.add("end");
+    
+    resetStats();
+}
+
+function getCell(r, c) {
+    if (r < 0 || r >= rows || c < 0 || c >= cols) return null;
+    return grid[r * cols + c];
+}
+
+// --- MAZE GENERATORS ---
+
+function generateRandomMaze() {
+    if(isRunning) return;
+    
+    clearPath(false); 
+    
+    const density = parseInt(densitySlider.value) / 100;
+    
+    for(let r=0; r<rows; r++) {
+        for(let c=0; c<cols; c++) {
+            if((r===start[0] && c===start[1]) || (r===end[0] && c===end[1])) continue;
+            
+            if(Math.random() < density) {
+                getCell(r, c).classList.add("wall");
+            }
+        }
+    }
+    updateStatus("Maze Generated", "idle");
+}
+
+function generatePerfectMaze() {
+    if(isRunning) return;
+    
+    const targetRows = rows % 2 === 0 ? rows - 1 : rows;
+    const targetCols = cols % 2 === 0 ? cols - 1 : cols;
+    
+    createGrid(targetRows, targetCols);
+    
+    for(let i=0; i<grid.length; i++) {
+        if (!grid[i].classList.contains("start") && !grid[i].classList.contains("end")) {
+            grid[i].classList.add("wall");
+        }
+    }
+    
+    const startR = 1, startC = 1;
+    const stack = [[startR, startC]];
+    getCell(startR, startC).classList.remove("wall");
+    
+    const dirs = [[0, -2], [0, 2], [-2, 0], [2, 0]]; 
+    
+    while(stack.length > 0) {
+        const [r, c] = stack[stack.length - 1];
+        
+        const shuffledDirs = dirs.sort(() => Math.random() - 0.5);
+        let found = false;
+        
+        for(let [dr, dc] of shuffledDirs) {
+            const nr = r + dr;
+            const nc = c + dc;
+            
+            if (nr > 0 && nr < rows - 1 && nc > 0 && nc < cols - 1 && getCell(nr, nc).classList.contains("wall")) {
+                getCell(nr, nc).classList.remove("wall");
+                getCell(r + dr/2, c + dc/2).classList.remove("wall"); 
+                
+                stack.push([nr, nc]);
+                found = true;
+                break;
+            }
+        }
+        
+        if(!found) {
+            stack.pop();
+        }
+    }
+    
+    getCell(0,0).classList.remove("wall");
+    getCell(0,1).classList.remove("wall");
+    getCell(1,0).classList.remove("wall");
+    
+    getCell(rows-1, cols-1).classList.remove("wall");
+    getCell(rows-2, cols-1).classList.remove("wall");
+    getCell(rows-1, cols-2).classList.remove("wall");
+    
+    updateStatus("Perfect Maze Ready", "idle");
+}
+
+// --- DFS LOGIC ---
+
+function getNeighbors(r, c) {
+    return [
+        [r-1, c], [r+1, c], [r, c-1], [r, c+1]
+    ].filter(([nr,nc]) => 
+        nr >= 0 && nc >= 0 && nr < rows && nc < cols && 
+        !getCell(nr, nc).classList.contains("wall")
+    );
+}
+
+function updateStatus(text, type) {
+    statusText.textContent = text;
+    statusDot.className = "status-dot " + type;
+}
+
+function resetStats() {
+    steps = 0;
+    stepsEl.textContent = 0;
+    visitedEl.textContent = 0;
+    stackSizeEl.textContent = 0;
+    timeEl.textContent = "0ms";
+    updateStatus("Ready", "idle");
+}
+
+async function toggleSearch() {
+    if (isRunning) {
+        isRunning = false;
+        updateStatus("Stopped", "fail");
+        setButtonState(false);
+    } else {
+        clearPath(true); 
+        runId++;
+        const currentRun = runId;
+        
+        steps = 0;
+        startTime = performance.now();
+        isRunning = true;
+        setButtonState(true);
+        updateStatus("Searching...", "running");
+        
+        stack = [[...start]];
+        parentMap.set(`${start[0]},${start[1]}`, null);
+        
+        while(stack.length > 0 && isRunning) {
+            if(currentRun !== runId) break;
+            
+            if(steps % 5 === 0) {
+                stackSizeEl.textContent = stack.length;
+                visitedEl.textContent = visited.size;
+                timeEl.textContent = Math.round(performance.now() - startTime) + "ms";
+            }
+
+            const [r, c] = stack.pop();
+            const idx = r * cols + c;
+            const key = `${r},${c}`;
+
+            if(visited.has(key)) continue;
+            
+            visited.add(key);
+            steps++;
+            stepsEl.textContent = steps;
+
+            const cell = grid[idx];
+            cell.classList.add("current");
+            
+            await new Promise(r => setTimeout(r, speed));
+            
+            if(!isRunning || currentRun !== runId) break;
+
+            cell.classList.remove("current");
+            cell.classList.add("visited");
+
+            if(r === end[0] && c === end[1]) {
+                isRunning = false;
+                setButtonState(false);
+                updateStatus("Path Found!", "done");
+                await reconstructPath();
+                return;
+            }
+
+            let neighbors = getNeighbors(r, c);
+            
+            for(let i = 0; i < neighbors.length; i++) {
+                const [nr, nc] = neighbors[i];
+                const nKey = `${nr},${nc}`;
+                if(!visited.has(nKey)) {
+                    parentMap.set(nKey, key); 
+                    stack.push([nr, nc]);
+                }
+            }
+        }
+
+        if(isRunning) {
+            updateStatus("Exhausted / No Path", "fail");
+            isRunning = false;
+        }
+        setButtonState(false);
+    }
+}
+
+// --- PATH RECONSTRUCTION ---
+
+async function reconstructPath() {
+    let curr = `${end[0]},${end[1]}`;
+    let path = [];
+    
+    // Check if end is reachable
+    if (!parentMap.has(curr)) {
+        updateStatus("No Path Possible", "fail");
+        return;
+    }
+
+    while(curr) {
+        path.push(curr);
+        curr = parentMap.get(curr);
+    }
+    
+    // Animate path
+    for(let key of path) {
+        if(!isRunning) break; 
+        const [r, c] = key.split(',').map(Number);
+        const cell = getCell(r, c);
+        
+        // We apply path to EVERYTHING in the path for maximum visibility
+        // This might overwrite Start/End colors, but makes the path clear
+        cell.classList.add("path");
+        
+        // Path animation speed is half the search speed for better feel
+        // But ensure minimum delay so it doesn't break
+        const pathSpeed = Math.max(10, speed / 2); 
+        await new Promise(r => setTimeout(r, pathSpeed));
+    }
+}
+
+// --- HELPERS ---
+
+function clearPath(keepWalls = true) {
+    if(isRunning) return;
+    for(let cell of grid) {
+        if (keepWalls) {
+            cell.classList.remove("visited", "current", "path");
+        } else {
+            cell.classList.remove("visited", "current", "path", "wall");
+        }
+    }
+    visited.clear();
+    parentMap.clear();
+    stack = [];
+    resetStats();
+}
+
+function setButtonState(running) {
+    if(running) {
+        toggleBtn.className = 'btn-danger';
+        toggleBtn.innerHTML = '<i class="ri-stop-fill"></i> Stop Search';
+        clearPathBtn.disabled = true;
+        randomMazeBtn.disabled = true;
+        perfectMazeBtn.disabled = true;
+        resizeBtn.disabled = true;
+    } else {
+        toggleBtn.className = 'btn-primary';
+        toggleBtn.innerHTML = '<i class="ri-play-fill"></i> Start Search';
+        clearPathBtn.disabled = false;
+        randomMazeBtn.disabled = false;
+        perfectMazeBtn.disabled = false;
+        resizeBtn.disabled = false;
+    }
+}
+
+// --- EVENT LISTENERS ---
+
+densitySlider.oninput = () => {
+    densityVal.textContent = densitySlider.value + "%";
+};
+
+speedSlider.oninput = () => {
+    // Map 1-100 to 200ms-5ms
+    const val = parseInt(speedSlider.value);
+    speed = Math.max(5, 200 - (val * 2));
+};
+
+resizeBtn.onclick = () => {
+    if(isRunning) return;
+    let r = parseInt(rowsInput.value);
+    let c = parseInt(colsInput.value);
+    r = Math.max(5, Math.min(40, r));
+    c = Math.max(5, Math.min(40, c));
+    
+    createGrid(r, c);
+    updateStatus("Resized", "idle");
+};
+
+randomMazeBtn.onclick = generateRandomMaze;
+perfectMazeBtn.onclick = generatePerfectMaze;
+clearPathBtn.onclick = () => clearPath(true);
+resetBtn.onclick = () => {
+    if(isRunning) return;
+    createGrid(rows, cols);
+    updateStatus("Reset", "idle");
+};
+
+// Initial Setup
+window.onload = () => {
+    updateCellSize();
+    createGrid(15, 15);
+    generateRandomMaze();
+};
+
+</script>
+</body>
+</html>

@@ -1,0 +1,2549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apriori Algorithm - ML Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #f59e0b;
+  --accent-alt: #ef4444;
+  --accent-warm: #f97316;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #06b6d4;
+  --purple: #8b5cf6;
+  --blue: #3b82f6;
+  --green: #10b981;
+  --orange: #f59e0b;
+  --amber: #fbbf24;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(245, 158, 11, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(139, 92, 246, 0.04) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--orange), var(--purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--orange), var(--purple));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--orange);
+}
+
+.hero {
+  min-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--orange);
+  background: rgba(245, 158, 11, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--orange);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--orange); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--orange); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--orange) 50%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 620px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Theory Card */
+.theory-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.theory-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--purple), var(--orange));
+  opacity: 0.6;
+}
+
+.theory-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.theory-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.theory-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(139, 92, 246, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.theory-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.theory-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px;
+  align-items: start;
+}
+
+.theory-text {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.theory-text p {
+  margin: 0 0 18px 0;
+}
+
+.theory-text p:last-child {
+  margin-bottom: 0;
+}
+
+.theory-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Conceptual Diagram */
+.concept-diagram {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.diagram-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.diagram-box {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(139, 92, 246, 0.1));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+  min-width: 110px;
+}
+
+.diagram-box.highlight {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(139, 92, 246, 0.2));
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.diagram-box-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--orange);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diagram-box-value {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.diagram-arrow {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* Key Concepts */
+.key-concepts {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.key-concepts-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-concepts-title::before {
+  content: '';
+  width: 12px;
+  height: 2px;
+  background: var(--orange);
+}
+
+.concept-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.concept-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.15);
+  font-size: 13px;
+  color: var(--muted);
+  transition: all 0.3s ease;
+}
+
+.concept-list li:last-child {
+  border-bottom: none;
+}
+
+.concept-list li:hover {
+  padding-left: 8px;
+  color: var(--text);
+}
+
+.concept-list li strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.concept-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--orange), var(--purple));
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* Simulator Section */
+.simulator-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 60px;
+}
+
+.simulator-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--purple), var(--orange));
+  opacity: 0.6;
+}
+
+.simulator-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simulator-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.simulator-title svg {
+  color: var(--orange);
+}
+
+.simulator-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--orange);
+  background: rgba(245, 158, 11, 0.1);
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.simulator-body {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 0;
+  min-height: 480px;
+}
+
+/* Control Panel */
+.control-panel {
+  padding: 24px;
+  border-right: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  height: 480px;
+  overflow-y: auto;
+}
+
+.control-section {
+  margin-bottom: 24px;
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.control-select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(10, 16, 32, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c7090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.control-select:hover, .control-select:focus {
+  border-color: var(--orange);
+  outline: none;
+}
+
+.control-slider-group {
+  margin-bottom: 16px;
+}
+
+.control-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.control-slider-label span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.control-slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--orange);
+  background: rgba(245, 158, 11, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.control-slider {
+  width: 100%;
+  height: 6px;
+  background: rgba(92, 112, 144, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.control-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--orange), var(--purple));
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.control-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.control-btn.primary {
+  background: linear-gradient(135deg, var(--orange), var(--purple));
+  color: var(--bg);
+}
+
+.control-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 4px 20px -4px var(--orange);
+  transform: translateY(-2px);
+}
+
+.control-btn.secondary {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--orange);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.control-btn.secondary:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Visualization Panel */
+.viz-panel {
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.1);
+  position: relative;
+  height: 480px;
+  overflow: hidden;
+}
+
+.viz-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.viz-section {
+  background: rgba(10, 16, 32, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  height: 420px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.viz-section-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.viz-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.viz-section-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.viz-canvas-wrap {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.viz-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: #060a14;
+}
+
+/* Itemset Display */
+.itemset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+
+.itemset-card {
+  background: rgba(10, 16, 32, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.3s ease;
+}
+
+.itemset-card.frequent {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.itemset-card.infrequent {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+  opacity: 0.6;
+}
+
+.itemset-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.itemset-support {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.support-bar-bg {
+  flex: 1;
+  height: 4px;
+  background: rgba(92, 112, 144, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.support-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.support-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  min-width: 35px;
+  text-align: right;
+}
+
+/* Steps Panel */
+.steps-panel {
+  padding: 24px;
+  border-left: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  height: 480px;
+  overflow-y: auto;
+}
+
+.explanation-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--purple);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explanation-header::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--purple);
+  border-radius: 2px;
+}
+
+.explanation-step {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.explanation-step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--orange);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explanation-step-num::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: rgba(245, 158, 11, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.explanation-step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.explanation-step-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Metrics Display */
+.metrics-display {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.metrics-display-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-name {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.metric-value.highlight {
+  color: var(--orange);
+}
+
+/* Rules Display */
+.rules-display {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  display: none;
+}
+
+.rules-display.active {
+  display: block;
+}
+
+.rules-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rules-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 2px;
+}
+
+.rule-item {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.rule-item:last-child {
+  margin-bottom: 0;
+}
+
+.rule-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.rule-metrics {
+  display: flex;
+  gap: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Advantages Section */
+.advantages-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.advantages-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--purple), var(--orange));
+  opacity: 0.6;
+}
+
+.advantages-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.advantages-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(139, 92, 246, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.advantages-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.advantages-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.advantage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  transition: all 0.3s ease;
+}
+
+.advantage-item:hover {
+  border-color: rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.03);
+}
+
+.advantage-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(139, 92, 246, 0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.advantage-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* Help Button */
+.help-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--orange), var(--purple));
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 32px -8px rgba(245, 158, 11, 0.4),
+    0 0 48px -12px rgba(139, 92, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.help-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 12px 40px -8px rgba(245, 158, 11, 0.5),
+    0 0 60px -12px rgba(139, 92, 246, 0.4);
+}
+
+.help-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--orange), var(--purple));
+  opacity: 0.3;
+  filter: blur(10px);
+  z-index: -1;
+}
+
+/* Help Modal */
+.help-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 13, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  padding: 20px;
+}
+
+.help-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.help-modal {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.98), rgba(8, 12, 22, 0.99));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.help-modal-overlay.active .help-modal {
+  transform: translateY(0) scale(1);
+}
+
+.help-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), var(--purple), var(--orange));
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.help-modal-title svg {
+  color: var(--orange);
+}
+
+.help-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.help-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.help-modal-body {
+  padding: 28px;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-section-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--orange);
+  border-radius: 2px;
+}
+
+.help-section-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.help-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.help-list li:last-child {
+  border-bottom: none;
+}
+
+.help-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--orange), var(--purple));
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Scroll reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .simulator-body {
+    grid-template-columns: 260px 1fr 260px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .theory-content {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  
+  .simulator-body {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  
+  .control-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    height: auto;
+    max-height: 350px;
+  }
+  
+  .steps-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    height: auto;
+    max-height: 350px;
+  }
+  
+  .advantages-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .viz-panel {
+    height: auto;
+  }
+  
+  .viz-section {
+    height: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 35vh;
+  }
+  
+  .theory-card {
+    padding: 28px 24px;
+  }
+  
+  .simulator-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .diagram-flow {
+    flex-direction: column;
+  }
+  
+  .diagram-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .help-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .viz-section {
+    height: 300px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="As_Holder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="ml_lab.html">Machine Learning</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="unsupervised.html">Unsupervised</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="association.html">Association</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Apriori Algorithm</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Association Rule Mining</div>
+    <h1 class="main-title">Apriori Algorithm</h1>
+    <p class="subtitle">
+      // A classic association rule mining algorithm that discovers frequent<br>
+      // itemsets in transactional datasets by iteratively scanning and pruning.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <!-- Theory Card -->
+    <div class="theory-card reveal">
+      <div class="theory-header">
+        <div class="theory-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+            <path d="M10 6.5h4M6.5 10v4M17.5 10v4M10 17.5h4"/>
+          </svg>
+        </div>
+        <h2 class="theory-title">Understanding the Apriori Algorithm</h2>
+      </div>
+      
+      <div class="theory-content">
+        <div class="theory-text">
+          <p>
+            <strong>The Apriori Algorithm is a classic association rule mining algorithm</strong> used to discover frequent itemsets in transactional databases. It operates on the principle that if an itemset is frequent, all of its subsets must also be frequent.
+          </p>
+          <p>
+            <strong>Frequent itemsets</strong> are sets of items that appear together in transactions at least as often as a user-specified minimum support threshold. The algorithm finds these through iterative database scanning and candidate generation.
+          </p>
+          
+          <!-- Conceptual Diagram -->
+          <div class="concept-diagram">
+            <div class="diagram-flow">
+              <div class="diagram-box">
+                <div class="diagram-box-title">Input</div>
+                <div class="diagram-box-value">Transactions</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Generate</div>
+                <div class="diagram-box-value">Candidates</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Calculate</div>
+                <div class="diagram-box-value">Support</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Prune</div>
+                <div class="diagram-box-value">Itemsets</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Output</div>
+                <div class="diagram-box-value">Frequent</div>
+              </div>
+            </div>
+          </div>
+          
+          <p><strong>Apriori Property:</strong> If an itemset is frequent, then all its subsets must also be frequent. Conversely, if an itemset is infrequent, all its supersets must also be infrequent. This property enables efficient pruning of the search space.</p>
+        </div>
+        
+        <div class="key-concepts">
+          <div class="key-concepts-title">Key Concepts</div>
+          <ul class="concept-list">
+            <li>
+              <div>
+                <strong>Itemset</strong>
+                A collection of one or more items that appear together in a transaction.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Candidate Itemset</strong>
+                A potentially frequent itemset generated for support counting in each pass.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Frequent Itemset</strong>
+                An itemset whose support meets or exceeds the minimum support threshold.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Support Threshold</strong>
+                The minimum frequency required for an itemset to be considered frequent.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Pruning</strong>
+                Eliminating candidate itemsets that cannot be frequent based on the Apriori property.
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Simulator -->
+    <div class="simulator-card reveal">
+      <div class="simulator-header">
+        <h3 class="simulator-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          Interactive Apriori Simulator
+        </h3>
+        <span class="simulator-badge">STEP-BY-STEP</span>
+      </div>
+      
+      <div class="simulator-body">
+        <!-- Control Panel -->
+        <div class="control-panel">
+          <div class="control-section">
+            <label class="control-label">Dataset Type</label>
+            <select class="control-select" id="datasetSelect">
+              <option value="market">Market Basket Dataset</option>
+              <option value="retail">Retail Dataset</option>
+              <option value="random">Random Dataset</option>
+            </select>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Min Support (%)</span>
+                <span class="control-slider-value" id="supportValueDisplay">30%</span>
+              </div>
+              <input type="range" class="control-slider" id="supportSlider" min="10" max="60" step="5" value="30">
+            </div>
+            
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Transactions</span>
+                <span class="control-slider-value" id="transValueDisplay">12</span>
+              </div>
+              <input type="range" class="control-slider" id="transSlider" min="6" max="20" step="1" value="12">
+            </div>
+            
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Animation Speed</span>
+                <span class="control-slider-value" id="speedValueDisplay">1.0x</span>
+              </div>
+              <input type="range" class="control-slider" id="speedSlider" min="0.5" max="2" step="0.25" value="1">
+            </div>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-buttons">
+              <button class="control-btn primary" id="generateBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                </svg>
+                Generate Dataset
+              </button>
+              <button class="control-btn secondary" id="startBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Start Apriori
+              </button>
+              <button class="control-btn secondary" id="resetBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="1 4 1 10 7 10"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Visualization Panel -->
+        <div class="viz-panel">
+          <div class="viz-container">
+            <div class="viz-section">
+              <div class="viz-section-header">
+                <span class="viz-section-title">Transaction Visualization</span>
+                <span class="viz-section-info" id="datasetInfo">Generate dataset to begin</span>
+              </div>
+              <div class="viz-canvas-wrap">
+                <canvas class="viz-canvas" id="mainCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Steps Panel -->
+        <div class="steps-panel">
+          <div class="explanation-header">Algorithm Progress</div>
+          
+          <div class="explanation-step" id="currentStep">
+            <div class="explanation-step-num" id="stepNum">READY</div>
+            <div class="explanation-step-title" id="stepTitle">Initialize Dataset</div>
+            <div class="explanation-step-text" id="stepText">
+              Click "Generate Dataset" to create sample transactions. Adjust support threshold and number of transactions before generating.
+            </div>
+          </div>
+          
+          <div class="metrics-display">
+            <div class="metrics-display-title">Current Metrics</div>
+            <div class="metric-row">
+              <span class="metric-name">Current Pass (K)</span>
+              <span class="metric-value highlight" id="currentPass">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Candidate Itemsets</span>
+              <span class="metric-value" id="candidateCount">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Frequent Itemsets</span>
+              <span class="metric-value" id="frequentCount">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Min Support</span>
+              <span class="metric-value" id="minSupport">30%</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Dataset Size</span>
+              <span class="metric-value" id="datasetSize">0</span>
+            </div>
+          </div>
+          
+          <div class="rules-display" id="rulesDisplay">
+            <div class="rules-title">Association Rules</div>
+            <div id="rulesList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advantages Section -->
+    <div class="advantages-card reveal">
+      <div class="advantages-header">
+        <div class="advantages-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3 class="advantages-title">Advantages of Apriori Algorithm</h3>
+      </div>
+      
+      <div class="advantages-grid">
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Simple and intuitive algorithm that is easy to understand and implement for association rule mining.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+              <path d="M12 20V10"/>
+              <path d="M18 20V4"/>
+              <path d="M6 20v-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Uses the Apriori property to prune the search space efficiently, reducing candidate itemsets.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Finds all frequent itemsets in the database, enabling comprehensive pattern discovery.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Works well with sparse datasets and can be parallelized for improved performance.</div>
+        </div>
+      </div>
+    </div>
+    
+  </section>
+
+  <footer>
+    <p>// Apriori Algorithm visualization for machine learning education</p>
+  </footer>
+  
+</div>
+
+<!-- Help Button -->
+<button class="help-btn" id="helpBtn" aria-label="Help">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+</button>
+
+<!-- Help Modal -->
+<div class="help-modal-overlay" id="helpModal">
+  <div class="help-modal">
+    <div class="help-modal-header">
+      <h3 class="help-modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Apriori Algorithm Guide
+      </h3>
+      <button class="help-modal-close" id="closeModal" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="help-modal-body">
+      <div class="help-section">
+        <h4 class="help-section-title">What is the Apriori Algorithm?</h4>
+        <p class="help-section-text">
+          Apriori is an algorithm for mining frequent itemsets and learning association rules. It operates on databases containing transactions, finding itemsets that appear together frequently.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How to Use the Simulator</h4>
+        <ul class="help-list">
+          <li>Select a dataset type from the dropdown menu</li>
+          <li>Adjust the minimum support threshold</li>
+          <li>Set the number of transactions</li>
+          <li>Click "Generate Dataset" to create sample data</li>
+          <li>Click "Start Apriori" to watch the algorithm run step-by-step</li>
+          <li>Observe candidate generation, scanning, and pruning</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">What is Support?</h4>
+        <p class="help-section-text">
+          Support measures how frequently an itemset appears in the dataset. It's calculated as the number of transactions containing the itemset divided by the total number of transactions.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Candidate Generation</h4>
+        <p class="help-section-text">
+          Candidates are generated by joining frequent itemsets from the previous pass. For example, if {A} and {B} are frequent 1-itemsets, then {A,B} becomes a candidate 2-itemset.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Why Pruning Matters</h4>
+        <p class="help-section-text">
+          Pruning eliminates candidates that cannot be frequent based on the Apriori property. If any subset of a candidate is infrequent, the candidate is pruned, saving computation time.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const bgNodes = [];
+const bgNodeCount = 50;
+
+function initBgNodes() {
+  bgNodes.length = 0;
+  
+  for (let i = 0; i < bgNodeCount; i++) {
+    bgNodes.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'orange' : 'purple'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < bgNodes.length; i++) {
+    for (let j = i + 1; j < bgNodes.length; j++) {
+      const dx = bgNodes[i].x - bgNodes[j].x;
+      const dy = bgNodes[i].y - bgNodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 120) {
+        const alpha = (1 - dist / 120) * 0.15;
+        const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+        
+        if (bgNodes[i].type === 'orange') {
+          bgCtx.strokeStyle = 'rgba(245, 158, 11, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(139, 92, 246, ' + pulseAlpha + ')';
+        }
+        
+        bgCtx.beginPath();
+        bgCtx.moveTo(bgNodes[i].x, bgNodes[i].y);
+        bgCtx.lineTo(bgNodes[j].x, bgNodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  
+  bgNodes.forEach(node => {
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.03;
+    
+    if (node.x < 0 || node.x > bgWidth) node.vx *= -1;
+    if (node.y < 0 || node.y > bgHeight) node.vy *= -1;
+    
+    const dx = mouseX - node.x;
+    const dy = mouseY - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 150) {
+      node.x -= dx * 0.01;
+      node.y -= dy * 0.01;
+    }
+    
+    const pulseRadius = node.radius + Math.sin(node.pulse) * 0.5;
+    const glowRadius = Math.max(1, pulseRadius + 4);
+    
+    const glow = bgCtx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, glowRadius
+    );
+    
+    if (node.type === 'orange') {
+      glow.addColorStop(0, 'rgba(245, 158, 11, 0.4)');
+      glow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
+      glow.addColorStop(1, 'rgba(139, 92, 246, 0)');
+    }
+    
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+    bgCtx.fill();
+    
+    bgCtx.fillStyle = node.type === 'orange' ? '#f59e0b' : '#8b5cf6';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pulseRadius), 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  gradient.addColorStop(0, 'rgba(245, 158, 11, 0.04)');
+  gradient.addColorStop(0.5, 'rgba(139, 92, 246, 0.02)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animateBg() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animateBg);
+}
+
+// === ITEM COLORS ===
+const itemColors = {
+  'Milk': '#06b6d4',
+  'Bread': '#f59e0b',
+  'Eggs': '#10b981',
+  'Butter': '#ec4899',
+  'Cheese': '#8b5cf6',
+  'Juice': '#ef4444',
+  'Apple': '#22c55e',
+  'Banana': '#eab308',
+  'Coffee': '#78716c',
+  'Tea': '#14b8a6'
+};
+
+// === APRIORI SIMULATOR ===
+let mainCanvas = null;
+let mainCtx = null;
+
+let transactions = [];
+let allItems = [];
+let frequentItemsets = [];
+let candidateItemsets = [];
+let minSupport = 0.3;
+let numTransactions = 12;
+let animationSpeed = 1;
+let datasetType = 'market';
+
+let isRunning = false;
+let currentPass = 0;
+let animationId = null;
+let scanLine = -1;
+let currentHighlightItem = null;
+
+function initSimulator() {
+  mainCanvas = document.getElementById('mainCanvas');
+  if (!mainCanvas) return;
+  
+  mainCtx = mainCanvas.getContext('2d');
+  resizeMainCanvas();
+  
+  drawScene();
+}
+
+function resizeMainCanvas() {
+  if (!mainCanvas) return;
+  
+  const container = mainCanvas.parentElement;
+  const rect = container.getBoundingClientRect();
+  mainCanvas.width = Math.max(1, rect.width);
+  mainCanvas.height = Math.max(1, rect.height);
+  
+  drawScene();
+}
+
+// === DATASET GENERATION ===
+const datasetTemplates = {
+  market: {
+    items: ['Milk', 'Bread', 'Eggs', 'Butter', 'Cheese', 'Juice'],
+    patterns: [
+      ['Milk', 'Bread'],
+      ['Bread', 'Eggs'],
+      ['Milk', 'Eggs'],
+      ['Butter', 'Bread'],
+      ['Cheese', 'Milk']
+    ]
+  },
+  retail: {
+    items: ['Apple', 'Banana', 'Coffee', 'Tea', 'Juice', 'Bread'],
+    patterns: [
+      ['Apple', 'Banana'],
+      ['Coffee', 'Tea'],
+      ['Juice', 'Bread'],
+      ['Apple', 'Juice'],
+      ['Coffee', 'Bread']
+    ]
+  },
+  random: {
+    items: ['Milk', 'Bread', 'Eggs', 'Butter', 'Cheese', 'Juice', 'Apple', 'Banana'],
+    patterns: null
+  }
+};
+
+function generateDataset() {
+  transactions = [];
+  allItems = [];
+  frequentItemsets = [];
+  candidateItemsets = [];
+  currentPass = 0;
+  scanLine = -1;
+  currentHighlightItem = null;
+  
+  const template = datasetTemplates[datasetType];
+  allItems = [...template.items];
+  
+  for (let i = 0; i < numTransactions; i++) {
+    let transaction = [];
+    
+    if (template.patterns && Math.random() < 0.6) {
+      // Use a pattern
+      const pattern = template.patterns[Math.floor(Math.random() * template.patterns.length)];
+      transaction = [...pattern];
+    }
+    
+    // Add random items
+    const numAdditional = Math.floor(Math.random() * 3);
+    for (let j = 0; j < numAdditional; j++) {
+      const item = template.items[Math.floor(Math.random() * template.items.length)];
+      if (!transaction.includes(item)) {
+        transaction.push(item);
+      }
+    }
+    
+    if (transaction.length > 0) {
+      transactions.push(transaction);
+    }
+  }
+  
+  // Ensure we have enough transactions
+  while (transactions.length < numTransactions) {
+    const transaction = [];
+    const numItems = Math.floor(Math.random() * 3) + 1;
+    for (let j = 0; j < numItems; j++) {
+      const item = template.items[Math.floor(Math.random() * template.items.length)];
+      if (!transaction.includes(item)) {
+        transaction.push(item);
+      }
+    }
+    if (transaction.length > 0) {
+      transactions.push(transaction);
+    }
+  }
+  
+  document.getElementById('datasetInfo').textContent = 
+    transactions.length + ' transactions | ' + allItems.length + ' unique items';
+  document.getElementById('datasetSize').textContent = transactions.length;
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('rulesDisplay').classList.remove('active');
+  
+  updateMetrics();
+  updateStepDisplay('READY', 'Dataset Generated', 
+    transactions.length + ' transactions created with ' + allItems.length + ' unique items. Min support: ' + (minSupport * 100).toFixed(0) + '%. Click "Start Apriori" to begin.');
+  
+  drawScene();
+}
+
+// === APRIORI ALGORITHM ===
+function startApriori() {
+  if (isRunning || transactions.length === 0) return;
+  
+  isRunning = true;
+  currentPass = 1;
+  frequentItemsets = [];
+  
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('generateBtn').disabled = true;
+  
+  runAprioriStep();
+}
+
+function runAprioriStep() {
+  const stepDelay = 1500 / animationSpeed;
+  
+  // Step 1: Generate candidates
+  step_generateCandidates();
+  
+  setTimeout(() => {
+    if (!isRunning) return;
+    
+    // Step 2: Scan and count
+    step_scanAndCount();
+    
+  }, stepDelay);
+}
+
+function step_generateCandidates() {
+  updateStepDisplay('STEP ' + (currentPass * 2 - 1), 'Generate ' + currentPass + '-Item Candidates',
+    'Generating candidate itemsets of size ' + currentPass + ' from frequent ' + (currentPass - 1) + '-itemsets.');
+  
+  candidateItemsets = [];
+  
+  if (currentPass === 1) {
+    // Generate all 1-itemsets
+    allItems.forEach(item => {
+      candidateItemsets.push({ items: [item], support: 0 });
+    });
+  } else {
+    // Generate from previous frequent itemsets
+    const prevFrequent = frequentItemsets.filter(f => f.items.length === currentPass - 1);
+    
+    for (let i = 0; i < prevFrequent.length; i++) {
+      for (let j = i + 1; j < prevFrequent.length; j++) {
+        const items1 = prevFrequent[i].items;
+        const items2 = prevFrequent[j].items;
+        
+        // Check if they share first k-1 items
+        let canJoin = true;
+        for (let k = 0; k < items1.length - 1; k++) {
+          if (items1[k] !== items2[k]) {
+            canJoin = false;
+            break;
+          }
+        }
+        
+        if (canJoin) {
+          const newItems = [...items1, items2[items2.length - 1]];
+          
+          // Check Apriori property - all subsets must be frequent
+          if (checkAprioriProperty(newItems)) {
+            candidateItemsets.push({ items: newItems, support: 0 });
+          }
+        }
+      }
+    }
+  }
+  
+  updateMetrics();
+  drawScene();
+}
+
+function checkAprioriProperty(items) {
+  if (items.length <= 1) return true;
+  
+  // Check if all subsets of size k-1 are frequent
+  for (let i = 0; i < items.length; i++) {
+    const subset = items.filter((_, idx) => idx !== i);
+    const isFrequent = frequentItemsets.some(f => 
+      f.items.length === subset.length && 
+      subset.every(s => f.items.includes(s))
+    );
+    if (!isFrequent) return false;
+  }
+  return true;
+}
+
+function step_scanAndCount() {
+  updateStepDisplay('STEP ' + (currentPass * 2), 'Scan & Count Support',
+    'Scanning all transactions to count support for ' + candidateItemsets.length + ' candidates.');
+  
+  // Reset support
+  candidateItemsets.forEach(c => c.support = 0);
+  
+  // Animate scanning
+  scanLine = 0;
+  animateScanning();
+}
+
+function animateScanning() {
+  if (scanLine < transactions.length) {
+    // Count support for current transaction
+    const transaction = transactions[scanLine];
+    candidateItemsets.forEach(candidate => {
+      if (candidate.items.every(item => transaction.includes(item))) {
+        candidate.support++;
+      }
+    });
+    
+    drawScene();
+    scanLine++;
+    
+    setTimeout(() => {
+      if (isRunning) {
+        animateScanning();
+      }
+    }, (200 / animationSpeed));
+  } else {
+    scanLine = -1;
+    // Move to pruning
+    setTimeout(() => {
+      if (isRunning) {
+        step_prune();
+      }
+    }, (500 / animationSpeed));
+  }
+}
+
+function step_prune() {
+  const minCount = Math.ceil(minSupport * transactions.length);
+  
+  updateStepDisplay('STEP ' + (currentPass * 2 + 1), 'Prune Infrequent Itemsets',
+    'Removing itemsets with support < ' + minCount + ' (' + (minSupport * 100).toFixed(0) + '% of ' + transactions.length + ' transactions).');
+  
+  const newFrequent = candidateItemsets.filter(c => c.support >= minCount);
+  
+  // Mark candidates as frequent or not
+  candidateItemsets.forEach(c => {
+    c.isFrequent = c.support >= minCount;
+  });
+  
+  drawScene();
+  
+  setTimeout(() => {
+    if (!isRunning) return;
+    
+    // Add to frequent itemsets
+    newFrequent.forEach(f => {
+      f.supportPercent = (f.support / transactions.length * 100).toFixed(1);
+      frequentItemsets.push(f);
+    });
+    
+    updateMetrics();
+    
+    if (newFrequent.length > 0 && currentPass < 5) {
+      currentPass++;
+      setTimeout(() => {
+        if (isRunning) {
+          runAprioriStep();
+        }
+      }, (1000 / animationSpeed));
+    } else {
+      step_finalize();
+    }
+  }, (1000 / animationSpeed));
+}
+
+function step_finalize() {
+  isRunning = false;
+  document.getElementById('generateBtn').disabled = false;
+  document.getElementById('startBtn').disabled = false;
+  
+  updateStepDisplay('COMPLETE', 'Algorithm Complete',
+    'Found ' + frequentItemsets.length + ' frequent itemsets across ' + currentPass + ' passes. Generating association rules.');
+  
+  generateAssociationRules();
+  drawScene();
+}
+
+function generateAssociationRules() {
+  const rules = [];
+  const minConfidence = 0.5;
+  
+  // Generate rules from itemsets with 2+ items
+  frequentItemsets.filter(f => f.items.length >= 2).forEach(itemset => {
+    // Generate all possible rules
+    for (let i = 0; i < itemset.items.length; i++) {
+      const antecedent = itemset.items.filter((_, idx) => idx !== i);
+      const consequent = itemset.items[i];
+      
+      // Find support of antecedent
+      const antecedentSupport = frequentItemsets.find(f => 
+        f.items.length === antecedent.length && 
+        antecedent.every(a => f.items.includes(a))
+      );
+      
+      if (antecedentSupport) {
+        const confidence = itemset.support / antecedentSupport.support;
+        
+        if (confidence >= minConfidence) {
+          // Calculate lift
+          const consequentSupport = frequentItemsets.find(f => 
+            f.items.length === 1 && f.items.includes(consequent)
+          );
+          const lift = consequentSupport ? 
+            confidence / (consequentSupport.support / transactions.length) : 0;
+          
+          rules.push({
+            antecedent: antecedent.join(', '),
+            consequent: consequent,
+            support: (itemset.support / transactions.length * 100).toFixed(1),
+            confidence: (confidence * 100).toFixed(1),
+            lift: lift.toFixed(2)
+          });
+        }
+      }
+    }
+  });
+  
+  // Display rules
+  const rulesList = document.getElementById('rulesList');
+  rulesList.innerHTML = '';
+  
+  rules.slice(0, 6).forEach(rule => {
+    const ruleEl = document.createElement('div');
+    ruleEl.className = 'rule-item';
+    ruleEl.innerHTML = 
+      '<div class="rule-text">' + rule.antecedent + ' → ' + rule.consequent + '</div>' +
+      '<div class="rule-metrics">' +
+        '<span>Support: ' + rule.support + '%</span>' +
+        '<span>Conf: ' + rule.confidence + '%</span>' +
+        '<span>Lift: ' + rule.lift + '</span>' +
+      '</div>';
+    rulesList.appendChild(ruleEl);
+  });
+  
+  if (rules.length > 0) {
+    document.getElementById('rulesDisplay').classList.add('active');
+  }
+}
+
+function updateMetrics() {
+  document.getElementById('currentPass').textContent = currentPass;
+  document.getElementById('candidateCount').textContent = candidateItemsets.length;
+  document.getElementById('frequentCount').textContent = frequentItemsets.length;
+  document.getElementById('minSupport').textContent = (minSupport * 100).toFixed(0) + '%';
+}
+
+function updateStepDisplay(step, title, text) {
+  document.getElementById('stepNum').textContent = step;
+  document.getElementById('stepTitle').textContent = title;
+  document.getElementById('stepText').textContent = text;
+}
+
+// === DRAWING ===
+function drawScene() {
+  if (!mainCtx) return;
+  
+  const w = mainCanvas.width;
+  const h = mainCanvas.height;
+  
+  // Background
+  mainCtx.fillStyle = '#060a14';
+  mainCtx.fillRect(0, 0, w, h);
+  
+  // Draw based on state
+  if (transactions.length === 0) {
+    drawEmptyState(w, h);
+  } else {
+    drawTransactions(w, h);
+  }
+}
+
+function drawEmptyState(w, h) {
+  mainCtx.font = '14px JetBrains Mono';
+  mainCtx.fillStyle = '#5c7090';
+  mainCtx.textAlign = 'center';
+  mainCtx.fillText('Generate a dataset to begin visualization', w / 2, h / 2);
+}
+
+function drawTransactions(w, h) {
+  const padding = 16;
+  const rowHeight = 28;
+  const itemWidth = 65;
+  const maxItemsPerRow = Math.floor((w - padding * 2 - 80) / itemWidth);
+  
+  // Draw transactions
+  transactions.forEach((transaction, idx) => {
+    const y = padding + idx * rowHeight;
+    
+    if (y + rowHeight > h - padding) return;
+    
+    // Transaction label
+    mainCtx.font = '11px JetBrains Mono';
+    mainCtx.fillStyle = scanLine === idx ? '#f59e0b' : '#5c7090';
+    mainCtx.textAlign = 'left';
+    mainCtx.fillText('T' + (idx + 1), padding, y + 14);
+    
+    // Highlight row during scanning
+    if (scanLine === idx) {
+      mainCtx.fillStyle = 'rgba(245, 158, 11, 0.1)';
+      mainCtx.fillRect(padding + 30, y, w - padding * 2 - 30, rowHeight - 4);
+    }
+    
+    // Draw items
+    transaction.slice(0, maxItemsPerRow).forEach((item, itemIdx) => {
+      const x = padding + 40 + itemIdx * itemWidth;
+      const color = itemColors[item] || '#5c7090';
+      
+      // Item pill
+      const isHighlighted = currentHighlightItem === item || 
+        (candidateItemsets.length > 0 && candidateItemsets.some(c => c.items.includes(item)));
+      
+      mainCtx.fillStyle = isHighlighted ? color : color + '40';
+      mainCtx.beginPath();
+      roundRect(mainCtx, x, y + 2, itemWidth - 8, 20, 4);
+      mainCtx.fill();
+      
+      // Item text
+      mainCtx.font = '10px JetBrains Mono';
+      mainCtx.fillStyle = isHighlighted ? '#04060d' : color;
+      mainCtx.textAlign = 'center';
+      mainCtx.fillText(item.slice(0, 6), x + (itemWidth - 8) / 2, y + 15);
+    });
+    
+    // Show more indicator
+    if (transaction.length > maxItemsPerRow) {
+      mainCtx.font = '10px JetBrains Mono';
+      mainCtx.fillStyle = '#5c7090';
+      mainCtx.textAlign = 'left';
+      mainCtx.fillText('+' + (transaction.length - maxItemsPerRow), padding + 40 + maxItemsPerRow * itemWidth, y + 15);
+    }
+  });
+  
+  // Draw itemset summary at bottom
+  if (candidateItemsets.length > 0 || frequentItemsets.length > 0) {
+    drawItemsetSummary(w, h);
+  }
+}
+
+function drawItemsetSummary(w, h) {
+  const summaryY = h - 80;
+  
+  // Background
+  mainCtx.fillStyle = 'rgba(10, 16, 32, 0.9)';
+  mainCtx.fillRect(0, summaryY - 10, w, 90);
+  
+  mainCtx.strokeStyle = 'rgba(92, 112, 144, 0.2)';
+  mainCtx.beginPath();
+  mainCtx.moveTo(0, summaryY - 10);
+  mainCtx.lineTo(w, summaryY - 10);
+  mainCtx.stroke();
+  
+  // Title
+  mainCtx.font = '10px JetBrains Mono';
+  mainCtx.fillStyle = '#f59e0b';
+  mainCtx.textAlign = 'left';
+  mainCtx.fillText(currentPass > 0 ? 'PASS ' + currentPass : 'ITEMSETS', 16, summaryY + 5);
+  
+  // Draw candidate/frequent itemsets
+  const items = candidateItemsets.length > 0 ? candidateItemsets : frequentItemsets;
+  const x = 16;
+  let offsetX = x;
+  
+  items.slice(0, 8).forEach((itemset, idx) => {
+    const text = '{' + itemset.items.join(',') + '}';
+    const supportText = ((itemset.support / transactions.length) * 100).toFixed(0) + '%';
+    
+    // Box
+    const boxWidth = mainCtx.measureText(text).width + 30;
+    mainCtx.fillStyle = itemset.isFrequent === false ? 'rgba(239, 68, 68, 0.2)' : 
+                        itemset.isFrequent ? 'rgba(16, 185, 129, 0.2)' : 
+                        'rgba(92, 112, 144, 0.2)';
+    mainCtx.beginPath();
+    roundRect(mainCtx, offsetX, summaryY + 15, boxWidth + 20, 40, 6);
+    mainCtx.fill();
+    
+    // Text
+    mainCtx.font = '11px JetBrains Mono';
+    mainCtx.fillStyle = itemset.isFrequent === false ? '#ef4444' : 
+                        itemset.isFrequent ? '#10b981' : '#e8ecf4';
+    mainCtx.textAlign = 'left';
+    mainCtx.fillText(text, offsetX + 8, summaryY + 35);
+    
+    mainCtx.font = '9px JetBrains Mono';
+    mainCtx.fillStyle = '#5c7090';
+    mainCtx.fillText('Sup: ' + supportText, offsetX + 8, summaryY + 50);
+    
+    offsetX += boxWidth + 25;
+    if (offsetX > w - 80) return;
+  });
+  
+  if (items.length > 8) {
+    mainCtx.font = '10px JetBrains Mono';
+    mainCtx.fillStyle = '#5c7090';
+    mainCtx.fillText('+' + (items.length - 8) + ' more', offsetX, summaryY + 35);
+  }
+}
+
+function roundRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function resetSimulator() {
+  if (animationId) {
+    clearTimeout(animationId);
+    animationId = null;
+  }
+  
+  isRunning = false;
+  transactions = [];
+  allItems = [];
+  frequentItemsets = [];
+  candidateItemsets = [];
+  currentPass = 0;
+  scanLine = -1;
+  currentHighlightItem = null;
+  
+  document.getElementById('datasetInfo').textContent = 'Generate dataset to begin';
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('generateBtn').disabled = false;
+  document.getElementById('rulesDisplay').classList.remove('active');
+  
+  updateMetrics();
+  updateStepDisplay('READY', 'Reset Complete', 
+    'Canvas cleared. Adjust parameters and click "Generate Dataset" to create new data.');
+  
+  drawScene();
+}
+
+// === HELP MODAL ===
+function initHelpModal() {
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const closeModal = document.getElementById('closeModal');
+  
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('active');
+  });
+  
+  closeModal.addEventListener('click', () => {
+    helpModal.classList.remove('active');
+  });
+  
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.classList.remove('active');
+    }
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && helpModal.classList.contains('active')) {
+      helpModal.classList.remove('active');
+    }
+  });
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initBgNodes();
+  
+  resizeMainCanvas();
+});
+
+// === CONTROL BINDINGS ===
+document.addEventListener('DOMContentLoaded', function() {
+  const datasetSelect = document.getElementById('datasetSelect');
+  const supportSlider = document.getElementById('supportSlider');
+  const transSlider = document.getElementById('transSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const generateBtn = document.getElementById('generateBtn');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  
+  datasetSelect.addEventListener('change', function() {
+    datasetType = this.value;
+  });
+  
+  supportSlider.addEventListener('input', function() {
+    minSupport = parseInt(this.value) / 100;
+    document.getElementById('supportValueDisplay').textContent = this.value + '%';
+    document.getElementById('minSupport').textContent = this.value + '%';
+  });
+  
+  transSlider.addEventListener('input', function() {
+    numTransactions = parseInt(this.value);
+    document.getElementById('transValueDisplay').textContent = numTransactions;
+  });
+  
+  speedSlider.addEventListener('input', function() {
+    animationSpeed = parseFloat(this.value);
+    document.getElementById('speedValueDisplay').textContent = this.value + 'x';
+  });
+  
+  generateBtn.addEventListener('click', generateDataset);
+  startBtn.addEventListener('click', startApriori);
+  resetBtn.addEventListener('click', resetSimulator);
+  
+  // Initialize
+  initSimulator();
+});
+
+// === INITIALIZE ===
+initBgNodes();
+animateBg();
+initScrollReveal();
+initHelpModal();
+</script>
+
+</body>
+</html>

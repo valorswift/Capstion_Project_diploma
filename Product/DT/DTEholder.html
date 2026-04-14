@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DTE Concepts Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #00e5ff;
+  --accent-alt: #a855f7;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #22d3ee;
+  --purple: #c084fc;
+  --orange: #fb923c;
+  --green: #10b981;
+  --red: #ef4444;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.04) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.hero {
+  min-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 229, 255, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--accent); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--accent); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--cyan) 50%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 520px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 28px;
+}
+
+.card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  display: block;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), transparent, rgba(168, 85, 247, 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.card:hover::before { opacity: 1; }
+.card:hover::after { opacity: 1; }
+
+.card:hover {
+  transform: translateY(-10px) scale(1.01);
+  border-color: rgba(0, 229, 255, 0.25);
+  box-shadow: 
+    0 30px 80px -20px rgba(0, 229, 255, 0.12),
+    0 0 60px -20px rgba(168, 85, 247, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.card-preview {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at center, #0c1428 0%, #060a14 100%);
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.card-preview-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  background: rgba(4, 6, 13, 0.85);
+  padding: 6px 12px;
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+  z-index: 1;
+  border: 1px solid rgba(0, 229, 255, 0.1);
+}
+
+.card-content { padding: 28px; }
+
+.card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.tag-core { 
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.18), rgba(249, 115, 22, 0.18)); 
+  color: #fb923c; 
+  border: 1px solid rgba(251, 146, 60, 0.2);
+}
+.tag-foundation { 
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(220, 38, 38, 0.18)); 
+  color: #f87171; 
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.tag-logic { 
+  background: linear-gradient(135deg, rgba(254, 202, 87, 0.18), rgba(245, 158, 11, 0.18)); 
+  color: #feca57; 
+  border: 1px solid rgba(254, 202, 87, 0.2);
+}
+.tag-circuit { 
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.18)); 
+  color: #34d399; 
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 24px 0;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  background: linear-gradient(135deg, var(--accent), #3b82f6);
+  color: var(--bg);
+  transition: all 0.3s ease;
+}
+
+.card:hover .card-btn {
+  background: linear-gradient(135deg, var(--cyan), var(--accent));
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px -4px var(--accent);
+}
+
+.card-btn svg { transition: transform 0.3s ease; }
+.card:hover .card-btn svg { transform: translateX(4px); }
+
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .nav { padding: 16px 20px; }
+  .nav-breadcrumb { display: none; }
+  .hero { padding: 100px 20px 30px; min-height: 40vh; }
+  .card-preview { height: 160px; }
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Digital Techniques</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">DTE Visualization Module</div>
+    <h1 class="main-title">Digital Techniques</h1>
+    <p class="subtitle">
+      // Explore digital electronics fundamentals<br>
+      // through interactive logic gates, circuits, and system visualizations.
+    </p>
+  </section>
+
+  <section class="section">
+    <div class="grid">
+      
+      <!-- VLCE -->
+      <a href="DTEdragDrop.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-vlce"></canvas>
+          <div class="card-preview-overlay">BUILDER</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-core">Core Tool</span>
+          <h3>VLCE</h3>
+          <p>Visual Logic Construction Engine. Build custom circuits or demonstrate logic concepts dynamically.</p>
+          <div class="card-footer">
+            <span class="card-btn">Start Building <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Number System -->
+      <a href="Number_System.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-number"></canvas>
+          <div class="card-preview-overlay">CONVERSION</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-foundation">Foundation</span>
+          <h3>Number System</h3>
+          <p>Visualize binary, decimal, octal, and hexadecimal conversions with interactive bit manipulation.</p>
+          <div class="card-footer">
+            <span class="card-btn">Convert <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Logic Gates -->
+      <a href="LogicgateHolder.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-logic"></canvas>
+          <div class="card-preview-overlay">GATES</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-logic">Primitive</span>
+          <h3>Logic Gates</h3>
+          <p>Understand fundamental building blocks: AND, OR, NOT, XOR, NAND, NOR, and XNOR operations.</p>
+          <div class="card-footer">
+            <span class="card-btn">Simulate <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Combinational Circuits -->
+      <a href="Combinational_Circuits_Holder.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-combinational"></canvas>
+          <div class="card-preview-overlay">MUX/DEC</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-circuit">System</span>
+          <h3>Combinational Circuits</h3>
+          <p>Explore multiplexers, demultiplexers, encoders, decoders, and arithmetic logic units.</p>
+          <div class="card-footer">
+            <span class="card-btn">Explore <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+  </section>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+let width = window.innerWidth;
+let height = window.innerHeight;
+bgCanvas.width = width;
+bgCanvas.height = height;
+let mouseX = width / 2, mouseY = height / 2;
+let targetMouseX = mouseX, targetMouseY = mouseY;
+const nodes = [];
+const nodeCount = 50;
+
+function initNodes() {
+  nodes.length = 0;
+  for (let i = 0; i < nodeCount; i++) {
+    nodes.push({
+      x: Math.random() * width, y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 2 + 1, pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'cyan' : 'purple'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, width, height);
+  const time = Date.now() * 0.001;
+  bgCtx.lineWidth = 1;
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 120) {
+        const alpha = (1 - dist / 120) * 0.15 * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+        bgCtx.strokeStyle = nodes[i].type === 'cyan' ? `rgba(34, 211, 238, ${alpha})` : `rgba(168, 85, 247, ${alpha})`;
+        bgCtx.beginPath(); bgCtx.moveTo(nodes[i].x, nodes[i].y); bgCtx.lineTo(nodes[j].x, nodes[j].y); bgCtx.stroke();
+      }
+    }
+  }
+  nodes.forEach(node => {
+    node.x += node.vx; node.y += node.vy; node.pulse += 0.03;
+    if (node.x < 0 || node.x > width) node.vx *= -1;
+    if (node.y < 0 || node.y > height) node.vy *= -1;
+    const dx = mouseX - node.x, dy = mouseY - node.y;
+    if (Math.sqrt(dx * dx + dy * dy) < 150) { node.x -= dx * 0.01; node.y -= dy * 0.01; }
+    const glowRadius = Math.max(1, node.radius + Math.sin(node.pulse) * 0.5 + 4);
+    const glow = bgCtx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius);
+    glow.addColorStop(0, node.type === 'cyan' ? 'rgba(34, 211, 238, 0.4)' : 'rgba(168, 85, 247, 0.4)');
+    glow.addColorStop(1, 'transparent');
+    bgCtx.fillStyle = glow; bgCtx.beginPath(); bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2); bgCtx.fill();
+    bgCtx.fillStyle = node.type === 'cyan' ? '#22d3ee' : '#a855f7';
+    bgCtx.beginPath(); bgCtx.arc(node.x, node.y, Math.max(0.5, node.radius), 0, Math.PI * 2); bgCtx.fill();
+  });
+}
+
+function animateBg() {
+  mouseX += (targetMouseX - mouseX) * 0.08; mouseY += (targetMouseY - mouseY) * 0.08;
+  drawBackground();
+  requestAnimationFrame(animateBg);
+}
+
+// === PREVIEW ANIMATIONS ===
+
+// 1. VLCE - Construction Animation
+function initPreviewVLCE() {
+  const canvas = document.getElementById('preview-vlce');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.offsetWidth;
+  canvas.height = canvas.parentElement.offsetHeight;
+  
+  let time = 0;
+  let phase = 0;
+  
+  function draw() {
+    time += 0.03;
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw Grid
+    ctx.strokeStyle = 'rgba(251, 146, 60, 0.05)';
+    ctx.lineWidth = 1;
+    for(let x=0; x<canvas.width; x+=20) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+    for(let y=0; y<canvas.height; y+=20) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+    
+    // Animated Construction
+    const progress = (Math.sin(time * 0.5) + 1) / 2; // 0 to 1 loop
+    
+    // Input
+    ctx.fillStyle = '#22d3ee';
+    ctx.shadowBlur = 10; ctx.shadowColor = '#22d3ee';
+    ctx.beginPath(); ctx.arc(30, canvas.height/2, 5, 0, Math.PI*2); ctx.fill();
+    
+    // Wire drawing
+    ctx.strokeStyle = '#fb923c';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(35, canvas.height/2);
+    const wireLen = progress * 50;
+    ctx.lineTo(35 + wireLen, canvas.height/2);
+    ctx.stroke();
+    
+    // Gate appearing
+    if(progress > 0.3) {
+        ctx.strokeStyle = '#fb923c';
+        ctx.fillStyle = 'rgba(251, 146, 60, 0.1)';
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(85, canvas.height/2 - 15);
+        ctx.lineTo(95, canvas.height/2 - 15);
+        ctx.arc(95, canvas.height/2, 15, -Math.PI/2, Math.PI/2);
+        ctx.lineTo(85, canvas.height/2 + 15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px JetBrains Mono';
+        ctx.fillText('AND', 82, canvas.height/2 + 4);
+    }
+    
+    // Signal traveling
+    if(progress > 0.6) {
+        const signalProgress = (progress - 0.6) / 0.4;
+        const sx = 30 + signalProgress * 110;
+        ctx.fillStyle = '#fff';
+        ctx.shadowBlur = 15; ctx.shadowColor = '#fff';
+        ctx.beginPath(); ctx.arc(sx, canvas.height/2, 3, 0, Math.PI*2); ctx.fill();
+    }
+    
+    ctx.shadowBlur = 0;
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// 2. Number System - Flowing Bits
+function initPreviewNumber() {
+  const canvas = document.getElementById('preview-number');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.offsetWidth;
+  canvas.height = canvas.parentElement.offsetHeight;
+  
+  const bits = [1, 0, 1, 1, 0, 1, 0, 0];
+  let time = 0;
+  
+  function draw() {
+    time += 0.05;
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Decimal Value Counter
+    const val = Math.floor(time * 10) % 256;
+    ctx.fillStyle = '#f87171';
+    ctx.font = 'bold 28px JetBrains Mono';
+    ctx.shadowBlur = 15; ctx.shadowColor = '#f87171';
+    ctx.fillText(val, canvas.width/2 - 20, 40);
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillStyle = '#5c7090';
+    ctx.fillText('DEC', canvas.width/2 - 10, 55);
+    ctx.shadowBlur = 0;
+    
+    // Bit stream
+    const bitWidth = 30;
+    const startX = (canvas.width - (bits.length * (bitWidth + 5))) / 2;
+    
+    bits.forEach((bit, i) => {
+      const x = startX + i * (bitWidth + 5);
+      const y = canvas.height/2 + 20;
+      
+      // Flip bits randomly to simulate calculation
+      if(Math.random() < 0.02) bits[i] = bits[i] ? 0 : 1;
+      
+      // Glow effect
+      if(bit) {
+        ctx.shadowBlur = 15; ctx.shadowColor = '#22d3ee';
+      } else {
+        ctx.shadowBlur = 0;
+      }
+      
+      ctx.fillStyle = bit ? '#22d3ee' : '#1c1c28';
+      ctx.beginPath();
+      ctx.roundRect(x, y, bitWidth, bitWidth, 4);
+      ctx.fill();
+      
+      ctx.fillStyle = bit ? '#04060d' : '#5c7090';
+      ctx.font = 'bold 16px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(bit ? '1' : '0', x + bitWidth/2, y + bitWidth/2 + 6);
+    });
+    
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'left';
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// 3. Logic Gates - Truth Table Simulation
+function initPreviewLogic() {
+  const canvas = document.getElementById('preview-logic');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.offsetWidth;
+  canvas.height = canvas.parentElement.offsetHeight;
+  
+  let time = 0;
+  
+  function drawGate(x, y, type, inA, inB) {
+    const out = type === 'AND' ? (inA && inB) : (inA || inB);
+    ctx.strokeStyle = '#feca57';
+    ctx.fillStyle = 'rgba(254, 202, 87, 0.1)';
+    ctx.lineWidth = 2;
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y - 15);
+    ctx.lineTo(x + 10, y - 15);
+    ctx.arc(x + 10, y, 15, -Math.PI/2, Math.PI/2);
+    ctx.lineTo(x, y + 15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px JetBrains Mono';
+    ctx.fillText(type, x + 2, y + 4);
+    return out;
+  }
+  
+  function draw() {
+    time += 0.04;
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Generate Inputs
+    const A = Math.sin(time * 1.5) > 0;
+    const B = Math.sin(time * 2.5) > 0;
+    
+    // Draw AND Gate
+    const outAnd = drawGate(40, 70, 'AND', A, B);
+    // Draw OR Gate
+    const outOr = drawGate(150, 70, 'OR', A, B);
+    
+    // Draw Inputs
+    ctx.fillStyle = A ? '#22d3ee' : '#2a2a3e';
+    ctx.beginPath(); ctx.arc(20, 60, 4, 0, Math.PI*2); ctx.fill();
+    
+    ctx.fillStyle = B ? '#a855f7' : '#2a2a3e';
+    ctx.beginPath(); ctx.arc(20, 80, 4, 0, Math.PI*2); ctx.fill();
+    
+    // Draw Outputs
+    ctx.fillStyle = outAnd ? '#10b981' : '#2a2a3e';
+    ctx.beginPath(); ctx.arc(100, 70, 4, 0, Math.PI*2); ctx.fill();
+    
+    ctx.fillStyle = outOr ? '#10b981' : '#2a2a3e';
+    ctx.beginPath(); ctx.arc(210, 70, 4, 0, Math.PI*2); ctx.fill();
+    
+    // Truth Table Overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(20, 120, canvas.width - 40, 60);
+    ctx.strokeStyle = '#152035';
+    ctx.strokeRect(20, 120, canvas.width - 40, 60);
+    
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillStyle = '#5c7090';
+    ctx.fillText('A  B  | AND  OR', 30, 138);
+    ctx.fillText(`${A?1:0}  ${B?1:0}  |  ${outAnd?1:0}    ${outOr?1:0}`, 30, 155);
+    
+    // Animated signals
+    ctx.fillStyle = '#fff';
+    ctx.shadowBlur = 10; ctx.shadowColor = '#fff';
+    const sigPos = (time * 50) % 200;
+    ctx.beginPath(); ctx.arc(sigPos, 70, 2, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// 4. Combinational - MUX Wave Selection
+function initPreviewCombinational() {
+  const canvas = document.getElementById('preview-combinational');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.offsetWidth;
+  canvas.height = canvas.parentElement.offsetHeight;
+  
+  let time = 0;
+  
+  function draw() {
+    time += 0.05;
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Selector bit toggles every 3 seconds
+    const selector = Math.floor(time / 3) % 2;
+    
+    // Draw MUX Box
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, 50);
+    ctx.lineTo(180, 70);
+    ctx.lineTo(180, 130);
+    ctx.lineTo(80, 150);
+    ctx.closePath();
+    ctx.stroke();
+    
+    ctx.fillStyle = '#34d399';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('MUX', 115, 105);
+    
+    // Input 0 (Sine wave)
+    ctx.strokeStyle = selector === 0 ? '#ef4444' : '#3f3f46';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 70);
+    for(let x=0; x<80; x++) {
+       const y = 70 + Math.sin((x + time*20) * 0.1) * 10;
+       ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    
+    // Input 1 (Square-ish wave)
+    ctx.strokeStyle = selector === 1 ? '#22d3ee' : '#3f3f46';
+    ctx.beginPath();
+    ctx.moveTo(0, 130);
+    for(let x=0; x<80; x++) {
+       const y = 130 + (Math.sin((x + time*20) * 0.2) > 0 ? 10 : -10);
+       ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    
+    // Selector input
+    ctx.fillStyle = selector ? '#a855f7' : '#5c7090';
+    ctx.beginPath(); ctx.arc(130, 160, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillText('S=' + selector, 115, 175);
+    
+    // Output (Selected Wave)
+    ctx.strokeStyle = selector === 0 ? '#ef4444' : '#22d3ee';
+    ctx.shadowColor = selector === 0 ? '#ef4444' : '#22d3ee';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(180, 100);
+    for(let x=0; x<80; x++) {
+       const baseY = selector === 0 ? 70 : 130;
+       const wave = selector === 0 ? Math.sin((x + time*20) * 0.1) * 10 : (Math.sin((x + time*20) * 0.2) > 0 ? 10 : -10);
+       ctx.lineTo(180 + x, baseY + wave - (selector === 0 ? 0 : 30));
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => { entry.target.classList.add('visible'); }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) { targetMouseX = e.clientX; targetMouseY = e.clientY; });
+window.addEventListener('resize', function() {
+  width = window.innerWidth; height = window.innerHeight;
+  bgCanvas.width = width; bgCanvas.height = height;
+  initNodes();
+  initPreviewVLCE(); initPreviewNumber(); initPreviewLogic(); initPreviewCombinational();
+});
+
+// === INITIALIZE ===
+initNodes();
+animateBg();
+initScrollReveal();
+requestAnimationFrame(function() {
+  initPreviewVLCE(); initPreviewNumber(); initPreviewLogic(); initPreviewCombinational();
+});
+</script>
+</body>
+</html>

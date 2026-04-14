@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Memory Management Unit</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+        
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+        }
+        
+        /* Data Packet Animation */
+        @keyframes travelPacket {
+            0% { transform: translateY(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(150px); opacity: 0; }
+        }
+        .packet-travel { animation: travelPacket 1.5s ease-in-out; }
+        
+        /* TLB Highlight */
+        .tlb-hit { border-color: #22c55e !important; box-shadow: 0 0 10px rgba(34, 197, 94, 0.3); }
+        .tlb-miss { border-color: #ef4444 !important; }
+        
+        /* Valid/Invalid styles */
+        .bit-valid { color: #22c55e; }
+        .bit-invalid { color: #ef4444; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex">
+
+    <!-- ==============================================
+         SIDEBAR (Controls & Input)
+         ============================================== -->
+    <aside class="w-80 glass-panel border-r border-slate-700 flex flex-col z-20">
+        <div class="p-6 border-b border-slate-700">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                Virtual Memory OS
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Paging & Address Translation</p>
+        </div>
+        
+        <div class="p-6 flex-1 overflow-y-auto space-y-6">
+            
+            <!-- Address Input -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold uppercase text-slate-400">CPU Request</h3>
+                <div class="space-y-2">
+                    <label class="text-xs text-slate-500">Virtual Address (0-65535)</label>
+                    <input type="number" id="vaddr-input" placeholder="e.g., 1024" class="w-full bg-slate-800 border-slate-600 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="accessMemory()" class="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-medium transition-colors">
+                        Access
+                    </button>
+                    <button onclick="randomAccess()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-medium transition-colors">
+                        Random
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold uppercase text-slate-400">Configuration</h3>
+                <div class="glass-panel rounded p-3 space-y-2 text-xs">
+                    <div class="flex justify-between"><span class="text-slate-400">Page Size:</span><span class="font-bold">1 KB (1024 bytes)</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Virtual Pages:</span><span class="font-bold">64</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Physical Frames:</span><span class="font-bold">16</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Address Width:</span><span class="font-bold">16-bit</span></div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold uppercase text-slate-400">Performance</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs"><span class="text-slate-400">TLB Hits:</span><span id="stat-tlb-hits" class="text-green-400 font-bold">0</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-slate-400">TLB Misses:</span><span id="stat-tlb-misses" class="text-red-400 font-bold">0</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-slate-400">Page Faults:</span><span id="stat-faults" class="text-amber-400 font-bold">0</span></div>
+                    <div class="flex justify-between text-xs pt-2 border-t border-slate-700"><span class="text-slate-400">Hit Ratio:</span><span id="stat-ratio" class="text-white font-bold">0%</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-4 border-t border-slate-700">
+            <button onclick="resetSystem()" class="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-xs font-medium">Reset Simulation</button>
+        </div>
+    </aside>
+
+    <!-- ==============================================
+         MAIN CONTENT
+         ============================================== -->
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <!-- Header -->
+        <header class="h-16 glass-panel border-b border-slate-700 flex items-center px-8 z-10">
+            <h2 class="text-lg font-semibold text-white">Memory Management Unit (MMU)</h2>
+            <div id="status-indicator" class="ml-4 px-2 py-1 bg-slate-800 rounded text-xs text-slate-400 border border-slate-700">
+                Idle
+            </div>
+        </header>
+
+        <!-- Visualization Grid -->
+        <div class="flex-1 p-6 overflow-y-auto grid grid-cols-3 gap-6">
+            
+            <!-- Left: Translation Process -->
+            <div class="col-span-2 space-y-6">
+                
+                <!-- Step 1: Address Splitting -->
+                <div class="glass-panel rounded-xl p-6 border-l-4 border-indigo-500">
+                    <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">1. Address Decoding</h3>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="flex-1">
+                            <label class="text-xs text-slate-500 block mb-1">Virtual Address (Binary)</label>
+                            <div id="addr-binary" class="font-mono text-lg text-white bg-slate-900 p-2 rounded text-center tracking-widest">
+                                0000000000000000
+                            </div>
+                        </div>
+                        <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-900/50 p-3 rounded border border-slate-700">
+                            <div class="text-xs text-slate-500 mb-1">Page Number (High 6 bits)</div>
+                            <div id="addr-page" class="font-mono text-xl text-indigo-400 font-bold">0</div>
+                        </div>
+                        <div class="bg-slate-900/50 p-3 rounded border border-slate-700">
+                            <div class="text-xs text-slate-500 mb-1">Offset (Low 10 bits)</div>
+                            <div id="addr-offset" class="font-mono text-xl text-cyan-400 font-bold">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2 & 3: TLB & Page Table -->
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- TLB -->
+                    <div class="glass-panel rounded-xl p-6 relative overflow-hidden" id="tlb-panel">
+                        <div class="absolute top-2 right-2 text-[10px] px-2 py-0.5 bg-green-900 text-green-300 rounded">Associative Memory</div>
+                        <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">2. TLB Lookup</h3>
+                        <div class="space-y-2 text-xs font-mono">
+                            <div class="grid grid-cols-3 gap-2 text-slate-500 border-b border-slate-700 pb-1 mb-1">
+                                <span>Valid</span><span>Page#</span><span>Frame#</span>
+                            </div>
+                            <div id="tlb-body" class="space-y-1">
+                                <!-- JS Generated -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Page Table -->
+                    <div class="glass-panel rounded-xl p-6 relative overflow-hidden" id="pt-panel">
+                        <div class="absolute top-2 right-2 text-[10px] px-2 py-0.5 bg-blue-900 text-blue-300 rounded">Main Memory</div>
+                        <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">3. Page Table</h3>
+                        <div class="space-y-2 text-xs font-mono h-48 overflow-y-auto">
+                            <div class="grid grid-cols-4 gap-2 text-slate-500 border-b border-slate-700 pb-1 mb-1 sticky top-0 bg-slate-800/90">
+                                <span>Index</span><span>Valid</span><span>Prot</span><span>Frame#</span>
+                            </div>
+                            <div id="pt-body" class="space-y-1">
+                                <!-- JS Generated -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Physical Memory Access -->
+                <div class="glass-panel rounded-xl p-6 border-l-4 border-green-500">
+                    <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">4. Physical Address Calculation</h3>
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1 bg-slate-900 p-3 rounded text-center">
+                            <div class="text-[10px] text-slate-500 mb-1">Frame Number</div>
+                            <div id="out-frame" class="font-mono text-xl text-green-400 font-bold">0</div>
+                        </div>
+                        <span class="text-xl text-slate-500">+</span>
+                        <div class="flex-1 bg-slate-900 p-3 rounded text-center">
+                            <div class="text-[10px] text-slate-500 mb-1">Offset</div>
+                            <div id="out-offset" class="font-mono text-xl text-cyan-400 font-bold">0</div>
+                        </div>
+                        <span class="text-xl text-slate-500">=</span>
+                        <div class="flex-1 bg-green-900/30 border border-green-500 p-3 rounded text-center">
+                            <div class="text-[10px] text-green-400 mb-1">Physical Address</div>
+                            <div id="out-paddr" class="font-mono text-xl text-white font-bold">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Physical Memory (RAM) -->
+            <div class="col-span-1 flex flex-col">
+                <div class="glass-panel rounded-xl p-6 flex-1 flex flex-col">
+                    <h3 class="text-sm font-bold uppercase text-slate-300 mb-4">Physical Memory (RAM)</h3>
+                    <div class="text-xs text-slate-500 mb-2">16 Frames Total</div>
+                    <div id="ram-grid" class="grid grid-cols-4 gap-1 flex-1">
+                        <!-- JS Generated -->
+                    </div>
+                    <div class="mt-4 text-xs text-slate-500 text-center" id="ram-status">
+                        Usage: 0 / 16 Frames
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log Footer -->
+        <footer class="h-32 glass-panel border-t border-slate-700 p-4 overflow-y-auto">
+            <h3 class="text-xs font-bold uppercase text-slate-400 mb-2">System Log</h3>
+            <div id="log-area" class="font-mono text-xs text-slate-400 space-y-1">
+                <div class="opacity-50">> System initialized. Page size: 1024B. Frames: 16.</div>
+            </div>
+        </footer>
+    </main>
+
+    <!-- ==============================================
+         JAVASCRIPT ENGINE
+         ========================================== -->
+    <script>
+        // ==========================================
+        // SYSTEM STATE
+        // ==========================================
+        const CONFIG = {
+            pageSize: 1024, // 1KB
+            frames: 16,
+            tlbSize: 4,
+            bits: 16
+        };
+
+        let pageTable = []; // { valid, frame, protection }
+        let ram = []; // Array of objects { pid, data }
+        let tlb = []; // { valid, page, frame }
+        
+        let stats = { hits: 0, misses: 0, faults: 0 };
+        let replacementQueue = []; // For FIFO replacement
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        function init() {
+            // Clear State
+            pageTable = [];
+            ram = Array(CONFIG.frames).fill(null);
+            tlb = Array(CONFIG.tlbSize).fill({ valid: 0, page: -1, frame: -1 });
+            stats = { hits: 0, misses: 0, faults: 0 };
+            replacementQueue = [];
+
+            // Initialize Page Table (64 Virtual Pages)
+            for(let i=0; i<64; i++) {
+                pageTable.push({
+                    valid: 0,
+                    frame: -1,
+                    protection: 'RW'
+                });
+            }
+            
+            renderAll();
+            log("System Ready. Virtual Address Space: 64 pages.");
+        }
+
+        // ==========================================
+        // CORE LOGIC
+        // ==========================================
+        
+        function accessMemory() {
+            const input = document.getElementById('vaddr-input');
+            let vaddr = parseInt(input.value);
+            
+            if(isNaN(vaddr) || vaddr < 0 || vaddr > 65535) {
+                log("Error: Invalid address. Range 0-65535.");
+                return;
+            }
+
+            // 1. Decode Address
+            const pageNum = Math.floor(vaddr / CONFIG.pageSize);
+            const offset = vaddr % CONFIG.pageSize;
+            
+            updateStatus("Decoding Address...");
+            
+            // 2. Check TLB
+            let frameNum = -1;
+            let tlbHit = false;
+            
+            const tlbEntry = tlb.find(t => t.valid && t.page === pageNum);
+            if(tlbEntry) {
+                frameNum = tlbEntry.frame;
+                tlbHit = true;
+                stats.hits++;
+                log(`TLB HIT! Page ${pageNum} maps to Frame ${frameNum}.`);
+                updateTlbUI(true);
+            } else {
+                stats.misses++;
+                log(`TLB MISS. Checking Page Table for Page ${pageNum}...`);
+                updateTlbUI(false);
+                
+                // 3. Check Page Table
+                const ptEntry = pageTable[pageNum];
+                
+                if(ptEntry.valid) {
+                    frameNum = ptEntry.frame;
+                    log(`Page Table HIT. Page ${pageNum} valid. Frame: ${frameNum}.`);
+                    updateTlb(pageNum, frameNum); // Add to TLB
+                } else {
+                    // PAGE FAULT
+                    stats.faults++;
+                    log(`PAGE FAULT! Page ${pageNum} not in memory.`);
+                    frameNum = handlePageFault(pageNum);
+                }
+            }
+
+            // 4. Calculate Physical Address
+            const paddr = (frameNum * CONFIG.pageSize) + offset;
+            
+            // Update UI
+            updateAddressUI(vaddr, pageNum, offset, frameNum, paddr);
+            updateStatsUI();
+            
+            // Highlight RAM frame
+            highlightFrame(frameNum);
+        }
+
+        function handlePageFault(pageNum) {
+            updateStatus("Handling Page Fault...");
+            log("OS Triggered: Allocating free frame...");
+            
+            // Find Free Frame
+            let freeFrameIndex = ram.findIndex(f => f === null);
+            
+            if (freeFrameIndex === -1) {
+                // No free frames, run replacement
+                log("Memory Full. Running FIFO Replacement...");
+                freeFrameIndex = runReplacement();
+            }
+
+            // Load data into RAM
+            ram[freeFrameIndex] = { page: pageNum, data: "Data..." };
+            replacementQueue.push(freeFrameIndex); // Track for FIFO
+
+            // Update Page Table
+            pageTable[pageNum].valid = 1;
+            pageTable[pageNum].frame = freeFrameIndex;
+            
+            // Update TLB
+            updateTlb(pageNum, freeFrameIndex);
+            
+            log(`Page ${pageNum} loaded into Frame ${freeFrameIndex}.`);
+            renderRam();
+            renderPageTable();
+            return freeFrameIndex;
+        }
+
+        function runReplacement() {
+            // FIFO: Pop the first frame pushed
+            const frameToEvict = replacementQueue.shift();
+            
+            // Find which page owns this frame
+            const oldPageEntry = pageTable.find(p => p.frame === frameToEvict);
+            if(oldPageEntry) {
+                oldPageEntry.valid = 0;
+                oldPageEntry.frame = -1;
+                log(`Evicted Page ${pageTable.indexOf(oldPageEntry)} from Frame ${frameToEvict}.`);
+            }
+            
+            return frameToEvict;
+        }
+
+        function updateTlb(page, frame) {
+            // Simple replacement: Find first invalid slot or overwrite random
+            let idx = tlb.findIndex(t => !t.valid);
+            if (idx === -1) idx = Math.floor(Math.random() * CONFIG.tlbSize); // Random replace if full
+            
+            tlb[idx] = { valid: 1, page: page, frame: frame };
+            renderTlb();
+        }
+
+        function randomAccess() {
+            const randAddr = Math.floor(Math.random() * 65535);
+            document.getElementById('vaddr-input').value = randAddr;
+            accessMemory();
+        }
+
+        // ==========================================
+        // UI RENDERING
+        // ==========================================
+
+        function renderAll() {
+            renderTlb();
+            renderPageTable();
+            renderRam();
+            updateStatsUI();
+        }
+
+        function updateAddressUI(vaddr, pageNum, offset, frameNum, paddr) {
+            // Binary Representation
+            const binary = vaddr.toString(2).padStart(16, '0');
+            const pageBin = binary.substring(0, 6);
+            const offsetBin = binary.substring(6);
+
+            document.getElementById('addr-binary').innerHTML = 
+                `<span class="text-indigo-400">${pageBin}</span><span class="text-cyan-400">${offsetBin}</span>`;
+            
+            document.getElementById('addr-page').innerText = pageNum;
+            document.getElementById('addr-offset').innerText = offset;
+            
+            document.getElementById('out-frame').innerText = frameNum;
+            document.getElementById('out-offset').innerText = offset;
+            document.getElementById('out-paddr').innerText = paddr;
+        }
+
+        function renderTlb() {
+            const body = document.getElementById('tlb-body');
+            body.innerHTML = '';
+            tlb.forEach(t => {
+                const color = t.valid ? 'text-white' : 'text-slate-600';
+                const bg = t.valid ? 'bg-slate-800' : 'bg-transparent';
+                body.innerHTML += `
+                    <div class="grid grid-cols-3 gap-2 ${bg} p-1 rounded">
+                        <span class="${t.valid ? 'bit-valid' : 'text-slate-600'}">${t.valid ? '1' : '0'}</span>
+                        <span class="${color}">${t.valid ? t.page : '-'}</span>
+                        <span class="${color}">${t.valid ? t.frame : '-'}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function updateTlbUI(hit) {
+            const panel = document.getElementById('tlb-panel');
+            panel.classList.remove('tlb-hit', 'tlb-miss');
+            void panel.offsetWidth; // Trigger reflow
+            panel.classList.add(hit ? 'tlb-hit' : 'tlb-miss');
+        }
+
+        function renderPageTable() {
+            const body = document.getElementById('pt-body');
+            body.innerHTML = '';
+            pageTable.forEach((pt, idx) => {
+                if(idx > 15) return; // Only show first 16 for brevity
+                body.innerHTML += `
+                    <div class="grid grid-cols-4 gap-2 p-1 hover:bg-slate-800 rounded">
+                        <span class="text-slate-500">${idx}</span>
+                        <span class="${pt.valid ? 'bit-valid' : 'bit-invalid'}">${pt.valid}</span>
+                        <span class="text-slate-400">${pt.protection}</span>
+                        <span class="text-white">${pt.valid ? pt.frame : '-'}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderRam() {
+            const grid = document.getElementById('ram-grid');
+            grid.innerHTML = '';
+            ram.forEach((f, idx) => {
+                const isEmpty = f === null;
+                const color = isEmpty ? 'bg-slate-800 border-slate-700' : 'bg-green-800 border-green-600';
+                grid.innerHTML += `
+                    <div id="frame-${idx}" class="h-8 flex items-center justify-center rounded border ${color} text-xs font-mono ${isEmpty ? 'text-slate-600' : 'text-green-200'}">
+                        ${isEmpty ? 'Free' : 'P' + f.page}
+                    </div>
+                `;
+            });
+            
+            const used = ram.filter(f => f !== null).length;
+            document.getElementById('ram-status').innerText = `Usage: ${used} / ${CONFIG.frames} Frames`;
+        }
+
+        function highlightFrame(idx) {
+            // Reset all borders
+            document.querySelectorAll('#ram-grid > div').forEach(el => el.classList.remove('ring', 'ring-white', 'scale-110'));
+            
+            const el = document.getElementById(`frame-${idx}`);
+            if(el) {
+                el.classList.add('ring', 'ring-white', 'scale-110');
+            }
+        }
+
+        function updateStatsUI() {
+            document.getElementById('stat-tlb-hits').innerText = stats.hits;
+            document.getElementById('stat-tlb-misses').innerText = stats.misses;
+            document.getElementById('stat-faults').innerText = stats.faults;
+            
+            const total = stats.hits + stats.misses;
+            const ratio = total > 0 ? ((stats.hits / total) * 100).toFixed(1) : 0;
+            document.getElementById('stat-ratio').innerText = ratio + '%';
+        }
+
+        function updateStatus(msg) {
+            document.getElementById('status-indicator').innerText = msg;
+        }
+
+        function log(msg) {
+            const el = document.getElementById('log-area');
+            const time = new Date().toLocaleTimeString();
+            el.innerHTML += `<div><span class="text-slate-600">[${time}]</span> ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function resetSystem() {
+            init();
+            document.getElementById('vaddr-input').value = '';
+            document.getElementById('addr-binary').innerText = '0000000000000000';
+            document.getElementById('addr-page').innerText = '0';
+            document.getElementById('addr-offset').innerText = '0';
+            document.getElementById('out-frame').innerText = '0';
+            document.getElementById('out-paddr').innerText = '0';
+            log("System Reset.");
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>

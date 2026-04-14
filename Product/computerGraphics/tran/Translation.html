@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2D Translation | Computer Graphics</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #05080c;
+  --bg-elevated: #0a1018;
+  --card: #0d1520;
+  --border: #1a2535;
+  --accent: #00ffc8;
+  --accent-alt: #ff6b4a;
+  --text: #e4e8ec;
+  --muted: #5a6a7a;
+  --cyan-blue: #00d4ff;
+  --warm-gold: #ffa94d;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 8, 12, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--cyan-blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.nav-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.progress-bar {
+  width: 120px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.hero {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 60px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 255, 200, 0.1);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 255, 200, 0.2);
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.main-title {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  color: var(--text);
+}
+
+.hero-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 600px;
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.hero-nav {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: #00e6b8;
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.section {
+  padding: 80px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: 48px;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 0 0 12px 0;
+}
+
+.section-desc {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.two-col.reverse {
+  direction: rtl;
+}
+
+.two-col.reverse > * {
+  direction: ltr;
+}
+
+.canvas-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.canvas-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.canvas-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.canvas-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.canvas-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.canvas-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.canvas-body {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.canvas-body canvas {
+  border-radius: 8px;
+}
+
+.info-panel {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.info-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.content-block {
+  padding: 24px;
+}
+
+.content-block h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.content-block p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 16px 0;
+}
+
+.formula-box {
+  background: rgba(0, 255, 200, 0.05);
+  border: 1px solid rgba(0, 255, 200, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.formula-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.key-points {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+
+.key-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.key-points li:last-child {
+  border-bottom: none;
+}
+
+.key-point-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.key-point-icon.cyan {
+  background: rgba(0, 255, 200, 0.15);
+  color: var(--accent);
+}
+
+.key-point-icon.orange {
+  background: rgba(255, 107, 74, 0.15);
+  color: var(--accent-alt);
+}
+
+.key-point-icon.blue {
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--cyan-blue);
+}
+
+.key-point-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.slider-container {
+  margin: 20px 0;
+}
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.slider-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+
+.comparison-section {
+  margin-top: 60px;
+  padding: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.comparison-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.comparison-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.comparison-item {
+  text-align: center;
+}
+
+.comparison-canvas {
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.comparison-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.comparison-arrow {
+  color: var(--accent);
+  font-size: 24px;
+}
+
+.algo-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.algo-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.algo-card:hover {
+  border-color: rgba(0, 255, 200, 0.3);
+  transform: translateY(-4px);
+}
+
+.algo-card h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+
+.algo-card p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.algo-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(0, 255, 200, 0.1);
+  color: var(--accent);
+}
+
+.vector-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 20px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+}
+
+.vector-component {
+  text-align: center;
+}
+
+.vector-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.vector-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.vector-value.tx { color: var(--accent); }
+.vector-value.ty { color: var(--accent-alt); }
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  margin-top: 80px;
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
+@media (max-width: 900px) {
+  .two-col {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .two-col.reverse {
+    direction: ltr;
+  }
+  
+  .algo-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .nav-progress {
+    display: none;
+  }
+  
+  .comparison-visual {
+    flex-direction: column;
+  }
+  
+  .comparison-arrow {
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 40px;
+  }
+  
+  .canvas-body {
+    min-height: 300px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#05080c" stroke-width="2.5">
+          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">CG Lab</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="transformations.html">Transformations</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Translation</span>
+    </div>
+    <div class="nav-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+      <span id="progress-text">0%</span>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-badge">Transformation Module</div>
+    <h1 class="main-title">Translation Transformation</h1>
+    <p class="hero-subtitle">
+      // Learn how translation moves geometric objects from one position<br>
+      // to another without changing their shape, size, or orientation.
+    </p>
+    <div class="hero-nav">
+      <button class="btn btn-primary" onclick="scrollToSection('intro')">
+        Start Learning
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
+      <a href="rotation.html" class="btn btn-ghost">Skip to Rotation</a>
+    </div>
+  </section>
+
+  <!-- Section 1: What is Translation -->
+  <section class="section" id="intro">
+    <div class="section-header">
+      <div class="section-number">01 / Definition</div>
+      <h2 class="section-title">What is Translation?</h2>
+      <p class="section-desc">
+        Translation is a transformation that moves every point of an object by the same distance in a given direction. It shifts the object without altering its shape or orientation.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">TRANSLATION_VISUALIZATION</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-intro" width="400" height="400"></canvas>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Definition</h3>
+        <p>
+          Translation moves an object from its original position to a new position 
+          by adding translation values to each coordinate:
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">P'(x', y') = P(x, y) + T(tx, ty)</div>
+          <div class="formula-label">Translation operation</div>
+        </div>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">T</div>
+            <div class="key-point-text">
+              <strong>Rigid Transformation:</strong> Preserves distances and angles
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">S</div>
+            <div class="key-point-text">
+              <strong>Shape Preserved:</strong> No change in size or orientation
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">P</div>
+            <div class="key-point-text">
+              <strong>Parallel Movement:</strong> All points move the same distance
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Translation Formula -->
+  <section class="section" id="formula">
+    <div class="section-header">
+      <div class="section-number">02 / Mathematics</div>
+      <h2 class="section-title">Translation Formula</h2>
+      <p class="section-desc">
+        The mathematical representation of translation uses simple addition to calculate new coordinates from original positions.
+      </p>
+    </div>
+    
+    <div class="two-col reverse">
+      <div class="content-block">
+        <h3>Coordinate Transformation</h3>
+        <p>
+          For any point P(x, y), the translated point P'(x', y') is calculated by:
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">x' = x + tx</div>
+          <div class="formula-label">X-coordinate translation</div>
+        </div>
+        
+        <div class="formula-box">
+          <div class="formula">y' = y + ty</div>
+          <div class="formula-label">Y-coordinate translation</div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Parameters</h3>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">tx</div>
+            <div class="key-point-text">
+              <strong>Translation X:</strong> Distance to move along the X-axis (positive = right, negative = left)
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">ty</div>
+            <div class="key-point-text">
+              <strong>Translation Y:</strong> Distance to move along the Y-axis (positive = down, negative = up)
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">FORMULA_DEMO</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-formula" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Original P(x, y)</span>
+            <span class="info-value" id="formula-original">(3, 3)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Translation T(tx, ty)</span>
+            <span class="info-value" id="formula-translation">(+4, +5)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">New P'(x', y')</span>
+            <span class="info-value" id="formula-new">(7, 8)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Interactive Demo -->
+  <section class="section" id="interactive">
+    <div class="section-header">
+      <div class="section-number">03 / Interactive Demo</div>
+      <h2 class="section-title">Control the Translation</h2>
+      <p class="section-desc">
+        Use the sliders below to adjust the translation values and watch the object move in real-time. The original position is shown as a reference.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">INTERACTIVE_TRANSLATION</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn" onclick="resetTranslation()">Reset</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-interactive" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Original Position</span>
+            <span class="info-value" id="interactive-original">(4, 4)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Translation Vector</span>
+            <span class="info-value" id="interactive-vector">T(0, 0)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">New Position</span>
+            <span class="info-value" id="interactive-new">(4, 4)</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="content-block">
+        <h3>Translation Controls</h3>
+        <p>
+          Adjust the sliders to translate the square. Positive values move right/down, 
+          negative values move left/up.
+        </p>
+        
+        <div class="slider-container">
+          <div class="slider-label">
+            <span class="slider-name">Translation X (tx)</span>
+            <span class="slider-value" id="slider-tx-value">0</span>
+          </div>
+          <input type="range" class="slider" id="slider-tx" min="-8" max="8" value="0" oninput="updateTranslation()">
+        </div>
+        
+        <div class="slider-container">
+          <div class="slider-label">
+            <span class="slider-name">Translation Y (ty)</span>
+            <span class="slider-value" id="slider-ty-value">0</span>
+          </div>
+          <input type="range" class="slider" id="slider-ty" min="-8" max="8" value="0" oninput="updateTranslation()">
+        </div>
+        
+        <div class="vector-display">
+          <div class="vector-component">
+            <div class="vector-label">tx</div>
+            <div class="vector-value tx" id="display-tx">0</div>
+          </div>
+          <div style="font-size: 24px; color: var(--muted);">,</div>
+          <div class="vector-component">
+            <div class="vector-label">ty</div>
+            <div class="vector-value ty" id="display-ty">0</div>
+          </div>
+        </div>
+        
+        <div class="formula-box" style="margin-top: 24px;">
+          <div class="formula" id="formula-display">x' = 4 + 0 = 4<br>y' = 4 + 0 = 4</div>
+          <div class="formula-label">Calculation</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Translation Vector -->
+  <section class="section" id="vector">
+    <div class="section-header">
+      <div class="section-number">04 / Vector Concept</div>
+      <h2 class="section-title">Translation as a Vector</h2>
+      <p class="section-desc">
+        Translation can be represented as a vector that describes both the magnitude and direction of the movement.
+      </p>
+    </div>
+    
+    <div class="two-col reverse">
+      <div class="content-block">
+        <h3>Vector Representation</h3>
+        <p>
+          A translation vector T = (tx, ty) completely describes the transformation:
+        </p>
+        
+        <div class="formula-box">
+          <div class="formula">T = (tx, ty)</div>
+          <div class="formula-label">Translation vector notation</div>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Vector Properties</h3>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">M</div>
+            <div class="key-point-text">
+              <strong>Magnitude:</strong> |T| = sqrt(tx^2 + ty^2) - the distance moved
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">D</div>
+            <div class="key-point-text">
+              <strong>Direction:</strong> Angle from positive X-axis
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">A</div>
+            <div class="key-point-text">
+              <strong>Additive:</strong> Multiple translations can be combined by adding vectors
+            </div>
+          </li>
+        </ul>
+        
+        <div class="formula-box" style="margin-top: 24px;">
+          <div class="formula">T1 + T2 = (tx1 + tx2, ty1 + ty2)</div>
+          <div class="formula-label">Combining translations</div>
+        </div>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">VECTOR_VISUALIZATION</span>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-vector" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Vector T</span>
+            <span class="info-value" id="vector-t">T(5, 4)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Magnitude |T|</span>
+            <span class="info-value" id="vector-magnitude">6.40</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Direction</span>
+            <span class="info-value" id="vector-direction">38.66 degrees</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Applications -->
+  <section class="section" id="applications">
+    <div class="section-header">
+      <div class="section-number">05 / Applications</div>
+      <h2 class="section-title">Real-World Applications</h2>
+      <p class="section-desc">
+        Translation is one of the most frequently used transformations in computer graphics, games, and user interfaces.
+      </p>
+    </div>
+    
+    <div class="two-col">
+      <div class="content-block">
+        <h3>Common Uses</h3>
+        
+        <ul class="key-points">
+          <li>
+            <div class="key-point-icon cyan">G</div>
+            <div class="key-point-text">
+              <strong>Game Development:</strong> Moving characters, objects, and projectiles across the game world
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon orange">A</div>
+            <div class="key-point-text">
+              <strong>Animation:</strong> Creating smooth motion by applying incremental translations frame by frame
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon blue">C</div>
+            <div class="key-point-text">
+              <strong>Camera Movement:</strong> Panning the viewport to follow players or reveal content
+            </div>
+          </li>
+          <li>
+            <div class="key-point-icon cyan">U</div>
+            <div class="key-point-text">
+              <strong>UI Positioning:</strong> Placing buttons, windows, and elements at specific screen coordinates
+            </div>
+          </li>
+        </ul>
+        
+        <p style="margin-top: 24px; font-size: 13px; color: var(--accent-alt);">
+          Watch the animation to see translation in action - the object moves smoothly across the screen using continuous translation updates.
+        </p>
+      </div>
+      
+      <div class="canvas-container">
+        <div class="canvas-header">
+          <span class="canvas-title">ANIMATION_DEMO</span>
+          <div class="canvas-controls">
+            <button class="canvas-btn active" id="btn-play" onclick="toggleAnimation()">Pause</button>
+          </div>
+        </div>
+        <div class="canvas-body">
+          <canvas id="canvas-applications" width="400" height="400"></canvas>
+        </div>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Animation Type</span>
+            <span class="info-value">Continuous Translation</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Current Position</span>
+            <span class="info-value" id="app-position">(0, 0)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Velocity</span>
+            <span class="info-value" id="app-velocity">T(1.5, 0.8)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="algo-cards">
+      <a href="rotation.html" class="algo-card">
+        <h4>Rotation Transformation</h4>
+        <p>
+          Learn how to rotate objects around a pivot point using rotation matrices 
+          and trigonometric calculations.
+        </p>
+        <span class="algo-tag">Next: Rotation</span>
+      </a>
+      
+      <a href="scaling.html" class="algo-card">
+        <h4>Scaling Transformation</h4>
+        <p>
+          Discover how to resize objects uniformly or non-uniformly using 
+          scaling factors along each axis.
+        </p>
+        <span class="algo-tag">Next: Scaling</span>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <p>// 2D Translation Transformation - Fundamental Computer Graphics Concept</p>
+  </footer>
+  
+</div>
+
+<script>
+// === INITIALIZATION GUARD ===
+let initialized = false;
+
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let bgWidth = window.innerWidth;
+let bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+let mouseX = bgWidth / 2;
+let mouseY = bgHeight / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const particles = [];
+const particleCount = 30;
+
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.15 + 0.05
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#05080c';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+  
+  const time = Date.now() * 0.001;
+  
+  // Subtle grid
+  bgCtx.strokeStyle = 'rgba(0, 255, 200, 0.02)';
+  bgCtx.lineWidth = 1;
+  
+  const gridSize = 60;
+  for (let x = 0; x < bgWidth; x += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(x, 0);
+    bgCtx.lineTo(x, bgHeight);
+    bgCtx.stroke();
+  }
+  for (let y = 0; y < bgHeight; y += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, y);
+    bgCtx.lineTo(bgWidth, y);
+    bgCtx.stroke();
+  }
+  
+  // Translation arrows
+  bgCtx.strokeStyle = 'rgba(0, 255, 200, 0.03)';
+  for (let i = 0; i < 5; i++) {
+    const startX = (i / 5) * bgWidth + Math.sin(time + i) * 30;
+    const startY = bgHeight * 0.3 + i * 80;
+    const endX = startX + 60;
+    const endY = startY + 40;
+    
+    bgCtx.beginPath();
+    bgCtx.moveTo(startX, startY);
+    bgCtx.lineTo(endX, endY);
+    bgCtx.stroke();
+    
+    // Arrowhead
+    const angle = Math.atan2(endY - startY, endX - startX);
+    bgCtx.beginPath();
+    bgCtx.moveTo(endX, endY);
+    bgCtx.lineTo(endX - 8 * Math.cos(angle - 0.4), endY - 8 * Math.sin(angle - 0.4));
+    bgCtx.lineTo(endX - 8 * Math.cos(angle + 0.4), endY - 8 * Math.sin(angle + 0.4));
+    bgCtx.closePath();
+    bgCtx.fill();
+  }
+  
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    if (p.x < 0) p.x = bgWidth;
+    if (p.x > bgWidth) p.x = 0;
+    if (p.y < 0) p.y = bgHeight;
+    if (p.y > bgHeight) p.y = 0;
+    
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 100) {
+      p.x -= dx * 0.005;
+      p.y -= dy * 0.005;
+    }
+    
+    bgCtx.fillStyle = 'rgba(0, 255, 200, ' + p.opacity + ')';
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  // Mouse glow
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 120);
+  gradient.addColorStop(0, 'rgba(0, 255, 200, 0.03)');
+  gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.1;
+  mouseY += (targetMouseY - mouseY) * 0.1;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === CANVAS UTILITIES ===
+function drawGrid(ctx, canvas, pixelSize, showLabels) {
+  const w = canvas.width;
+  const h = canvas.height;
+  
+  ctx.fillStyle = '#080c10';
+  ctx.fillRect(0, 0, w, h);
+  
+  // Grid lines
+  ctx.strokeStyle = 'rgba(0, 255, 200, 0.08)';
+  ctx.lineWidth = 1;
+  
+  for (let x = 0; x <= w; x += pixelSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+  
+  for (let y = 0; y <= h; y += pixelSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  
+  if (showLabels) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'center';
+    
+    for (let x = 0; x <= Math.floor(w / pixelSize); x += 5) {
+      ctx.fillText(x.toString(), x * pixelSize + pixelSize / 2, h - 4);
+    }
+  }
+}
+
+function drawSquare(ctx, x, y, size, pixelSize, color, label, labelPos) {
+  const px = x * pixelSize;
+  const py = y * pixelSize;
+  const s = size * pixelSize;
+  
+  // Fill
+  ctx.fillStyle = color;
+  ctx.fillRect(px, py, s, s);
+  
+  // Border
+  ctx.strokeStyle = color.replace('0.4', '0.8');
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px, py, s, s);
+  
+  // Label
+  if (label) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = 'bold 11px JetBrains Mono';
+    ctx.textAlign = 'center';
+    
+    const labelX = px + s / 2;
+    let labelY = py - 8;
+    
+    if (labelPos === 'bottom') labelY = py + s + 16;
+    if (labelPos === 'inside') labelY = py + s / 2 + 4;
+    
+    ctx.fillText(label, labelX, labelY);
+  }
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color, dashed) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  
+  if (dashed) ctx.setLineDash([6, 4]);
+  
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  
+  ctx.setLineDash([]);
+  
+  // Arrowhead
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const headLen = 12;
+  
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+  ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+  ctx.closePath();
+  ctx.fill();
+}
+
+// === INTRO CANVAS ===
+function initIntroCanvas() {
+  const canvas = document.getElementById('canvas-intro');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 20;
+  let t = 0;
+  
+  // Original and translated positions
+  const origSquare = { x: 4, y: 4, size: 3 };
+  let currentTx = 0;
+  let currentTy = 0;
+  const targetTx = 7;
+  const targetTy = 6;
+  
+  function draw() {
+    t += 0.02;
+    
+    // Animate translation
+    if (currentTx < targetTx) currentTx += 0.08;
+    if (currentTy < targetTy) currentTy += 0.07;
+    
+    currentTx = Math.min(currentTx, targetTx);
+    currentTy = Math.min(currentTy, targetTy);
+    
+    // Reset
+    if (t > 6) {
+      t = 0;
+      currentTx = 0;
+      currentTy = 0;
+    }
+    
+    drawGrid(ctx, canvas, pixelSize, true);
+    
+    // Original square (faded)
+    drawSquare(ctx, origSquare.x, origSquare.y, origSquare.size, pixelSize, 
+      'rgba(100, 120, 140, 0.3)', 'Original', 'top');
+    
+    // Translation arrow
+    const origCenterX = (origSquare.x + origSquare.size / 2) * pixelSize;
+    const origCenterY = (origSquare.y + origSquare.size / 2) * pixelSize;
+    const newCenterX = (origSquare.x + currentTx + origSquare.size / 2) * pixelSize;
+    const newCenterY = (origSquare.y + currentTy + origSquare.size / 2) * pixelSize;
+    
+    if (currentTx > 0.5 || currentTy > 0.5) {
+      drawArrow(ctx, origCenterX, origCenterY, newCenterX, newCenterY, 
+        'rgba(0, 255, 200, 0.5)', true);
+      
+      // Translation values
+      ctx.fillStyle = 'rgba(0, 255, 200, 0.8)';
+      ctx.font = '11px JetBrains Mono';
+      ctx.textAlign = 'center';
+      const midX = (origCenterX + newCenterX) / 2;
+      const midY = (origCenterY + newCenterY) / 2 - 10;
+      ctx.fillText('T(' + Math.round(currentTx) + ', ' + Math.round(currentTy) + ')', midX, midY);
+    }
+    
+    // Translated square
+    if (currentTx > 0.1 || currentTy > 0.1) {
+      drawSquare(ctx, origSquare.x + currentTx, origSquare.y + currentTy, origSquare.size, 
+        pixelSize, 'rgba(0, 255, 200, 0.4)', 'Translated', 'bottom');
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === FORMULA CANVAS ===
+function initFormulaCanvas() {
+  const canvas = document.getElementById('canvas-formula');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 20;
+  let t = 0;
+  
+  const origPoint = { x: 3, y: 3 };
+  const tx = 4;
+  const ty = 5;
+  
+  function draw() {
+    t += 0.02;
+    
+    drawGrid(ctx, canvas, pixelSize, true);
+    
+    // Point at original position
+    ctx.fillStyle = 'rgba(255, 107, 74, 0.8)';
+    ctx.beginPath();
+    ctx.arc(origPoint.x * pixelSize + pixelSize / 2, 
+      origPoint.y * pixelSize + pixelSize / 2, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#05080c';
+    ctx.font = 'bold 9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('P', origPoint.x * pixelSize + pixelSize / 2, 
+      origPoint.y * pixelSize + pixelSize / 2 + 3);
+    
+    // Animated translation
+    const progress = Math.min(1, (t % 5) / 2);
+    const currentX = origPoint.x + tx * progress;
+    const currentY = origPoint.y + ty * progress;
+    
+    // Translation arrow
+    if (progress > 0.1) {
+      drawArrow(ctx, 
+        origPoint.x * pixelSize + pixelSize / 2,
+        origPoint.y * pixelSize + pixelSize / 2,
+        currentX * pixelSize + pixelSize / 2,
+        currentY * pixelSize + pixelSize / 2,
+        'rgba(0, 255, 200, 0.5)', true);
+    }
+    
+    // Point at new position
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.8)';
+    ctx.beginPath();
+    ctx.arc(currentX * pixelSize + pixelSize / 2, 
+      currentY * pixelSize + pixelSize / 2, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#05080c';
+    ctx.font = 'bold 9px JetBrains Mono';
+    ctx.fillText("P'", currentX * pixelSize + pixelSize / 2, 
+      currentY * pixelSize + pixelSize / 2 + 3);
+    
+    // Coordinate labels
+    ctx.fillStyle = 'rgba(255, 107, 74, 0.8)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText('(' + origPoint.x + ', ' + origPoint.y + ')', 
+      origPoint.x * pixelSize + 14, origPoint.y * pixelSize - 6);
+    
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.8)';
+    ctx.fillText('(' + Math.round(currentX) + ', ' + Math.round(currentY) + ')', 
+      currentX * pixelSize + 14, currentY * pixelSize - 6);
+    
+    // Update info
+    document.getElementById('formula-original').textContent = 
+      '(' + origPoint.x + ', ' + origPoint.y + ')';
+    document.getElementById('formula-translation').textContent = 
+      '(+' + tx + ', +' + ty + ')';
+    document.getElementById('formula-new').textContent = 
+      '(' + (origPoint.x + tx) + ', ' + (origPoint.y + ty) + ')';
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === INTERACTIVE CANVAS ===
+let translationState = { tx: 0, ty: 0 };
+const origSquarePos = { x: 4, y: 4, size: 3 };
+
+function initInteractiveCanvas() {
+  const canvas = document.getElementById('canvas-interactive');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 20;
+  
+  function draw() {
+    drawGrid(ctx, canvas, pixelSize, true);
+    
+    // Original square (faded)
+    drawSquare(ctx, origSquarePos.x, origSquarePos.y, origSquarePos.size, pixelSize, 
+      'rgba(100, 120, 140, 0.25)', 'Original', 'top');
+    
+    // Translated square
+    const newX = origSquarePos.x + translationState.tx;
+    const newY = origSquarePos.y + translationState.ty;
+    
+    drawSquare(ctx, newX, newY, origSquarePos.size, pixelSize, 
+      'rgba(0, 255, 200, 0.4)', 'Translated', 'bottom');
+    
+    // Translation arrow
+    if (translationState.tx !== 0 || translationState.ty !== 0) {
+      const origCenterX = (origSquarePos.x + origSquarePos.size / 2) * pixelSize;
+      const origCenterY = (origSquarePos.y + origSquarePos.size / 2) * pixelSize;
+      const newCenterX = (newX + origSquarePos.size / 2) * pixelSize;
+      const newCenterY = (newY + origSquarePos.size / 2) * pixelSize;
+      
+      drawArrow(ctx, origCenterX, origCenterY, newCenterX, newCenterY, 
+        'rgba(0, 212, 255, 0.6)', true);
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function updateTranslation() {
+  const txSlider = document.getElementById('slider-tx');
+  const tySlider = document.getElementById('slider-ty');
+  
+  translationState.tx = parseInt(txSlider.value);
+  translationState.ty = parseInt(tySlider.value);
+  
+  document.getElementById('slider-tx-value').textContent = translationState.tx;
+  document.getElementById('slider-ty-value').textContent = translationState.ty;
+  
+  document.getElementById('display-tx').textContent = translationState.tx;
+  document.getElementById('display-ty').textContent = translationState.ty;
+  
+  const newX = origSquarePos.x + translationState.tx;
+  const newY = origSquarePos.y + translationState.ty;
+  
+  document.getElementById('interactive-vector').textContent = 
+    'T(' + translationState.tx + ', ' + translationState.ty + ')';
+  document.getElementById('interactive-new').textContent = 
+    '(' + newX + ', ' + newY + ')';
+  
+  document.getElementById('formula-display').innerHTML = 
+    "x' = " + origSquarePos.x + " + (" + translationState.tx + ") = " + newX + "<br>" +
+    "y' = " + origSquarePos.y + " + (" + translationState.ty + ") = " + newY;
+}
+
+function resetTranslation() {
+  translationState.tx = 0;
+  translationState.ty = 0;
+  
+  document.getElementById('slider-tx').value = 0;
+  document.getElementById('slider-ty').value = 0;
+  
+  updateTranslation();
+}
+
+// === VECTOR CANVAS ===
+function initVectorCanvas() {
+  const canvas = document.getElementById('canvas-vector');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 20;
+  const tx = 5;
+  const ty = 4;
+  
+  let t = 0;
+  
+  function draw() {
+    t += 0.02;
+    
+    drawGrid(ctx, canvas, pixelSize, true);
+    
+    // Origin point
+    ctx.fillStyle = 'rgba(255, 107, 74, 0.8)';
+    ctx.beginPath();
+    ctx.arc(3 * pixelSize + pixelSize / 2, 4 * pixelSize + pixelSize / 2, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#05080c';
+    ctx.font = 'bold 9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('O', 3 * pixelSize + pixelSize / 2, 4 * pixelSize + pixelSize / 2 + 3);
+    
+    // Translation vector arrow
+    const startX = 3 * pixelSize + pixelSize / 2;
+    const startY = 4 * pixelSize + pixelSize / 2;
+    const endX = (3 + tx) * pixelSize + pixelSize / 2;
+    const endY = (4 + ty) * pixelSize + pixelSize / 2;
+    
+    // Animated pulse
+    const alpha = 0.6 + Math.sin(t * 3) * 0.2;
+    
+    // Vector line
+    ctx.strokeStyle = 'rgba(0, 255, 200, ' + alpha + ')';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    
+    // Arrowhead
+    const angle = Math.atan2(ty, tx);
+    ctx.fillStyle = 'rgba(0, 255, 200, ' + alpha + ')';
+    ctx.beginPath();
+    ctx.moveTo(endX, endY);
+    ctx.lineTo(endX - 14 * Math.cos(angle - 0.35), endY - 14 * Math.sin(angle - 0.35));
+    ctx.lineTo(endX - 14 * Math.cos(angle + 0.35), endY - 14 * Math.sin(angle + 0.35));
+    ctx.closePath();
+    ctx.fill();
+    
+    // Vector label
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.9)';
+    ctx.font = '12px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText('T', startX + tx * pixelSize / 2 + 10, startY + ty * pixelSize / 2);
+    
+    // Component lines (dashed)
+    ctx.strokeStyle = 'rgba(0, 212, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    
+    // tx component
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, startY);
+    ctx.stroke();
+    
+    // ty component
+    ctx.beginPath();
+    ctx.moveTo(endX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    
+    ctx.setLineDash([]);
+    
+    // Component labels
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.7)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('tx = ' + tx, (startX + endX) / 2, startY - 8);
+    
+    ctx.fillStyle = 'rgba(255, 107, 74, 0.7)';
+    ctx.fillText('ty = ' + ty, endX + 20, (startY + endY) / 2);
+    
+    // End point
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.8)';
+    ctx.beginPath();
+    ctx.arc(endX, endY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Update info
+    const magnitude = Math.sqrt(tx * tx + ty * ty).toFixed(2);
+    const direction = (Math.atan2(ty, tx) * 180 / Math.PI).toFixed(2);
+    
+    document.getElementById('vector-t').textContent = 'T(' + tx + ', ' + ty + ')';
+    document.getElementById('vector-magnitude').textContent = magnitude;
+    document.getElementById('vector-direction').textContent = direction + ' degrees';
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === APPLICATIONS CANVAS ===
+let appAnimationRunning = true;
+let appObjectPos = { x: 2, y: 2 };
+const appVelocity = { x: 1.2, y: 0.8 };
+
+function initApplicationsCanvas() {
+  const canvas = document.getElementById('canvas-applications');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const pixelSize = 20;
+  
+  function draw() {
+    drawGrid(ctx, canvas, pixelSize, true);
+    
+    // Draw some static objects
+    ctx.fillStyle = 'rgba(100, 120, 140, 0.2)';
+    ctx.fillRect(15 * pixelSize, 2 * pixelSize, 2 * pixelSize, 2 * pixelSize);
+    ctx.fillRect(2 * pixelSize, 14 * pixelSize, 3 * pixelSize, 3 * pixelSize);
+    
+    // Animated object
+    if (appAnimationRunning) {
+      appObjectPos.x += appVelocity.x * 0.03;
+      appObjectPos.y += appVelocity.y * 0.03;
+      
+      // Bounce off edges
+      if (appObjectPos.x > 15 || appObjectPos.x < 1) {
+        appVelocity.x *= -1;
+        appObjectPos.x = Math.max(1, Math.min(15, appObjectPos.x));
+      }
+      if (appObjectPos.y > 14 || appObjectPos.y < 1) {
+        appVelocity.y *= -1;
+        appObjectPos.y = Math.max(1, Math.min(14, appObjectPos.y));
+      }
+    }
+    
+    // Trail effect
+    const trailX = appObjectPos.x - appVelocity.x * 0.5;
+    const trailY = appObjectPos.y - appVelocity.y * 0.5;
+    
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.1)';
+    ctx.beginPath();
+    ctx.arc(trailX * pixelSize + pixelSize / 2, trailY * pixelSize + pixelSize / 2, 12, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.2)';
+    ctx.beginPath();
+    ctx.arc(trailX * pixelSize + pixelSize / 2, trailY * pixelSize + pixelSize / 2, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Main object
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.8)';
+    ctx.beginPath();
+    ctx.arc(appObjectPos.x * pixelSize + pixelSize / 2, 
+      appObjectPos.y * pixelSize + pixelSize / 2, 12, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Velocity arrow
+    const arrowLen = 30;
+    const arrowEndX = appObjectPos.x * pixelSize + pixelSize / 2 + appVelocity.x * 10;
+    const arrowEndY = appObjectPos.y * pixelSize + pixelSize / 2 + appVelocity.y * 10;
+    
+    ctx.strokeStyle = 'rgba(255, 107, 74, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(appObjectPos.x * pixelSize + pixelSize / 2, 
+      appObjectPos.y * pixelSize + pixelSize / 2);
+    ctx.lineTo(arrowEndX, arrowEndY);
+    ctx.stroke();
+    
+    // Arrowhead
+    const angle = Math.atan2(appVelocity.y, appVelocity.x);
+    ctx.fillStyle = 'rgba(255, 107, 74, 0.6)';
+    ctx.beginPath();
+    ctx.moveTo(arrowEndX, arrowEndY);
+    ctx.lineTo(arrowEndX - 8 * Math.cos(angle - 0.4), arrowEndY - 8 * Math.sin(angle - 0.4));
+    ctx.lineTo(arrowEndX - 8 * Math.cos(angle + 0.4), arrowEndY - 8 * Math.sin(angle + 0.4));
+    ctx.closePath();
+    ctx.fill();
+    
+    // Update info
+    document.getElementById('app-position').textContent = 
+      '(' + appObjectPos.x.toFixed(1) + ', ' + appObjectPos.y.toFixed(1) + ')';
+    document.getElementById('app-velocity').textContent = 
+      'T(' + appVelocity.x.toFixed(1) + ', ' + appVelocity.y.toFixed(1) + ')';
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function toggleAnimation() {
+  appAnimationRunning = !appAnimationRunning;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = appAnimationRunning ? 'Pause' : 'Play';
+  btn.classList.toggle('active', appAnimationRunning);
+}
+
+// === SCROLL PROGRESS ===
+function updateProgress() {
+  const sections = ['intro', 'formula', 'interactive', 'vector', 'applications'];
+  const scrollPos = window.scrollY + window.innerHeight * 0.5;
+  
+  let currentSection = 0;
+  sections.forEach((id, index) => {
+    const el = document.getElementById(id);
+    if (el && scrollPos > el.offsetTop) {
+      currentSection = index + 1;
+    }
+  });
+  
+  const progress = Math.round((currentSection / sections.length) * 100);
+  const progressFill = document.getElementById('progress-fill');
+  const progressText = document.getElementById('progress-text');
+  
+  if (progressFill) progressFill.style.width = progress + '%';
+  if (progressText) progressText.textContent = progress + '%';
+}
+
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('scroll', updateProgress);
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initParticles();
+});
+
+// === INITIALIZE ===
+initParticles();
+animate();
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (!initialized) {
+    initialized = true;
+    initIntroCanvas();
+    initFormulaCanvas();
+    initInteractiveCanvas();
+    initVectorCanvas();
+    initApplicationsCanvas();
+    updateProgress();
+  }
+});
+</script>
+
+</body>
+</html>

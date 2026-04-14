@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Pro: Stack Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+<style>
+:root {
+  /* Dark Mode Variables Only */
+  --bg-body: #0c1222;
+  --bg-sidebar: rgba(15, 23, 42, 0.97);
+  --bg-card: rgba(30, 41, 59, 0.7);
+  --bg-input: #1e293b;
+  --bg-secondary: #0f172a;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --border-color: #334155;
+  
+  --primary: #2dd4bf;
+  --primary-hover: #5eead4;
+  --primary-light: rgba(45, 212, 191, 0.15);
+  --primary-glow: rgba(45, 212, 191, 0.3);
+  
+  --danger: #dc2626;
+  --danger-light: rgba(220, 38, 38, 0.12);
+  --success: #16a34a;
+  --success-light: rgba(22, 163, 74, 0.12);
+  --warning: #d97706;
+  --warning-light: rgba(217, 119, 6, 0.12);
+  --purple: #7c3aed;
+  --purple-light: rgba(124, 58, 237, 0.12);
+  --info: #0284c7;
+  --info-light: rgba(2, 132, 199, 0.12);
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+  
+  --sidebar-width: 280px;
+  
+  --item-normal: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%);
+  --item-operand: linear-gradient(135deg, #16a34a 0%, #4ade80 100%);
+  --item-operator: linear-gradient(135deg, #d97706 0%, #fbbf24 100%);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  background: var(--bg-body);
+  color: var(--text-main);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Background Pattern */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: 
+    radial-gradient(ellipse 70% 50% at 10% 20%, var(--primary-glow), transparent),
+    radial-gradient(ellipse 50% 40% at 90% 80%, rgba(124, 58, 237, 0.15), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Grid Overlay */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: 
+    linear-gradient(rgba(100, 116, 139, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 116, 139, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Mobile Header --- */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 60px;
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(16px);
+  border-right: 1px solid var(--border-color);
+  height: 100vh;
+  position: fixed;
+  left: 0; top: 0;
+  overflow-y: auto;
+  z-index: 50;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-brand {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-brand i {
+  font-size: 1.5rem;
+}
+
+.nav-menu {
+  padding: 16px 12px;
+  flex: 1;
+}
+
+.nav-group-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin: 20px 12px 8px;
+  font-weight: 700;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+}
+
+.nav-item:hover {
+  background: var(--bg-secondary);
+  color: var(--primary);
+}
+
+.nav-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.nav-item i { font-size: 1.25rem; }
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.sidebar-footer span {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* --- Main Content --- */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding: 30px 40px;
+  transition: margin-left 0.35s ease, padding 0.35s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.breadcrumbs {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumbs span.current {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.btn-icon {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1.1rem;
+}
+
+.btn-icon:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+/* --- View Sections --- */
+.view-section {
+  display: none;
+  animation: fadeSlideIn 0.4s ease;
+}
+
+.view-section.active {
+  display: block;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-title {
+  font-size: 1.9rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+}
+
+.section-subtitle {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 30px;
+  max-width: 650px;
+  line-height: 1.65;
+}
+
+/* --- Cards --- */
+.card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+}
+
+.card h3 {
+  font-size: 1.15rem;
+  margin-bottom: 12px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card h3 i {
+  color: var(--primary);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.info-box p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* --- Controls --- */
+.controls-wrapper {
+  background: var(--bg-input);
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+}
+
+/* Mode Tabs */
+.mode-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 20px;
+  gap: 4px;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+}
+
+.mode-tab:hover {
+  color: var(--text-main);
+}
+
+.mode-tab.active {
+  background: var(--bg-card);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.input-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.input-field {
+  flex: 1;
+  min-width: 150px;
+  position: relative;
+}
+
+.input-field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.2s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--bg-input);
+  box-shadow: 0 0 0 4px var(--primary-glow);
+}
+
+input::placeholder {
+  color: var(--text-dim);
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+button.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+button.btn::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s, height 0.4s;
+}
+
+button.btn:active::after {
+  width: 200px; height: 200px;
+}
+
+button.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  filter: brightness(1.1);
+}
+
+button.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.btn-primary { background: var(--primary); }
+.btn-success { background: var(--success); }
+.btn-danger { background: var(--danger); }
+.btn-purple { background: var(--purple); }
+.btn-gray { background: var(--text-muted); }
+.btn-warning { background: var(--warning); }
+
+/* Back Button Style */
+.btn-back {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: var(--text-main);
+  text-decoration: none;
+}
+.btn-back:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.speed-control label {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+input[type="range"] {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border-color);
+  appearance: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* --- Visual Container --- */
+.visual-container {
+  min-height: 450px;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  border: 1px dashed var(--border-color);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 30px 40px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.current-token-display {
+  position: absolute;
+  top: 20px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-input);
+  padding: 10px 24px;
+  border-radius: 10px;
+  border: 2px solid var(--primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--primary);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+
+.current-token-display.visible {
+  opacity: 1;
+}
+
+/* --- Stack Wrapper --- */
+.stack-wrapper {
+  position: relative;
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 20px;
+}
+
+.stack-info-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  padding: 6px 14px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.stack-label {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.stack-container {
+  width: 100%;
+  height: 350px;
+  border-radius: 0 0 12px 12px;
+  border: 2px solid var(--border-color);
+  border-top: none;
+  display: flex;
+  flex-direction: column-reverse;
+  padding: 8px;
+  gap: 6px;
+  position: relative;
+  background: var(--bg-input);
+  box-shadow: inset 0 4px 10px rgba(0,0,0,0.04);
+}
+
+.stack-container::before {
+  content: '';
+  position: absolute;
+  top: -14px; left: 0; right: 0;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 5px,
+    var(--border-color) 5px,
+    var(--border-color) 10px
+  );
+}
+
+.stack-container.overflow {
+  animation: overflowShake 0.5s ease;
+  border-color: var(--danger);
+}
+
+.stack-container.overflow::before {
+  border-color: var(--danger);
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 5px,
+    var(--danger) 5px,
+    var(--danger) 10px
+  );
+}
+
+.stack-container.underflow {
+  animation: underflowPulse 0.4s ease;
+  border-color: var(--warning);
+}
+
+@keyframes overflowShake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+  20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
+
+@keyframes underflowPulse {
+  0%, 100% { box-shadow: inset 0 4px 10px rgba(0,0,0,0.04); }
+  50% { box-shadow: inset 0 0 30px rgba(217, 119, 6, 0.3); }
+}
+
+/* --- Stack Item --- */
+.stack-item {
+  height: 36px;
+  width: 100%;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: white;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stack-item.top-item {
+  box-shadow: 0 0 0 3px var(--primary), var(--shadow);
+  transform: scale(1.03);
+}
+
+.stack-item.top-item::after {
+  content: 'TOP';
+  position: absolute;
+  right: -42px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.stack-item.peek-highlight {
+  animation: peekPulse 0.6s ease infinite alternate;
+}
+
+@keyframes peekPulse {
+  to { transform: scale(1.05); box-shadow: 0 0 20px var(--primary-glow); }
+}
+
+.stack-item.processing {
+  animation: itemPulse 0.3s ease infinite alternate;
+}
+
+@keyframes itemPulse {
+  to { transform: scale(1.03); box-shadow: 0 0 15px var(--primary-glow); }
+}
+
+.type-normal { background: var(--item-normal); }
+.type-operand { background: var(--item-operand); }
+.type-operator { background: var(--item-operator); }
+
+.stack-item.pushing {
+  animation: pushDown 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.stack-item.popping {
+  animation: popUp 0.4s forwards cubic-bezier(0.6, -0.28, 0.735, 0.045);
+}
+
+@keyframes pushDown {
+  from { transform: translateY(-80px) scale(0.7); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes popUp {
+  to { transform: translateY(-80px) scale(0.7); opacity: 0; }
+}
+
+/* --- Status Bar --- */
+.status-bar {
+  background: var(--bg-input);
+  padding: 14px 20px;
+  border-radius: 12px;
+  border-left: 4px solid var(--primary);
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.status-bar.success { border-color: var(--success); color: var(--success); }
+.status-bar.error { border-color: var(--danger); color: var(--danger); }
+.status-bar.warning { border-color: var(--warning); color: var(--warning); }
+
+.status-bar i {
+  font-size: 1.1rem;
+}
+
+/* --- Concept Panel --- */
+.concept-panel {
+  background: var(--primary-light);
+  border-radius: 14px;
+  padding: 24px;
+  border-left: 5px solid var(--primary);
+  margin-top: 20px;
+}
+
+.concept-panel h4 {
+  color: var(--primary);
+  margin-bottom: 12px;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.concept-panel p {
+  font-size: 0.95rem;
+  color: var(--text-main);
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.code-block {
+  background: rgba(0,0,0,0.3);
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  overflow-x: auto;
+}
+
+/* --- Diagram Container --- */
+.diagram-container {
+  display: flex;
+  justify-content: center;
+  margin: 30px 0;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.stack-diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.diagram-cell {
+  width: 70px;
+  height: 45px;
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--bg-input);
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.diagram-cell.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.diagram-cell.highlight {
+  transform: scale(1.08);
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.diagram-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+/* --- Quiz --- */
+.quiz-container {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color);
+}
+
+.quiz-container h3 {
+  margin-bottom: 10px;
+}
+
+.quiz-container p {
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.quiz-options {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.quiz-btn {
+  background: var(--bg-input);
+  border: 2px solid var(--border-color);
+  color: var(--text-main);
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.quiz-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.quiz-btn.correct {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+}
+
+.quiz-btn.wrong {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+/* --- Table --- */
+.complexity-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.complexity-table th {
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.complexity-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.complexity-table tr:last-child td {
+  border-bottom: none;
+}
+
+.complexity-table .good { color: var(--success); font-weight: 600; }
+.complexity-table .medium { color: var(--warning); font-weight: 600; }
+.complexity-table .bad { color: var(--danger); font-weight: 600; }
+
+/* --- Hidden Utility --- */
+.hidden { display: none !important; }
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 280px;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .main-content {
+    margin-left: 0;
+    padding: 80px 20px 20px 20px;
+  }
+  .mobile-header {
+    display: flex;
+  }
+  .visual-container {
+    min-height: 380px;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+  }
+  .stack-wrapper {
+    width: 140px;
+    margin: 0;
+  }
+  .stack-container {
+    height: 280px;
+  }
+  .button-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .input-group {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .stack-wrapper {
+    width: 120px;
+  }
+  .stack-container {
+    height: 250px;
+  }
+  .stack-item.top-item::after {
+    display: none;
+  }
+}
+
+/* --- Reduced Motion --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile Header -->
+<div class="mobile-header">
+  <div class="sidebar-brand">
+    <i class="ri-stack-line"></i> DSA Pro
+  </div>
+  <button class="btn-icon" onclick="toggleSidebar()" aria-label="Toggle Menu">
+    <i class="ri-menu-4-line"></i>
+  </button>
+</div>
+
+<div class="app-layout">
+  
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <i class="ri-stack-line"></i> DSA Pro
+      </div>
+    </div>
+
+    <div class="nav-menu">
+      <div class="nav-item active" onclick="navigate('visualizer')" role="button">
+        <i class="ri-bar-chart-box-line"></i> Visualizer
+      </div>
+
+      <div class="nav-group-label">Core Concepts</div>
+      <div class="nav-item" onclick="navigate('basics')" role="button">
+        <i class="ri-book-open-line"></i> Stack Basics
+      </div>
+      <div class="nav-item" onclick="navigate('operations')" role="button">
+        <i class="ri-function-line"></i> Operations
+      </div>
+
+      <div class="nav-group-label">Analysis</div>
+      <div class="nav-item" onclick="navigate('complexity')" role="button">
+        <i class="ri-time-line"></i> Time Complexity
+      </div>
+
+      <div class="nav-group-label">Advanced</div>
+      <div class="nav-item" onclick="navigate('expression')" role="button">
+        <i class="ri-calculator-line"></i> Expression Solver
+      </div>
+
+      <div class="nav-group-label">Real World</div>
+      <div class="nav-item" onclick="navigate('applications')" role="button">
+        <i class="ri-rocket-line"></i> Applications
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span>DSA Visuals 2024</span>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    
+    <div class="top-bar">
+      <div class="breadcrumbs">
+        <i class="ri-home-4-line"></i> / <span id="pageTitle">Visualizer</span>
+      </div>
+      <!-- Back Button Added Here -->
+      <div style="display: flex; gap: 10px;">
+        <a href="linear.html" class="btn btn-back">
+            <i class="ri-arrow-left-line"></i> Back to Arrays
+        </a>
+      </div>
+    </div>
+
+    <!-- VIEW: VISUALIZER -->
+    <section id="view-visualizer" class="view-section active">
+      <h2 class="section-title">Interactive Stack Visualizer</h2>
+      <p class="section-subtitle">Visualize stack operations with LIFO principle. Supports manual stack and expression evaluation modes.</p>
+
+      <div class="controls-wrapper">
+        <!-- Mode Tabs -->
+        <div class="mode-tabs" role="tablist">
+          <button class="mode-tab active" id="tab-manual" onclick="switchMode('manual')" role="tab">Manual Stack</button>
+          <button class="mode-tab" id="tab-expr" onclick="switchMode('expr')" role="tab">Expression Solver</button>
+        </div>
+
+        <!-- Manual Controls -->
+        <div id="controls-manual">
+          <div class="input-group">
+            <div class="input-field">
+              <label>Value</label>
+              <input type="number" id="valueInput" placeholder="Enter value" onkeydown="handleEnter(event)">
+            </div>
+          </div>
+
+          <div class="button-grid">
+            <button class="btn btn-success" id="btnPush" onclick="pushValue()">
+              <i class="ri-add-line"></i> Push
+            </button>
+            <button class="btn btn-danger" id="btnPop" onclick="popValue()">
+              <i class="ri-subtract-line"></i> Pop
+            </button>
+            <button class="btn btn-primary" id="btnPeek" onclick="peekValue()">
+              <i class="ri-eye-line"></i> Peek
+            </button>
+            <button class="btn btn-gray" id="btnClear" onclick="clearStack()">
+              <i class="ri-delete-bin-line"></i> Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Expression Controls -->
+        <div id="controls-expr" class="hidden">
+          <div class="input-group">
+            <div class="input-field" style="flex: 2;">
+              <label>Expression</label>
+              <input type="text" id="exprInput" placeholder="e.g. 3+5*(2+4)" onkeydown="handleExprEnter(event)">
+            </div>
+          </div>
+
+          <div class="button-grid">
+            <button class="btn btn-primary" id="btnSolve" onclick="solveExpression()">
+              <i class="ri-play-fill"></i> Solve
+            </button>
+            <button class="btn btn-gray" id="btnClearExpr" onclick="clearExpression()">
+              <i class="ri-delete-bin-line"></i> Clear
+            </button>
+          </div>
+
+          <div class="speed-control">
+            <label>Speed:</label>
+            <span>Slow</span>
+            <input type="range" id="speedRange" min="100" max="1500" value="700">
+            <span>Fast</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual Container -->
+      <div class="visual-container" id="visualContainer">
+        <div class="current-token-display" id="currentToken">Token: -</div>
+        
+        <!-- Manual Stack -->
+        <div class="stack-wrapper" id="manualStackWrapper">
+          <div class="stack-info-badge" id="stackSizeInfo">Size: 0 / 8</div>
+          <div class="stack-label">Stack (LIFO)</div>
+          <div class="stack-container" id="manualStack"></div>
+        </div>
+
+        <!-- Expression Stacks -->
+        <div class="stack-wrapper hidden" id="operandStackWrapper">
+          <div class="stack-info-badge">Operands</div>
+          <div class="stack-label">Operand Stack</div>
+          <div class="stack-container" id="operandStack"></div>
+        </div>
+
+        <div class="stack-wrapper hidden" id="operatorStackWrapper">
+          <div class="stack-info-badge">Operators</div>
+          <div class="stack-label">Operator Stack</div>
+          <div class="stack-container" id="operatorStack"></div>
+        </div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="status-bar" id="statusBar">
+        <i class="ri-information-line"></i>
+        <span id="statusText">Ready. Push elements to start.</span>
+      </div>
+
+      <!-- Concept Panel -->
+      <div class="concept-panel hidden" id="conceptPanel">
+        <h4 id="conceptTitle"><i class="ri-lightbulb-flash-line"></i> Algorithm</h4>
+        <div id="conceptContent"></div>
+      </div>
+    </section>
+
+    <!-- VIEW: BASICS -->
+    <section id="view-basics" class="view-section">
+      <h2 class="section-title">Stack Basics</h2>
+      <p class="section-subtitle">A linear data structure following Last-In-First-Out (LIFO) principle.</p>
+
+      <div class="card">
+        <h3><i class="ri-stack-line"></i> What is a Stack?</h3>
+        <p style="margin-top: 10px; line-height: 1.7; color: var(--text-muted);">
+          A stack is a linear data structure that follows the <strong>Last-In-First-Out (LIFO)</strong> principle. 
+          The last element inserted is the first one to be removed. Think of it like a stack of plates - 
+          you can only add or remove from the top.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3><i class="ri-layout-bottom-line"></i> Visual Representation</h3>
+        <div class="diagram-container">
+          <div class="stack-diagram">
+            <div class="diagram-cell">40</div>
+            <div class="diagram-cell">30</div>
+            <div class="diagram-cell">20</div>
+            <div class="diagram-cell active">10</div>
+            <div class="diagram-label">Bottom of Stack</div>
+          </div>
+          <div class="stack-diagram">
+            <div class="diagram-cell highlight">50</div>
+            <div class="diagram-label" style="color: var(--primary); font-weight: 600;">TOP (Push/Pop here)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="card info-box">
+          <h3><i class="ri-lightbulb-line"></i> Key Concept</h3>
+          <p>Only the top element is accessible at any time. You cannot access elements below without removing the ones above.</p>
+        </div>
+        <div class="card info-box">
+          <h3><i class="ri-tools-line"></i> Implementation</h3>
+          <p>Can be implemented using arrays (fixed size) or linked lists (dynamic size). Each has its own trade-offs.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: OPERATIONS -->
+    <section id="view-operations" class="view-section">
+      <h2 class="section-title">Stack Operations</h2>
+      <p class="section-subtitle">Core operations that define stack behavior.</p>
+
+      <div class="info-grid">
+        <div class="card">
+          <h3><i class="ri-add-circle-line" style="color: var(--success);"></i> Push</h3>
+          <p>Add an element to the top of the stack. Time complexity: O(1)</p>
+          <div class="code-block">stack.push(element)</div>
+        </div>
+
+        <div class="card">
+          <h3><i class="ri-subtract-line" style="color: var(--danger);"></i> Pop</h3>
+          <p>Remove and return the top element. Time complexity: O(1)</p>
+          <div class="code-block">element = stack.pop()</div>
+        </div>
+
+        <div class="card">
+          <h3><i class="ri-eye-line" style="color: var(--primary);"></i> Peek / Top</h3>
+          <p>Return the top element without removing it. Time complexity: O(1)</p>
+          <div class="code-block">element = stack.peek()</div>
+        </div>
+
+        <div class="card">
+          <h3><i class="ri-question-line" style="color: var(--warning);"></i> isEmpty</h3>
+          <p>Check if the stack is empty. Time complexity: O(1)</p>
+          <div class="code-block">if (stack.isEmpty()) {...}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: TIME COMPLEXITY -->
+    <section id="view-complexity" class="view-section">
+      <h2 class="section-title">Time Complexity Analysis</h2>
+      <p class="section-subtitle">Efficiency comparison of stack operations.</p>
+
+      <div class="card">
+        <table class="complexity-table">
+          <thead>
+            <tr>
+              <th>Operation</th>
+              <th>Array Implementation</th>
+              <th>Linked List Implementation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Push</td>
+              <td class="good">O(1)</td>
+              <td class="good">O(1)</td>
+            </tr>
+            <tr>
+              <td>Pop</td>
+              <td class="good">O(1)</td>
+              <td class="good">O(1)</td>
+            </tr>
+            <tr>
+              <td>Peek</td>
+              <td class="good">O(1)</td>
+              <td class="good">O(1)</td>
+            </tr>
+            <tr>
+              <td>isEmpty</td>
+              <td class="good">O(1)</td>
+              <td class="good">O(1)</td>
+            </tr>
+            <tr>
+              <td>Search</td>
+              <td class="bad">O(n)</td>
+              <td class="bad">O(n)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="quiz-container">
+        <h3>Quick Quiz</h3>
+        <p>What is the time complexity to access the bottom element of a stack?</p>
+        <div class="quiz-options">
+          <button class="quiz-btn" onclick="checkQuiz(this, false)">O(1)</button>
+          <button class="quiz-btn" onclick="checkQuiz(this, true)">O(n)</button>
+          <button class="quiz-btn" onclick="checkQuiz(this, false)">O(log n)</button>
+          <button class="quiz-btn" onclick="checkQuiz(this, false)">O(n²)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: EXPRESSION SOLVER -->
+    <section id="view-expression" class="view-section">
+      <h2 class="section-title">Expression Evaluation</h2>
+      <p class="section-subtitle">How stacks are used to evaluate arithmetic expressions with proper operator precedence.</p>
+
+      <div class="card">
+        <h3><i class="ri-calculator-line"></i> The Two-Stack Algorithm</h3>
+        <p style="margin: 12px 0; line-height: 1.7; color: var(--text-muted);">
+          Dijkstra's two-stack algorithm uses one stack for operands and another for operators. 
+          It processes each token and applies operators based on precedence rules.
+        </p>
+        
+        <h4 style="margin: 20px 0 12px; font-weight: 600;">Supported Operators</h4>
+        <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px;">
+          <div class="code-block" style="text-align: center;">+ Addition</div>
+          <div class="code-block" style="text-align: center;">- Subtraction</div>
+          <div class="code-block" style="text-align: center;">* Multiply</div>
+          <div class="code-block" style="text-align: center;">/ Division</div>
+          <div class="code-block" style="text-align: center;">^ Power</div>
+          <div class="code-block" style="text-align: center;">( ) Parens</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><i class="ri-flow-chart"></i> Operator Precedence</h3>
+        <p style="margin: 12px 0; color: var(--text-muted);">
+          Higher precedence operators are evaluated first. When operators have equal precedence, 
+          associativity determines the order (left-to-right for most, right-to-left for ^).
+        </p>
+        <table class="complexity-table" style="margin-top: 16px;">
+          <tr><td><strong>Parentheses</strong></td><td>()</td><td class="good">Highest</td></tr>
+          <tr><td><strong>Exponent</strong></td><td>^</td><td>Right-associative</td></tr>
+          <tr><td><strong>Multiplication/Division</strong></td><td>* /</td><td>Left-associative</td></tr>
+          <tr><td><strong>Addition/Subtraction</strong></td><td>+ -</td><td class="bad">Lowest</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- VIEW: APPLICATIONS -->
+    <section id="view-applications" class="view-section">
+      <h2 class="section-title">Real-World Applications</h2>
+      <p class="section-subtitle">Stacks are fundamental in computer science with countless applications.</p>
+
+      <div class="info-grid">
+        <div class="card">
+          <h3><i class="ri-code-line"></i> Function Calls</h3>
+          <p>Call stack manages function invocation and return addresses in programming languages.</p>
+        </div>
+
+        <div class="card">
+          <h3><i class="ri-arrow-go-back-line"></i> Undo Operations</h3>
+          <p>Text editors use stacks to track changes and implement undo functionality.</p>
+        </div>
+
+        <div class="card">
+          <h3><i class="ri-navigation-line"></i> Browser History</h3>
+          <p>Back/forward navigation uses stacks to track visited pages.</p>
+        </div>
+
+        <div class="card">
+          <h3><i class="ri-parentheses-line"></i> Syntax Parsing</h3>
+          <p>Compilers use stacks to check balanced parentheses and parse expressions.</p>
+        </div>
+
+        <div class="card">
+          <h3><i class="ri-memory-line"></i> Memory Management</h3>
+          <p>Stack memory allocation for local variables and function parameters.</p>
+        </div>
+
+        <div class="card">
+          <h3><i class="ri-route-line"></i> DFS Algorithm</h3>
+          <p>Depth-first search uses stacks (explicit or call stack) to traverse graphs.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// ==================== STATE ====================
+const MAX_STACK_SIZE = 8;
+let currentMode = 'manual';
+let isBusy = false;
+let delay = 700;
+
+// ==================== DOM ELEMENTS ====================
+const manualStack = document.getElementById('manualStack');
+const operandStack = document.getElementById('operandStack');
+const operatorStack = document.getElementById('operatorStack');
+const statusBar = document.getElementById('statusBar');
+const statusText = document.getElementById('statusText');
+const conceptPanel = document.getElementById('conceptPanel');
+const conceptTitle = document.getElementById('conceptTitle');
+const conceptContent = document.getElementById('conceptContent');
+const currentTokenDisplay = document.getElementById('currentToken');
+const speedRange = document.getElementById('speedRange');
+const stackSizeInfo = document.getElementById('stackSizeInfo');
+
+// Buttons
+const btnPush = document.getElementById('btnPush');
+const btnPop = document.getElementById('btnPop');
+const btnPeek = document.getElementById('btnPeek');
+const btnClear = document.getElementById('btnClear');
+const btnSolve = document.getElementById('btnSolve');
+const btnClearExpr = document.getElementById('btnClearExpr');
+
+// ==================== UTILITIES ====================
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function updateSpeed() {
+  delay = 1400 - parseInt(speedRange.value);
+}
+speedRange.addEventListener('input', updateSpeed);
+
+function setStatus(msg, type = '') {
+  statusBar.className = 'status-bar ' + type;
+  statusText.textContent = msg;
+}
+
+function setBusy(state) {
+  isBusy = state;
+  const buttons = [btnPush, btnPop, btnPeek, btnClear, btnSolve, btnClearExpr];
+  buttons.forEach(btn => { if (btn) btn.disabled = state; });
+}
+
+function updateStackInfo() {
+  const count = manualStack.children.length;
+  stackSizeInfo.textContent = `Size: ${count} / ${MAX_STACK_SIZE}`;
+  updateTopIndicator(manualStack);
+  updateTopIndicator(operandStack);
+  updateTopIndicator(operatorStack);
+}
+
+function updateTopIndicator(container) {
+  const items = container.querySelectorAll('.stack-item');
+  items.forEach((item, idx) => {
+    item.classList.toggle('top-item', idx === items.length - 1);
+  });
+}
+
+// ==================== NAVIGATION ====================
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+function navigate(viewId) {
+  // Update navigation
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const activeItem = Array.from(document.querySelectorAll('.nav-item'))
+    .find(el => el.getAttribute('onclick').includes(viewId));
+  if (activeItem) activeItem.classList.add('active');
+
+  // Show view
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.getElementById(`view-${viewId}`).classList.add('active');
+
+  // Update breadcrumb
+  document.getElementById('pageTitle').textContent = activeItem ? activeItem.textContent.trim() : 'Dashboard';
+
+  // Close sidebar on mobile
+  if (window.innerWidth <= 900) {
+    document.getElementById('sidebar').classList.remove('open');
+  }
+}
+
+// ==================== MODE SWITCHING ====================
+function switchMode(mode) {
+  if (isBusy) return;
+  currentMode = mode;
+
+  // Update tabs
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${mode}`).classList.add('active');
+
+  // Toggle controls
+  document.getElementById('controls-manual').classList.toggle('hidden', mode !== 'manual');
+  document.getElementById('controls-expr').classList.toggle('hidden', mode !== 'expr');
+
+  // Toggle stacks
+  document.getElementById('manualStackWrapper').classList.toggle('hidden', mode !== 'manual');
+  document.getElementById('operandStackWrapper').classList.toggle('hidden', mode !== 'expr');
+  document.getElementById('operatorStackWrapper').classList.toggle('hidden', mode !== 'expr');
+
+  // Hide token display
+  currentTokenDisplay.classList.remove('visible');
+  hideConcept();
+
+  if (mode === 'manual') {
+    setStatus('Manual Stack mode. Max capacity: 8 elements.');
+  } else {
+    setStatus('Expression Solver mode. Enter an expression to evaluate.');
+  }
+}
+
+// ==================== STACK ITEM CREATION ====================
+function createStackItem(value, type = 'normal') {
+  const item = document.createElement('div');
+  item.className = `stack-item type-${type} pushing`;
+  item.textContent = value;
+  return item;
+}
+
+// ==================== MANUAL STACK OPERATIONS ====================
+function handleEnter(e) {
+  if (e.key === 'Enter') pushValue();
+}
+
+async function pushValue() {
+  if (isBusy) return;
+
+  const input = document.getElementById('valueInput');
+  const value = input.value.trim();
+
+  if (!value) {
+    setStatus('Please enter a value.', 'error');
+    return;
+  }
+
+  // Check overflow (only for manual stack)
+  if (manualStack.children.length >= MAX_STACK_SIZE) {
+    setStatus(`Stack Overflow: Stack is full (${MAX_STACK_SIZE} elements max).`, 'error');
+    manualStack.parentElement.classList.add('overflow');
+    await sleep(500);
+    manualStack.parentElement.classList.remove('overflow');
+    return;
+  }
+
+  setBusy(true);
+
+  const item = createStackItem(value, 'normal');
+  manualStack.appendChild(item);
+  input.value = '';
+  updateStackInfo();
+
+  setStatus(`Pushed ${value} onto stack.`, 'success');
+
+  await sleep(400);
+  item.classList.remove('pushing');
+  setBusy(false);
+  input.focus();
+}
+
+async function popValue() {
+  if (isBusy) return;
+
+  const topItem = manualStack.lastElementChild;
+
+  if (!topItem) {
+    setStatus('Stack Underflow: Stack is empty.', 'error');
+    manualStack.parentElement.classList.add('underflow');
+    await sleep(400);
+    manualStack.parentElement.classList.remove('underflow');
+    return;
+  }
+
+  setBusy(true);
+
+  const value = topItem.textContent;
+  topItem.classList.add('popping');
+  setStatus(`Popping ${value}...`, 'warning');
+
+  await sleep(400);
+  topItem.remove();
+  updateStackInfo();
+  setStatus(`Popped ${value} from stack.`, 'success');
+  setBusy(false);
+}
+
+function peekValue() {
+  if (isBusy) return;
+
+  const topItem = manualStack.lastElementChild;
+
+  if (!topItem) {
+    setStatus('Stack is empty. Nothing to peek.', 'error');
+    return;
+  }
+
+  // Remove previous highlights
+  manualStack.querySelectorAll('.stack-item').forEach(item => {
+    item.classList.remove('peek-highlight');
+  });
+
+  topItem.classList.add('peek-highlight');
+  setStatus(`Top element: ${topItem.textContent}`, 'success');
+
+  // Remove highlight after animation
+  setTimeout(() => {
+    topItem.classList.remove('peek-highlight');
+  }, 2000);
+}
+
+function clearStack() {
+  if (isBusy) return;
+
+  manualStack.innerHTML = '';
+  updateStackInfo();
+  setStatus('Stack cleared.', 'warning');
+  hideConcept();
+}
+
+// ==================== EXPRESSION SOLVER ====================
+function handleExprEnter(e) {
+  if (e.key === 'Enter') solveExpression();
+}
+
+function clearExpression() {
+  if (isBusy) return;
+
+  operandStack.innerHTML = '';
+  operatorStack.innerHTML = '';
+  updateStackInfo();
+  currentTokenDisplay.classList.remove('visible');
+  hideConcept();
+  document.getElementById('exprInput').value = '';
+  setStatus('Expression cleared.');
+}
+
+function showCurrentToken(token, type) {
+  currentTokenDisplay.textContent = `Processing: ${token} (${type})`;
+  currentTokenDisplay.classList.add('visible');
+}
+
+function hideCurrentToken() {
+  currentTokenDisplay.classList.remove('visible');
+}
+
+function showConcept(title, content) {
+  conceptPanel.classList.remove('hidden');
+  conceptTitle.innerHTML = `<i class="ri-lightbulb-flash-line"></i> ${title}`;
+  conceptContent.innerHTML = content;
+}
+
+function updateConceptContent(content) {
+  conceptContent.innerHTML = content;
+}
+
+function hideConcept() {
+  conceptPanel.classList.add('hidden');
+}
+
+// Expression validation
+function validateExpression(tokens) {
+  let parenBalance = 0;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t === '(') parenBalance++;
+    if (t === ')') parenBalance--;
+    if (parenBalance < 0) throw new Error("Mismatched parentheses: ')' without matching '('");
+  }
+
+  if (parenBalance !== 0) throw new Error("Mismatched parentheses: Missing closing parenthesis");
+  if (tokens.length === 0) throw new Error("Empty expression");
+
+  const isNum = t => !isNaN(t);
+  const isOp = t => ['+', '-', '*', '/', '^'].includes(t);
+
+  for (let i = 0; i < tokens.length; i++) {
+    const curr = tokens[i];
+    const next = tokens[i + 1];
+
+    if (i === 0 && isOp(curr)) throw new Error(`Expression cannot start with operator '${curr}'`);
+    if (i === tokens.length - 1 && (isOp(curr) || curr === '(')) {
+      throw new Error("Expression cannot end with operator or '('");
+    }
+
+    if (curr === '(' && next === ')') throw new Error("Empty parentheses '()' not allowed");
+    if (isNum(curr) && next && (isNum(next) || next === '(')) {
+      throw new Error(`Missing operator between ${curr} and ${next}`);
+    }
+    if (isOp(curr) && next && (isOp(next) || next === ')')) {
+      throw new Error(`Invalid operator sequence: ${curr} ${next}`);
+    }
+  }
+
+  return true;
+}
+
+async function solveExpression() {
+  if (isBusy) return;
+
+  const input = document.getElementById('exprInput');
+  const expr = input.value.replace(/\s+/g, '');
+
+  if (!expr) {
+    setStatus('Please enter an expression.', 'error');
+    return;
+  }
+
+  const tokens = expr.match(/\d+|[()+\-*/^]/g);
+  if (!tokens) {
+    setStatus('Invalid characters. Use digits and + - * / ^ ( )', 'error');
+    return;
+  }
+
+  try {
+    validateExpression(tokens);
+  } catch (err) {
+    setStatus(err.message, 'error');
+    return;
+  }
+
+  // Clear stacks
+  operandStack.innerHTML = '';
+  operatorStack.innerHTML = '';
+  updateStackInfo();
+
+  setBusy(true);
+  updateSpeed();
+  setStatus(`Evaluating: ${expr}`);
+
+  showConcept('Expression Evaluation', `
+    <p><strong>Algorithm:</strong> Two-stack algorithm with operator precedence.</p>
+    <p><strong>Expression:</strong> ${expr}</p>
+  `);
+
+  const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
+
+  try {
+    for (const token of tokens) {
+      showCurrentToken(token, !isNaN(token) ? 'Operand' : 'Operator');
+
+      if (!isNaN(token)) {
+        // Push operand
+        const item = createStackItem(token, 'operand');
+        operandStack.appendChild(item);
+        updateStackInfo();
+        updateConceptContent(`<p>Pushed operand <strong>${token}</strong> to operand stack.</p>`);
+        await sleep(delay);
+        item.classList.remove('pushing');
+
+      } else if (token === '(') {
+        // Push left parenthesis
+        const item = createStackItem(token, 'operator');
+        operatorStack.appendChild(item);
+        updateStackInfo();
+        updateConceptContent(`<p>Pushed <strong>'('</strong> to operator stack.</p>`);
+        await sleep(delay);
+
+      } else if (token === ')') {
+        // Process until matching '('
+        updateConceptContent(`<p>Encountered <strong>')'</strong> - processing sub-expression...</p>`);
+        await sleep(delay * 0.5);
+
+        while (operatorStack.lastElementChild && operatorStack.lastElementChild.textContent !== '(') {
+          await applyOperator();
+        }
+
+        // Pop '('
+        const openParen = operatorStack.lastElementChild;
+        if (openParen) {
+          openParen.classList.add('popping');
+          await sleep(delay * 0.4);
+          openParen.remove();
+          updateStackInfo();
+        }
+
+      } else {
+        // Operator
+        const currentPrec = precedence[token];
+
+        while (operatorStack.lastElementChild && operatorStack.lastElementChild.textContent !== '(') {
+          const topOp = operatorStack.lastElementChild.textContent;
+          const topPrec = precedence[topOp];
+
+          // Determine if we should pop based on precedence and associativity
+          let shouldPop = (topPrec > currentPrec);
+          if (!shouldPop && topPrec === currentPrec && token !== '^') {
+            shouldPop = true; // Left-associative
+          }
+
+          if (shouldPop) {
+            await applyOperator();
+          } else {
+            break;
+          }
+        }
+
+        const item = createStackItem(token, 'operator');
+        operatorStack.appendChild(item);
+        updateStackInfo();
+        updateConceptContent(`<p>Pushed operator <strong>'${token}'</strong> to operator stack.</p>`);
+        await sleep(delay);
+      }
+    }
+
+    // Process remaining operators
+    while (operatorStack.lastElementChild) {
+      await applyOperator();
+    }
+
+    // Get result
+    const resultEl = operandStack.lastElementChild;
+    if (!resultEl) throw new Error("Evaluation error: No result");
+
+    const result = resultEl.textContent;
+    resultEl.classList.add('peek-highlight');
+
+    setStatus(`Result: ${result}`, 'success');
+    updateConceptContent(`
+      <p style="color: var(--success); font-weight: 600;">Evaluation Complete!</p>
+      <p><strong>Result:</strong> ${result}</p>
+    `);
+    hideCurrentToken();
+
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, 'error');
+    hideCurrentToken();
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function applyOperator() {
+  if (!operatorStack.lastElementChild || operandStack.children.length < 2) {
+    throw new Error("Invalid expression: Missing operands");
+  }
+
+  // Highlight items being processed
+  const opEl = operatorStack.lastElementChild;
+  const bEl = operandStack.lastElementChild;
+  const aEl = operandStack.children[operandStack.children.length - 2];
+
+  opEl.classList.add('processing');
+  bEl.classList.add('processing');
+  if (aEl) aEl.classList.add('processing');
+
+  const op = opEl.textContent;
+  await sleep(delay * 0.3);
+
+  // Pop operator
+  opEl.classList.remove('processing');
+  opEl.classList.add('popping');
+  await sleep(delay * 0.3);
+  opEl.remove();
+  updateStackInfo();
+
+  // Pop operand B
+  bEl.classList.remove('processing');
+  bEl.classList.add('popping');
+  const b = parseFloat(bEl.textContent);
+  await sleep(delay * 0.3);
+  bEl.remove();
+  updateStackInfo();
+
+  // Pop operand A
+  const aElNew = operandStack.lastElementChild;
+  if (!aElNew) throw new Error("Missing operand");
+
+  aElNew.classList.add('popping');
+  const a = parseFloat(aElNew.textContent);
+  await sleep(delay * 0.3);
+  aElNew.remove();
+  updateStackInfo();
+
+  // Calculate
+  let result;
+  switch (op) {
+    case '+': result = a + b; break;
+    case '-': result = a - b; break;
+    case '*': result = a * b; break;
+    case '/':
+      if (b === 0) throw new Error("Division by zero");
+      result = a / b;
+      break;
+    case '^': result = Math.pow(a, b); break;
+  }
+
+  const displayResult = parseFloat(result.toFixed(4)).toString();
+
+  // Push result
+  const resultItem = createStackItem(displayResult, 'operand');
+  operandStack.appendChild(resultItem);
+  updateStackInfo();
+
+  updateConceptContent(`
+    <p><strong>Computed:</strong> ${a} ${op} ${b} = <span style="color: var(--success)">${displayResult}</span></p>
+  `);
+
+  await sleep(delay * 0.5);
+  resultItem.classList.remove('pushing');
+}
+
+// ==================== QUIZ ====================
+function checkQuiz(btn, isCorrect) {
+  const siblings = btn.parentElement.querySelectorAll('.quiz-btn');
+  siblings.forEach(b => b.classList.remove('correct', 'wrong'));
+
+  if (isCorrect) {
+    btn.classList.add('correct');
+    btn.innerHTML += ' <i class="ri-check-line"></i>';
+  } else {
+    btn.classList.add('wrong');
+    btn.innerHTML += ' <i class="ri-close-line"></i>';
+  }
+}
+
+// ==================== INITIALIZATION ====================
+function init() {
+  updateStackInfo();
+  setStatus('Ready. Push elements to start.');
+}
+
+init();
+</script>
+</body>
+</html>

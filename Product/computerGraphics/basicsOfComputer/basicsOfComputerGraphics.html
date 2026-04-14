@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basics of Computer Graphics | Interactive Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #05080c;
+  --bg-elevated: #0a1018;
+  --card: #0d1520;
+  --border: #1a2535;
+  --accent: #00ffc8;
+  --accent-alt: #ff6b4a;
+  --text: #e4e8ec;
+  --muted: #5a6a7a;
+  --glow: rgba(0, 255, 200, 0.15);
+  --cyan-blue: #00d4ff;
+  --warm-gold: #ffa94d;
+  --magenta: #ff4d9d;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: auto; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.hero {
+  min-height: auto;
+  padding: 80px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.title-container {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.main-title {
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  background: linear-gradient(135deg, var(--text) 0%, var(--cyan-blue) 50%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 3px;
+  height: 1em;
+  background: var(--cyan-blue);
+  margin-left: 4px;
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(11px, 1.8vw, 14px);
+  max-width: 650px;
+  line-height: 1.7;
+  margin-bottom: 0;
+}
+
+.coords {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  background: rgba(5, 8, 12, 0.9);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+.coords span { color: var(--accent); }
+
+.fps-counter {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  background: rgba(5, 8, 12, 0.9);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+.fps-counter .value { color: var(--accent-alt); font-weight: 600; }
+
+.section {
+  padding: 20px 20px 80px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cyan-blue);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+}
+
+.section-heading {
+  font-size: clamp(22px, 4vw, 32px);
+  font-weight: 700;
+  margin-bottom: 40px;
+  letter-spacing: -1px;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 700px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 0;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  position: relative;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan-blue), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card:hover::before { opacity: 1; }
+
+.card:hover {
+  transform: translateY(-6px) scale(1.01);
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 20px 60px -20px rgba(0, 212, 255, 0.15);
+}
+
+.card-preview {
+  height: 180px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0,212,255,0.02) 0%, transparent 100%);
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.card-content { padding: 24px; }
+
+.card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.tag-fundamentals { background: rgba(0, 212, 255, 0.15); color: var(--cyan-blue); }
+.tag-system { background: rgba(0, 255, 200, 0.15); color: var(--accent); }
+.tag-memory { background: rgba(255, 77, 157, 0.15); color: var(--magenta); }
+
+.card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.5px;
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0 0 20px 0;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-primary {
+  background: var(--cyan-blue);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: #00c4e6;
+  transform: translateX(4px);
+}
+
+.arrow { transition: transform 0.3s ease; }
+.btn:hover .arrow { transform: translateX(4px); }
+
+.card-footer-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.feature-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 60px;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 700px) {
+  .feature-row { grid-template-columns: 1fr; }
+}
+
+.feature {
+  text-align: center;
+  padding: 28px 20px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, transparent 100%);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.feature:hover {
+  border-color: rgba(0, 212, 255, 0.3);
+  background: linear-gradient(180deg, rgba(0, 212, 255, 0.05) 0%, transparent 100%);
+}
+
+.feature-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 14px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feature h4 {
+  font-size: 15px;
+  margin: 0 0 6px 0;
+}
+
+.feature p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .coords, .fps-counter { display: none; }
+  .card-preview { height: 150px; }
+  .hero { padding: 60px 16px 30px; }
+}
+
+.back-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 20;
+  padding: 8px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: rgba(5, 8, 12, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-decoration: none;
+  backdrop-filter: blur(6px);
+  transition: all 0.25s ease;
+}
+
+.back-btn:hover {
+  border-color: var(--cyan-blue);
+  color: var(--cyan-blue);
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="coords">
+  MOUSE: <span id="mouse-x">0</span>, <span id="mouse-y">0</span> | 
+  WORLD: <span id="world-x">0.00</span>, <span id="world-y">0.00</span>
+</div>
+
+<div class="fps-counter">
+  FPS: <span class="value" id="fps-value">60</span> | 
+  VERTS: <span class="value" id="vert-count">0</span>
+</div>
+
+<div class="content">
+  <a href="../computerGraphHolder.html" class="back-btn">← Back to Lab</a>
+  
+  <section class="hero">
+    <div class="title-container">
+      <h1 class="main-title">Basics of Computer Graphics</h1>
+      <span class="cursor-blink"></span>
+    </div>
+    <p class="subtitle">
+      // Understanding the fundamental building blocks of digital imagery:<br>
+      // pixels, coordinate systems, and how color data is stored and rendered.
+    </p>
+  </section>
+
+  <section class="section" id="concepts">
+    <p class="section-title">Fundamental Concepts</p>
+    <h2 class="section-heading">Core Building Blocks</h2>
+    
+    <div class="grid">
+      
+      <!-- Pixel & Resolution -->
+      <div class="card">
+        <div class="card-preview">
+          <canvas id="preview-pixel"></canvas>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-fundamentals">Fundamentals</span>
+          <h3>Pixel & Resolution</h3>
+          <p>
+            Explore how digital images are composed of individual pixels, and how resolution 
+            determines the level of detail and clarity in rendered graphics.
+          </p>
+          <div class="card-footer">
+            <a href="pixels.html" class="btn btn-primary">
+              Open Lab
+              <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+            <span class="card-footer-text">interactive</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coordinate System -->
+      <div class="card">
+        <div class="card-preview">
+          <canvas id="preview-coordinate"></canvas>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-system">System</span>
+          <h3>Coordinate System</h3>
+          <p>
+            Learn how computer graphics use a screen coordinate system with the origin 
+            at the top-left corner, mapping positions to pixel locations.
+          </p>
+          <div class="card-footer">
+            <a href="coordinateSystem.html" class="btn btn-primary">
+              Open Lab
+              <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+            <span class="card-footer-text">interactive</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frame Buffer & Color -->
+      <div class="card">
+        <div class="card-preview">
+          <canvas id="preview-framebuffer"></canvas>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-memory">Memory</span>
+          <h3>Frame Buffer & Color</h3>
+          <p>
+            Understand how pixel color values are stored in memory using RGB components, 
+            and how the frame buffer drives display output.
+          </p>
+          <div class="card-footer">
+            <a href="color.html" class="btn btn-primary">
+              Open Lab
+              <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+            <span class="card-footer-text">interactive</span>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <div class="feature-row">
+      <div class="feature">
+        <div class="feature-icon" style="background: rgba(0, 212, 255, 0.1);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--cyan-blue)" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <rect x="7" y="7" width="3" height="3"/>
+            <rect x="14" y="7" width="3" height="3"/>
+            <rect x="7" y="14" width="3" height="3"/>
+            <rect x="14" y="14" width="3" height="3"/>
+          </svg>
+        </div>
+        <h4>Pixel Structure</h4>
+        <p>Understand how pixels form the basis of all digital imagery</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background: rgba(0, 255, 200, 0.1);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+            <line x1="12" y1="2" x2="12" y2="22"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M2 2l4 4"/>
+            <path d="M18 2l4 4"/>
+          </svg>
+        </div>
+        <h4>Coordinate Mapping</h4>
+        <p>Learn how screen coordinates map to physical pixel positions</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background: rgba(255, 77, 157, 0.1);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--magenta)" stroke-width="2">
+            <rect x="2" y="6" width="20" height="12" rx="2"/>
+            <line x1="6" y1="10" x2="6" y2="14"/>
+            <line x1="10" y1="10" x2="10" y2="14"/>
+            <line x1="14" y1="10" x2="14" y2="14"/>
+            <line x1="18" y1="10" x2="18" y2="14"/>
+          </svg>
+        </div>
+        <h4>Color Representation</h4>
+        <p>Discover how RGB values create the full spectrum of colors</p>
+      </div>
+    </div>
+    
+  </section>
+
+  <footer>
+    <p>// Built with Canvas 2D and mathematical visualization</p>
+  </footer>
+  
+</div>
+
+<script>
+// === INITIALIZATION GUARD ===
+const initialized = { pixel: false, coordinate: false, framebuffer: false };
+
+// === MAIN BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+bgCanvas.width = width;
+bgCanvas.height = height;
+
+let mouseX = width / 2;
+let mouseY = height / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+let lastTime = performance.now();
+let frameCount = 0;
+let fps = 60;
+let totalVerts = 0;
+
+const floatingShapes = [];
+const shapeCount = 6;
+
+function initShapes() {
+  floatingShapes.length = 0;
+  for (let i = 0; i < shapeCount; i++) {
+    const type = Math.floor(Math.random() * 3);
+    floatingShapes.push({
+      type: type,
+      x: Math.random() * width,
+      y: Math.random() * height * 0.5 + height * 0.1,
+      z: Math.random() * 200 + 50,
+      rotX: Math.random() * Math.PI * 2,
+      rotY: Math.random() * Math.PI * 2,
+      rotZ: Math.random() * Math.PI * 2,
+      speedX: (Math.random() - 0.5) * 0.006,
+      speedY: (Math.random() - 0.5) * 0.006,
+      speedZ: (Math.random() - 0.5) * 0.004,
+      driftX: (Math.random() - 0.5) * 0.2,
+      driftY: (Math.random() - 0.5) * 0.12,
+      size: Math.random() * 16 + 10,
+      opacity: Math.random() * 0.2 + 0.06
+    });
+  }
+}
+
+function project(x, y, z, fov) {
+  const fovVal = fov || 400;
+  const safeZ = Math.max(z, 1);
+  const scale = fovVal / (fovVal + safeZ);
+  return {
+    x: width / 2 + (x - width / 2) * scale,
+    y: height * 0.3 + (y - height * 0.3) * scale,
+    scale: scale
+  };
+}
+
+function rotate3D(x, y, z, rotX, rotY, rotZ) {
+  let y1 = y * Math.cos(rotX) - z * Math.sin(rotX);
+  let z1 = y * Math.sin(rotX) + z * Math.cos(rotX);
+  let x2 = x * Math.cos(rotY) + z1 * Math.sin(rotY);
+  let z2 = -x * Math.sin(rotY) + z1 * Math.cos(rotY);
+  let x3 = x2 * Math.cos(rotZ) - y1 * Math.sin(rotZ);
+  let y3 = x2 * Math.sin(rotZ) + y1 * Math.cos(rotZ);
+  return { x: x3, y: y3, z: z2 };
+}
+
+function getShapeVertices(type, size) {
+  const s = size;
+  if (type === 0) return [[-s,-s,-s],[s,-s,-s],[s,s,-s],[-s,s,-s],[-s,-s,s],[s,-s,s],[s,s,s],[-s,s,s]];
+  if (type === 1) return [[0,-s*1.2,0],[s,0,0],[0,0,s],[-s,0,0],[0,0,-s],[0,s*1.2,0]];
+  const h = s * 1.2;
+  return [[0,-h,0],[s,h/2,s],[-s,h/2,s],[0,h/2,-s]];
+}
+
+function getShapeEdges(type) {
+  if (type === 0) return [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  if (type === 1) return [[0,1],[0,2],[0,3],[0,4],[5,1],[5,2],[5,3],[5,4],[1,2],[2,3],[3,4],[4,1]];
+  return [[0,1],[0,2],[0,3],[1,2],[2,3],[3,1]];
+}
+
+function drawGrid() {
+  const perspectiveCenterX = width / 2 + (mouseX - width / 2) * 0.1;
+  const horizonPixelY = height * 0.35;
+  
+  bgCtx.strokeStyle = 'rgba(0, 212, 255, 0.05)';
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < 14; i++) {
+    const t = i / 14;
+    const y = horizonPixelY + (height - horizonPixelY) * t * t;
+    const scale = 1 - t;
+    const leftX = perspectiveCenterX - width * scale * 0.65;
+    const rightX = perspectiveCenterX + width * scale * 0.65;
+    
+    bgCtx.globalAlpha = (1 - t) * 0.3;
+    bgCtx.beginPath();
+    bgCtx.moveTo(leftX, y);
+    bgCtx.lineTo(rightX, y);
+    bgCtx.stroke();
+  }
+  
+  const numVLines = 16;
+  for (let i = 0; i < numVLines; i++) {
+    const angle = (i / numVLines - 0.5) * Math.PI * 0.6;
+    const endX = perspectiveCenterX + Math.tan(angle) * height * 0.5;
+    bgCtx.globalAlpha = 0.15 - Math.abs(i - numVLines/2) / numVLines * 0.1;
+    bgCtx.beginPath();
+    bgCtx.moveTo(perspectiveCenterX, horizonPixelY);
+    bgCtx.lineTo(endX, height + 50);
+    bgCtx.stroke();
+  }
+  
+  bgCtx.globalAlpha = 1;
+}
+
+function drawShapes() {
+  totalVerts = 0;
+  
+  floatingShapes.forEach(shape => {
+    shape.rotX += shape.speedX;
+    shape.rotY += shape.speedY;
+    shape.rotZ += shape.speedZ;
+    shape.x += shape.driftX;
+    shape.y += shape.driftY;
+    
+    if (shape.x < -50) shape.x = width + 50;
+    if (shape.x > width + 50) shape.x = -50;
+    if (shape.y < -50) shape.y = height * 0.5 + 50;
+    if (shape.y > height * 0.5 + 50) shape.y = -50;
+    
+    const vertices = getShapeVertices(shape.type, shape.size);
+    const edges = getShapeEdges(shape.type);
+    totalVerts += vertices.length;
+    
+    const projected = vertices.map(v => {
+      const rotated = rotate3D(v[0], v[1], v[2], shape.rotX, shape.rotY, shape.rotZ);
+      return project(shape.x + rotated.x, shape.y + rotated.y, shape.z + rotated.z, 600);
+    });
+    
+    bgCtx.strokeStyle = 'rgba(0, 212, 255, ' + shape.opacity + ')';
+    bgCtx.lineWidth = 1.5;
+    
+    edges.forEach(edge => {
+      const p1 = projected[edge[0]];
+      const p2 = projected[edge[1]];
+      if (p1.scale > 0 && p2.scale > 0) {
+        bgCtx.beginPath();
+        bgCtx.moveTo(p1.x, p1.y);
+        bgCtx.lineTo(p2.x, p2.y);
+        bgCtx.stroke();
+      }
+    });
+    
+    projected.forEach(p => {
+      if (p.scale > 0) {
+        bgCtx.fillStyle = 'rgba(0, 212, 255, ' + (shape.opacity * 2) + ')';
+        bgCtx.beginPath();
+        bgCtx.arc(p.x, p.y, Math.max(1, 2 * p.scale), 0, Math.PI * 2);
+        bgCtx.fill();
+      }
+    });
+  });
+}
+
+function drawMouseGlow() {
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  gradient.addColorStop(0, 'rgba(0, 212, 255, 0.02)');
+  gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, width, height);
+}
+
+function render() {
+  const now = performance.now();
+  frameCount++;
+  
+  if (now - lastTime >= 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    lastTime = now;
+    document.getElementById('fps-value').textContent = fps;
+    document.getElementById('vert-count').textContent = totalVerts;
+  }
+  
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  bgCtx.fillStyle = '#05080c';
+  bgCtx.fillRect(0, 0, width, height);
+  
+  drawGrid();
+  drawShapes();
+  drawMouseGlow();
+  
+  requestAnimationFrame(render);
+}
+
+// === PREVIEW CANVASES ===
+
+function initPreviewPixel() {
+  if (initialized.pixel) return;
+  initialized.pixel = true;
+  
+  const canvas = document.getElementById('preview-pixel');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  let t = 0;
+  const pixelSize = 12;
+  const cols = Math.floor(canvas.width / pixelSize);
+  const rows = Math.floor(canvas.height / pixelSize);
+  const activePixels = [];
+  
+  // Initialize random active pixels
+  for (let i = 0; i < 8; i++) {
+    activePixels.push({
+      x: Math.floor(Math.random() * cols),
+      y: Math.floor(Math.random() * rows),
+      phase: Math.random() * Math.PI * 2,
+      color: `rgba(0, 212, 255, 1)`
+    });
+  }
+  
+  function draw() {
+    t += 0.025;
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw pixel grid
+    ctx.strokeStyle = 'rgba(0, 212, 255, 0.08)';
+    ctx.lineWidth = 0.5;
+    
+    for (let x = 0; x <= cols; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * pixelSize, 0);
+      ctx.lineTo(x * pixelSize, canvas.height);
+      ctx.stroke();
+    }
+    
+    for (let y = 0; y <= rows; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * pixelSize);
+      ctx.lineTo(canvas.width, y * pixelSize);
+      ctx.stroke();
+    }
+    
+    // Animate active pixels
+    activePixels.forEach((pixel, i) => {
+      pixel.phase += 0.03;
+      const intensity = (Math.sin(pixel.phase) + 1) / 2;
+      
+      // Random movement
+      if (Math.random() < 0.02) {
+        pixel.x = Math.floor(Math.random() * cols);
+        pixel.y = Math.floor(Math.random() * rows);
+      }
+      
+      // Draw glow
+      const gradient = ctx.createRadialGradient(
+        pixel.x * pixelSize + pixelSize / 2,
+        pixel.y * pixelSize + pixelSize / 2,
+        0,
+        pixel.x * pixelSize + pixelSize / 2,
+        pixel.y * pixelSize + pixelSize / 2,
+        pixelSize * 1.5
+      );
+      gradient.addColorStop(0, `rgba(0, 212, 255, ${intensity * 0.4})`);
+      gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(
+        (pixel.x - 1) * pixelSize,
+        (pixel.y - 1) * pixelSize,
+        pixelSize * 3,
+        pixelSize * 3
+      );
+      
+      // Draw pixel
+      ctx.fillStyle = `rgba(0, 212, 255, ${0.3 + intensity * 0.7})`;
+      ctx.fillRect(
+        pixel.x * pixelSize + 1,
+        pixel.y * pixelSize + 1,
+        pixelSize - 2,
+        pixelSize - 2
+      );
+    });
+    
+    // Resolution demo - zoom effect
+    const zoomCenter = { x: cols - 5, y: 2 };
+    const zoomScale = 2 + Math.sin(t * 0.5) * 0.5;
+    
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(
+      zoomCenter.x * pixelSize - 5,
+      zoomCenter.y * pixelSize - 5,
+      pixelSize * 4 + 10,
+      pixelSize * 4 + 10
+    );
+    
+    // Label
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.8)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('PIXEL GRID', 10, 18);
+    ctx.fillText('RESOLUTION: ' + cols + 'x' + rows, 10, 32);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewCoordinate() {
+  if (initialized.coordinate) return;
+  initialized.coordinate = true;
+  
+  const canvas = document.getElementById('preview-coordinate');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  let t = 0;
+  
+  function draw() {
+    t += 0.02;
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const originX = 50;
+    const originY = canvas.height - 40;
+    const axisLength = 80;
+    
+    // Draw grid
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.1)';
+    ctx.lineWidth = 0.5;
+    
+    const gridSize = 15;
+    for (let x = originX; x < canvas.width; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, originY);
+      ctx.lineTo(x, 20);
+      ctx.stroke();
+    }
+    for (let y = originY; y > 20; y -= gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(originX, y);
+      ctx.lineTo(canvas.width - 20, y);
+      ctx.stroke();
+    }
+    
+    // X axis
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(originX + axisLength + 20, originY);
+    ctx.stroke();
+    
+    // Arrow head X
+    ctx.beginPath();
+    ctx.moveTo(originX + axisLength + 20, originY);
+    ctx.lineTo(originX + axisLength + 10, originY - 5);
+    ctx.lineTo(originX + axisLength + 10, originY + 5);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.6)';
+    ctx.fill();
+    
+    // Y axis
+    ctx.beginPath();
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(originX, originY - axisLength - 20);
+    ctx.stroke();
+    
+    // Arrow head Y
+    ctx.beginPath();
+    ctx.moveTo(originX, originY - axisLength - 20);
+    ctx.lineTo(originX - 5, originY - axisLength - 10);
+    ctx.lineTo(originX + 5, originY - axisLength - 10);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Axis labels
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.8)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('X', originX + axisLength + 25, originY + 4);
+    ctx.fillText('Y', originX - 4, originY - axisLength - 25);
+    ctx.fillText('(0,0)', originX - 25, originY + 15);
+    
+    // Animated point
+    const pointX = originX + (Math.sin(t) * 0.5 + 0.5) * axisLength;
+    const pointY = originY - (Math.cos(t * 0.7) * 0.5 + 0.5) * axisLength;
+    
+    // Draw guide lines
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.2)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(pointX, originY);
+    ctx.lineTo(pointX, pointY);
+    ctx.lineTo(originX, pointY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Draw point
+    ctx.fillStyle = '#00ffc8';
+    ctx.beginPath();
+    ctx.arc(pointX, pointY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Point glow
+    const gradient = ctx.createRadialGradient(pointX, pointY, 0, pointX, pointY, 20);
+    gradient.addColorStop(0, 'rgba(0, 255, 200, 0.3)');
+    gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(pointX, pointY, 20, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Coordinate display
+    const coordX = Math.floor((pointX - originX) / gridSize);
+    const coordY = Math.floor((originY - pointY) / gridSize);
+    
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.9)';
+    ctx.font = '11px JetBrains Mono';
+    ctx.fillText('POINT: (' + coordX + ', ' + coordY + ')', pointX + 12, pointY - 5);
+    
+    // Origin highlight
+    ctx.fillStyle = 'rgba(255, 169, 77, 0.8)';
+    ctx.beginPath();
+    ctx.arc(originX, originY, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Title
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.8)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('SCREEN COORDINATES', 10, 18);
+    
+    // Screen edge indicators
+    ctx.strokeStyle = 'rgba(255, 107, 74, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.strokeRect(25, 30, 60, 40);
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255, 107, 74, 0.6)';
+    ctx.font = '8px JetBrains Mono';
+    ctx.fillText('SCREEN', 40, 52);
+    ctx.fillText('ORIGIN', 40, 62);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewFramebuffer() {
+  if (initialized.framebuffer) return;
+  initialized.framebuffer = true;
+  
+  const canvas = document.getElementById('preview-framebuffer');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  let t = 0;
+  const pixelSize = 10;
+  const cols = Math.floor(canvas.width / pixelSize);
+  const rows = Math.floor(canvas.height / pixelSize);
+  
+  function hslToRgb(h, s, l) {
+    let r, g, b;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+  }
+  
+  function draw() {
+    t += 0.03;
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw pixel grid with changing colors
+    for (let x = 0; x < cols; x++) {
+      for (let y = 0; y < rows; y++) {
+        // Create wave pattern
+        const wave = Math.sin((x * 0.3) + t) * Math.cos((y * 0.3) + t * 0.7);
+        const hue = (wave + 1) / 2;
+        
+        const [r, g, b] = hslToRgb(hue, 0.8, 0.5);
+        
+        // Only draw some pixels to show frame buffer concept
+        const dist = Math.sqrt(Math.pow(x - cols/2, 2) + Math.pow(y - rows/2, 2));
+        if (dist < Math.min(cols, rows) / 2.5) {
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
+          ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+        }
+      }
+    }
+    
+    // Memory representation
+    const memX = 15;
+    const memY = canvas.height - 50;
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.1)';
+    ctx.fillRect(memX, memY, 120, 35);
+    ctx.strokeStyle = 'rgba(0, 212, 255, 0.3)';
+    ctx.strokeRect(memX, memY, 120, 35);
+    
+    // Memory cells
+    for (let i = 0; i < 6; i++) {
+      const cellX = memX + 5 + i * 19;
+      const [r, g, b] = hslToRgb((i / 6 + t * 0.1) % 1, 0.8, 0.5);
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
+      ctx.fillRect(cellX, memY + 8, 14, 14);
+    }
+    
+    // Labels
+    ctx.fillStyle = 'rgba(255, 77, 157, 0.8)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('FRAME BUFFER', 10, 18);
+    
+    // RGB breakdown
+    const sampleX = cols - 8;
+    const sampleY = 2;
+    const [sr, sg, sb] = hslToRgb((t * 0.2) % 1, 0.8, 0.5);
+    
+    ctx.fillStyle = `rgba(${sr}, 0, 0, 0.7)`;
+    ctx.fillRect(sampleX * pixelSize, sampleY * pixelSize + 10, pixelSize - 2, pixelSize - 2);
+    ctx.fillStyle = `rgba(0, ${sg}, 0, 0.7)`;
+    ctx.fillRect(sampleX * pixelSize, sampleY * pixelSize + 22, pixelSize - 2, pixelSize - 2);
+    ctx.fillStyle = `rgba(0, 0, ${sb}, 0.7)`;
+    ctx.fillRect(sampleX * pixelSize, sampleY * pixelSize + 34, pixelSize - 2, pixelSize - 2);
+    
+    ctx.fillStyle = 'rgba(255, 77, 157, 0.7)';
+    ctx.font = '8px JetBrains Mono';
+    ctx.fillText('R:' + sr, (sampleX + 1.2) * pixelSize, sampleY * pixelSize + 18);
+    ctx.fillText('G:' + sg, (sampleX + 1.2) * pixelSize, sampleY * pixelSize + 30);
+    ctx.fillText('B:' + sb, (sampleX + 1.2) * pixelSize, sampleY * pixelSize + 42);
+    
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.6)';
+    ctx.font = '8px JetBrains Mono';
+    ctx.fillText('MEMORY', memX + 35, memY + 32);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+  
+  document.getElementById('mouse-x').textContent = Math.floor(e.clientX);
+  document.getElementById('mouse-y').textContent = Math.floor(e.clientY);
+  document.getElementById('world-x').textContent = ((e.clientX / width) * 2 - 1).toFixed(2);
+  document.getElementById('world-y').textContent = ((1 - e.clientY / height) * 2 - 1).toFixed(2);
+});
+
+window.addEventListener('resize', function() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  bgCanvas.width = width;
+  bgCanvas.height = height;
+  initShapes();
+  
+  initialized.pixel = false;
+  initialized.coordinate = false;
+  initialized.framebuffer = false;
+  
+  initPreviewPixel();
+  initPreviewCoordinate();
+  initPreviewFramebuffer();
+});
+
+// === INITIALIZE ===
+initShapes();
+render();
+
+requestAnimationFrame(function() {
+  initPreviewPixel();
+  initPreviewCoordinate();
+  initPreviewFramebuffer();
+});
+</script>
+
+</body>
+</html>

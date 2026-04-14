@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bubble Sort Visualizer</title>
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-card: #161618;
+      --fg: #e8e8e8;
+      --muted: #6b6b6b;
+      --accent-cyan: #00d4aa;
+      --accent-purple: #a855f7;
+      --accent-yellow: #facc15;
+      --accent-orange: #f97316;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+      --border: #2a2a2c;
+      --glow-cyan: rgba(0, 212, 170, 0.3);
+      --glow-yellow: rgba(250, 204, 21, 0.4);
+      --glow-green: rgba(34, 197, 94, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Background Effects */
+    .bg-pattern {
+      background-image: 
+        radial-gradient(circle at 20% 20%, rgba(0, 212, 170, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.03) 0%, transparent 50%),
+        linear-gradient(rgba(255,255,255,0.01) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.01) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+    }
+
+    /* Card Styles */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .card-header {
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+
+    /* Button Styles */
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent-cyan);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #00e8bb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px var(--glow-cyan);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--border);
+      border-color: var(--muted);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .btn-warning {
+      background: rgba(250, 204, 21, 0.1);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(250, 204, 21, 0.3);
+    }
+
+    .btn-warning:hover:not(:disabled) {
+      background: rgba(250, 204, 21, 0.2);
+    }
+
+    /* Bar Styles */
+    .bar-container {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 4px;
+      height: 280px;
+      padding: 20px;
+    }
+
+    .bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 32px;
+      border-radius: 6px 6px 0 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .bar-value {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px;
+      color: var(--fg);
+    }
+
+    .bar-index {
+      position: absolute;
+      bottom: -24px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .bar-default {
+      background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%);
+    }
+
+    .bar-comparing {
+      background: linear-gradient(180deg, var(--accent-yellow) 0%, #ca8a04 100%);
+      box-shadow: 0 0 30px var(--glow-yellow), 0 0 60px rgba(250, 204, 21, 0.2);
+      transform: scaleY(1.02);
+    }
+
+    .bar-swapping {
+      background: linear-gradient(180deg, var(--accent-orange) 0%, #c2410c 100%);
+      box-shadow: 0 0 30px rgba(249, 115, 22, 0.4);
+    }
+
+    .bar-sorted {
+      background: linear-gradient(180deg, var(--accent-green) 0%, #16a34a 100%);
+      box-shadow: 0 0 20px var(--glow-green);
+    }
+
+    .bar-unsorted {
+      background: linear-gradient(180deg, var(--accent-blue) 0%, #1d4ed8 100%);
+    }
+
+    /* Pseudocode Styles */
+    .code-line {
+      padding: 8px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .code-line.active {
+      background: rgba(0, 212, 170, 0.1);
+      border-left-color: var(--accent-cyan);
+    }
+
+    .code-line.executed {
+      opacity: 0.5;
+    }
+
+    .code-keyword {
+      color: var(--accent-purple);
+    }
+
+    .code-variable {
+      color: var(--accent-cyan);
+    }
+
+    .code-operator {
+      color: var(--accent-yellow);
+    }
+
+    .code-comment {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* Stats Panel */
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-item:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+      height: 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+      transition: width 0.3s ease;
+      border-radius: 4px;
+    }
+
+    /* Swap History */
+    .swap-item {
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 6px;
+      border-left: 3px solid var(--accent-orange);
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* Explanation Panel */
+    .explanation-text {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--fg);
+    }
+
+    .highlight-value {
+      background: rgba(0, 212, 170, 0.2);
+      color: var(--accent-cyan);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    .highlight-yellow {
+      background: rgba(250, 204, 21, 0.2);
+      color: var(--accent-yellow);
+    }
+
+    .highlight-green {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--accent-green);
+    }
+
+    .highlight-red {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--accent-red);
+    }
+
+    /* Slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    /* Input */
+    .input-field {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--fg);
+      font-size: 14px;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: relative;
+    }
+
+    .tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      z-index: 100;
+    }
+
+    .tooltip:hover::after {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Complexity Badge */
+    .complexity-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .animate-pulse-slow {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in-up {
+      animation: fadeInUp 0.5s ease forwards;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .bar-container {
+        height: 200px;
+        gap: 2px;
+      }
+      
+      .bar {
+        min-width: 24px;
+      }
+      
+      .bar-value {
+        font-size: 9px;
+      }
+    }
+
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--muted);
+    }
+  </style>
+</head>
+<body class="bg-pattern">
+  <div class="min-h-screen p-4 lg:p-6">
+    <!-- Header -->
+    <header class="mb-6 fade-in-up">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl lg:text-3xl font-bold tracking-tight">
+            Bubble Sort <span style="color: var(--accent-cyan)">Visualizer</span>
+          </h1>
+          <p class="text-sm mt-1" style="color: var(--muted)">
+            Interactive algorithm learning tool with step-by-step visualization
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="btn btn-secondary tooltip" data-tooltip="Learn about Bubble Sort" onclick="showInfoModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4"></path>
+              <path d="M12 8h.01"></path>
+            </svg>
+            About
+          </button>
+          <button class="btn btn-secondary" id="soundToggle" onclick="toggleSound()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="soundIcon">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            Sound
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-6">
+      <!-- Left Panel - Visualization -->
+      <div class="xl:col-span-8 space-y-4">
+        <!-- Array Visualization Card -->
+        <div class="card fade-in-up" style="animation-delay: 0.1s">
+          <div class="card-header">
+            <span class="card-title ml-2">Array Visualization</span>
+            <div class="ml-auto flex items-center gap-2">
+              <span class="text-xs px-2 py-1 rounded" style="background: var(--bg-secondary); color: var(--muted)" id="passIndicator">Pass: 0</span>
+            </div>
+          </div>
+          <div class="bar-container" id="barContainer">
+            <!-- Bars will be rendered here -->
+          </div>
+          <div class="px-4 pb-4">
+            <div class="flex items-center gap-4 text-xs" style="color: var(--muted)">
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded" style="background: var(--muted)"></div>
+                <span>Default</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded" style="background: var(--accent-yellow)"></div>
+                <span>Comparing</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded" style="background: var(--accent-orange)"></div>
+                <span>Swapping</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded" style="background: var(--accent-green)"></div>
+                <span>Sorted</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded" style="background: var(--accent-blue)"></div>
+                <span>Unsorted</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls Card -->
+        <div class="card fade-in-up" style="animation-delay: 0.2s">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan)">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+            </svg>
+            <span class="card-title">Controls</span>
+          </div>
+          <div class="p-4 space-y-4">
+            <!-- Input Row -->
+            <div class="flex flex-col lg:flex-row gap-3">
+              <input type="text" class="input-field flex-1" id="customArrayInput" placeholder="Enter custom array (e.g., 5, 3, 8, 1, 9)">
+              <div class="flex gap-2">
+                <button class="btn btn-secondary" onclick="generateRandomArray()">Generate Random</button>
+                <button class="btn btn-secondary" onclick="applyCustomArray()">Apply</button>
+              </div>
+            </div>
+            
+            <!-- Generator Buttons -->
+            <div class="flex flex-wrap gap-2">
+              <button class="btn btn-secondary tooltip" data-tooltip="Already sorted array (best case)" onclick="generateBestCase()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 19V5M5 12l7-7 7 7"></path>
+                </svg>
+                Best Case
+              </button>
+              <button class="btn btn-secondary tooltip" data-tooltip="Reverse sorted array (worst case)" onclick="generateWorstCase()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12l7 7 7-7"></path>
+                </svg>
+                Worst Case
+              </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-2">
+              <button class="btn btn-primary" id="startBtn" onclick="startSorting()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Start
+              </button>
+              <button class="btn btn-warning" id="pauseBtn" onclick="togglePause()" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" id="pauseIcon">
+                  <rect x="6" y="4" width="4" height="16"></rect>
+                  <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+                <span id="pauseText">Pause</span>
+              </button>
+              <button class="btn btn-secondary" id="stepBtn" onclick="stepForward()" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                  <line x1="19" y1="5" x2="19" y2="19"></line>
+                </svg>
+                Step
+              </button>
+              <button class="btn btn-danger" id="resetBtn" onclick="resetVisualization()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
+                </svg>
+                Reset
+              </button>
+            </div>
+
+            <!-- Speed & Size Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs font-medium mb-2 block" style="color: var(--muted)">
+                  Animation Speed: <span id="speedValue" class="font-mono" style="color: var(--accent-cyan)">500ms</span>
+                </label>
+                <input type="range" min="50" max="1500" value="500" id="speedSlider" oninput="updateSpeed(this.value)">
+              </div>
+              <div>
+                <label class="text-xs font-medium mb-2 block" style="color: var(--muted)">
+                  Array Size: <span id="sizeValue" class="font-mono" style="color: var(--accent-cyan)">10</span>
+                </label>
+                <input type="range" min="5" max="25" value="10" id="sizeSlider" oninput="updateSize(this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explanation Panel -->
+        <div class="card fade-in-up" style="animation-delay: 0.3s">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple)">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="card-title">Step Explanation</span>
+          </div>
+          <div class="p-4">
+            <div class="explanation-text" id="explanationText">
+              <p>Welcome to the Bubble Sort Visualizer!</p>
+              <p class="mt-2" style="color: var(--muted)">Click <span class="highlight-value">Start</span> to begin sorting or <span class="highlight-value">Step</span> to advance one step at a time.</p>
+              <p class="mt-2" style="color: var(--muted)">Bubble Sort works by repeatedly comparing adjacent elements and swapping them if they are in the wrong order.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel -->
+      <div class="xl:col-span-4 space-y-4">
+        <!-- Pseudocode Card -->
+        <div class="card fade-in-up" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-yellow)">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            <span class="card-title">Pseudocode</span>
+          </div>
+          <div class="py-2" id="codeContainer">
+            <div class="code-line" data-line="1">
+              <span class="code-keyword">for</span> <span class="code-variable">i</span> <span class="code-operator">=</span> 0 <span class="code-keyword">to</span> n-1
+            </div>
+            <div class="code-line" data-line="2">
+              &nbsp;&nbsp;<span class="code-keyword">for</span> <span class="code-variable">j</span> <span class="code-operator">=</span> 0 <span class="code-keyword">to</span> n-i-1
+            </div>
+            <div class="code-line" data-line="3">
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">if</span> <span class="code-variable">arr[j]</span> <span class="code-operator">></span> <span class="code-variable">arr[j+1]</span>
+            </div>
+            <div class="code-line" data-line="4">
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">swap</span>(<span class="code-variable">arr[j]</span>, <span class="code-variable">arr[j+1]</span>)
+            </div>
+            <div class="code-line" data-line="5">
+              <span class="code-comment">// End of pass i</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="card fade-in-up" style="animation-delay: 0.25s">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-green)">
+              <path d="M18 20V10M12 20V4M6 20v-6"></path>
+            </svg>
+            <span class="card-title">Statistics</span>
+          </div>
+          <div class="p-4">
+            <div class="stat-item">
+              <span class="stat-label">Array Size</span>
+              <span class="stat-value font-mono" id="statArraySize">10</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Current Pass</span>
+              <span class="stat-value font-mono" style="color: var(--accent-cyan)" id="statCurrentPass">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Comparisons</span>
+              <span class="stat-value font-mono" style="color: var(--accent-yellow)" id="statComparisons">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Swaps</span>
+              <span class="stat-value font-mono" style="color: var(--accent-orange)" id="statSwaps">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Sorted Elements</span>
+              <span class="stat-value font-mono" style="color: var(--accent-green)" id="statSorted">0</span>
+            </div>
+            
+            <!-- Progress -->
+            <div class="mt-4">
+              <div class="flex justify-between text-xs mb-2" style="color: var(--muted)">
+                <span>Sorting Progress</span>
+                <span id="progressPercent">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Complexity Card -->
+        <div class="card fade-in-up" style="animation-delay: 0.35s">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-red)">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span class="card-title">Time Complexity</span>
+          </div>
+          <div class="p-4 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-sm" style="color: var(--muted)">Best Case</span>
+              <span class="complexity-badge" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-green)">O(n)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm" style="color: var(--muted)">Average</span>
+              <span class="complexity-badge" style="background: rgba(250, 204, 21, 0.2); color: var(--accent-yellow)">O(n²)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm" style="color: var(--muted)">Worst Case</span>
+              <span class="complexity-badge" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red)">O(n²)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm" style="color: var(--muted)">Space</span>
+              <span class="complexity-badge" style="background: rgba(0, 212, 170, 0.2); color: var(--accent-cyan)">O(1)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Swap History Card -->
+        <div class="card fade-in-up" style="animation-delay: 0.4s">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-orange)">
+              <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"></path>
+            </svg>
+            <span class="card-title">Swap History</span>
+          </div>
+          <div class="p-3 max-h-48 overflow-y-auto" id="swapHistory">
+            <p class="text-sm" style="color: var(--muted)">No swaps yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Modal -->
+  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" id="infoModal">
+    <div class="card max-w-lg w-full">
+      <div class="card-header">
+        <span class="card-title">About Bubble Sort</span>
+        <button class="ml-auto text-gray-400 hover:text-white" onclick="hideInfoModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <p class="text-sm leading-relaxed">
+          <strong style="color: var(--accent-cyan)">Bubble Sort</strong> is a simple sorting algorithm that repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order.
+        </p>
+        <p class="text-sm leading-relaxed" style="color: var(--muted)">
+          The pass through the list is repeated until the list is sorted. The algorithm, which is a comparison sort, is named for the way smaller or larger elements "bubble" to the top of the list.
+        </p>
+        <div class="bg-black/30 rounded-lg p-4 font-mono text-sm">
+          <p style="color: var(--accent-green)">Key Characteristics:</p>
+          <ul class="mt-2 space-y-1 text-xs" style="color: var(--muted)">
+            <li>• Stable sorting algorithm</li>
+            <li>• In-place sorting (O(1) space)</li>
+            <li>• Simple to understand and implement</li>
+            <li>• Not efficient for large datasets</li>
+          </ul>
+        </div>
+        <button class="btn btn-primary w-full" onclick="hideInfoModal()">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ STATE INITIALIZATION ============
+    let array = [];
+    let originalArray = [];
+    let sorting = false;
+    let paused = false;
+    let stepMode = false;
+    let stepResolve = null;
+    let speed = 500;
+    let arraySize = 10;
+    let soundEnabled = true;
+    let audioContext = null;
+
+    // Statistics
+    let currentPass = 0;
+    let comparisons = 0;
+    let swaps = 0;
+    let sortedElements = 0;
+    let swapHistory = [];
+
+    // ============ DOM ELEMENTS ============
+    const barContainer = document.getElementById('barContainer');
+    const explanationText = document.getElementById('explanationText');
+    const codeLines = document.querySelectorAll('.code-line');
+    const swapHistoryContainer = document.getElementById('swapHistory');
+
+    // ============ AUDIO SYSTEM ============
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      
+      try {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        switch(type) {
+          case 'compare':
+            oscillator.frequency.value = 440;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.1;
+            break;
+          case 'swap':
+            oscillator.frequency.value = 330;
+            oscillator.type = 'square';
+            gainNode.gain.value = 0.08;
+            break;
+          case 'complete':
+            oscillator.frequency.value = 523;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.15;
+            break;
+        }
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+      } catch(e) {
+        // Audio not available
+      }
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('soundToggle');
+      const icon = document.getElementById('soundIcon');
+      
+      if (soundEnabled) {
+        btn.style.borderColor = 'var(--border)';
+        icon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        `;
+      } else {
+        btn.style.borderColor = 'var(--accent-red)';
+        icon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="9" x2="17" y2="15"></line>
+          <line x1="17" y1="9" x2="23" y2="15"></line>
+        `;
+      }
+    }
+
+    // ============ ARRAY GENERATION ============
+    function generateRandomArray() {
+      if (sorting) return;
+      array = [];
+      for (let i = 0; i < arraySize; i++) {
+        array.push(Math.floor(Math.random() * 50) + 5);
+      }
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      updateExplanation('random');
+    }
+
+    function generateBestCase() {
+      if (sorting) return;
+      array = [];
+      for (let i = 1; i <= arraySize; i++) {
+        array.push(i * 4);
+      }
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      updateExplanation('bestCase');
+    }
+
+    function generateWorstCase() {
+      if (sorting) return;
+      array = [];
+      for (let i = arraySize; i >= 1; i--) {
+        array.push(i * 4);
+      }
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      updateExplanation('worstCase');
+    }
+
+    function applyCustomArray() {
+      if (sorting) return;
+      const input = document.getElementById('customArrayInput').value;
+      const values = input.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
+      
+      if (values.length < 2) {
+        updateExplanation('invalidInput');
+        return;
+      }
+      
+      array = values.slice(0, 25);
+      arraySize = array.length;
+      document.getElementById('sizeSlider').value = arraySize;
+      document.getElementById('sizeValue').textContent = arraySize;
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      updateExplanation('custom');
+    }
+
+    // ============ RENDERING ============
+    function renderBars(comparingIndices = [], swappingIndices = [], sortedIndices = [], unsortedEnd = -1) {
+      barContainer.innerHTML = '';
+      const maxVal = Math.max(...array);
+      const containerHeight = 240;
+      
+      array.forEach((value, index) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        
+        const height = Math.max(30, (value / maxVal) * containerHeight);
+        bar.style.height = `${height}px`;
+        
+        // Determine bar state
+        if (sortedIndices.includes(index)) {
+          bar.classList.add('bar-sorted');
+        } else if (swappingIndices.includes(index)) {
+          bar.classList.add('bar-swapping');
+        } else if (comparingIndices.includes(index)) {
+          bar.classList.add('bar-comparing');
+        } else if (index > unsortedEnd) {
+          bar.classList.add('bar-unsorted');
+        } else {
+          bar.classList.add('bar-default');
+        }
+        
+        // Value label
+        const valueLabel = document.createElement('span');
+        valueLabel.className = 'bar-value';
+        valueLabel.textContent = value;
+        bar.appendChild(valueLabel);
+        
+        // Index label
+        const indexLabel = document.createElement('span');
+        indexLabel.className = 'bar-index';
+        indexLabel.textContent = index;
+        bar.appendChild(indexLabel);
+        
+        barContainer.appendChild(bar);
+      });
+    }
+
+    // ============ STATISTICS ============
+    function resetStats() {
+      currentPass = 0;
+      comparisons = 0;
+      swaps = 0;
+      sortedElements = 0;
+      swapHistory = [];
+      updateStats();
+      updateSwapHistory();
+    }
+
+    function updateStats() {
+      document.getElementById('statArraySize').textContent = arraySize;
+      document.getElementById('statCurrentPass').textContent = currentPass;
+      document.getElementById('statComparisons').textContent = comparisons;
+      document.getElementById('statSwaps').textContent = swaps;
+      document.getElementById('statSorted').textContent = sortedElements;
+      document.getElementById('passIndicator').textContent = `Pass: ${currentPass}`;
+      
+      const progress = array.length > 0 ? Math.round((sortedElements / array.length) * 100) : 0;
+      document.getElementById('progressPercent').textContent = `${progress}%`;
+      document.getElementById('progressBar').style.width = `${progress}%`;
+    }
+
+    function updateSwapHistory() {
+      if (swapHistory.length === 0) {
+        swapHistoryContainer.innerHTML = '<p class="text-sm" style="color: var(--muted)">No swaps yet</p>';
+        return;
+      }
+      
+      swapHistoryContainer.innerHTML = swapHistory.map((s, i) => `
+        <div class="swap-item">
+          <span style="color: var(--muted)">Step ${i + 1}:</span> 
+          swapped <span class="highlight-value">${s.val1}</span> and <span class="highlight-value">${s.val2}</span>
+        </div>
+      `).join('');
+      
+      swapHistoryContainer.scrollTop = swapHistoryContainer.scrollHeight;
+    }
+
+    // ============ CODE HIGHLIGHTING ============
+    function highlightCode(lineNum) {
+      codeLines.forEach(line => {
+        line.classList.remove('active');
+        if (parseInt(line.dataset.line) === lineNum) {
+          line.classList.add('active');
+        }
+      });
+    }
+
+    // ============ EXPLANATION ============
+    function updateExplanation(type, data = {}) {
+      let html = '';
+      
+      switch(type) {
+        case 'random':
+          html = `
+            <p>Generated random array with <span class="highlight-value">${arraySize}</span> elements.</p>
+            <p class="mt-2" style="color: var(--muted)">Click <span class="highlight-value">Start</span> to begin sorting or use <span class="highlight-value">Step</span> for manual control.</p>
+          `;
+          break;
+          
+        case 'bestCase':
+          html = `
+            <p>Generated <span class="highlight-green">best case</span> array (already sorted).</p>
+            <p class="mt-2" style="color: var(--muted)">This will demonstrate O(n) time complexity - the algorithm will make one pass without any swaps.</p>
+          `;
+          break;
+          
+        case 'worstCase':
+          html = `
+            <p>Generated <span class="highlight-red">worst case</span> array (reverse sorted).</p>
+            <p class="mt-2" style="color: var(--muted)">This will demonstrate O(n²) time complexity - maximum comparisons and swaps.</p>
+          `;
+          break;
+          
+        case 'custom':
+          html = `
+            <p>Custom array loaded with <span class="highlight-value">${array.length}</span> elements.</p>
+            <p class="mt-2" style="color: var(--muted)">Ready to sort!</p>
+          `;
+          break;
+          
+        case 'invalidInput':
+          html = `
+            <p class="highlight-red">Invalid input!</p>
+            <p class="mt-2" style="color: var(--muted)">Please enter comma-separated positive numbers (e.g., 5, 3, 8, 1, 9)</p>
+          `;
+          break;
+          
+        case 'compare':
+          html = `
+            <p><strong>Comparing adjacent elements:</strong></p>
+            <p class="mt-2">
+              arr[<span class="highlight-value">${data.j}</span>] = <span class="highlight-yellow">${data.val1}</span>
+              <br>
+              arr[<span class="highlight-value">${data.j + 1}</span>] = <span class="highlight-yellow">${data.val2}</span>
+            </p>
+            <p class="mt-2">
+              ${data.val1 > data.val2 
+                ? `<span class="highlight-red">${data.val1} > ${data.val2}</span> - Swap needed!` 
+                : `<span class="highlight-green">${data.val1} ≤ ${data.val2}</span> - No swap needed.`}
+            </p>
+          `;
+          break;
+          
+        case 'swap':
+          html = `
+            <p><strong>Swapping elements:</strong></p>
+            <p class="mt-2">
+              <span class="highlight-yellow">${data.val1}</span> ↔ <span class="highlight-yellow">${data.val2}</span>
+            </p>
+            <p class="mt-2" style="color: var(--muted)">
+              Position ${data.j} now contains ${data.val2}, position ${data.j + 1} now contains ${data.val1}.
+            </p>
+          `;
+          break;
+          
+        case 'passComplete':
+          html = `
+            <p><strong>Pass ${data.pass} complete!</strong></p>
+            <p class="mt-2">
+              Element <span class="highlight-green">${data.maxElement}</span> has bubbled to its correct position at index ${data.position}.
+            </p>
+            <p class="mt-2" style="color: var(--muted)">
+              ${data.sortedCount} of ${array.length} elements are now sorted.
+            </p>
+          `;
+          break;
+          
+        case 'complete':
+          html = `
+            <p class="highlight-green"><strong>Sorting Complete!</strong></p>
+            <p class="mt-2">
+              Total comparisons: <span class="highlight-value">${comparisons}</span>
+              <br>
+              Total swaps: <span class="highlight-value">${swaps}</span>
+            </p>
+            <p class="mt-2" style="color: var(--muted">
+              The array is now sorted in ascending order.</p>
+          `;
+          break;
+          
+        case 'paused':
+          html = `
+            <p><strong>Paused</strong></p>
+            <p class="mt-2" style="color: var(--muted)">Click <span class="highlight-value">Resume</span> to continue or <span class="highlight-value">Step</span> to advance one step.</p>
+          `;
+          break;
+      }
+      
+      explanationText.innerHTML = html;
+    }
+
+    // ============ SORTING ALGORITHM ============
+    async function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function waitForStep() {
+      if (stepMode) {
+        return new Promise(resolve => {
+          stepResolve = resolve;
+        });
+      }
+      
+      while (paused) {
+        await sleep(100);
+      }
+    }
+
+    async function bubbleSort() {
+      const n = array.length;
+      const sortedIndices = [];
+      
+      for (let i = 0; i < n - 1; i++) {
+        currentPass = i + 1;
+        highlightCode(1);
+        await sleep(speed / 3);
+        
+        let swapped = false;
+        const unsortedEnd = n - i - 1;
+        
+        for (let j = 0; j < n - i - 1; j++) {
+          if (!sorting) return;
+          
+          // Compare
+          highlightCode(2);
+          await sleep(speed / 4);
+          
+          highlightCode(3);
+          comparisons++;
+          updateStats();
+          
+          renderBars([j, j + 1], [], sortedIndices, unsortedEnd);
+          playSound('compare');
+          updateExplanation('compare', { j, val1: array[j], val2: array[j + 1] });
+          await sleep(speed);
+          
+          await waitForStep();
+          
+          if (array[j] > array[j + 1]) {
+            // Swap
+            highlightCode(4);
+            renderBars([], [j, j + 1], sortedIndices, unsortedEnd);
+            playSound('swap');
+            updateExplanation('swap', { j, val1: array[j], val2: array[j + 1] });
+            await sleep(speed / 2);
+            
+            // Perform swap
+            const temp = array[j];
+            array[j] = array[j + 1];
+            array[j + 1] = temp;
+            swaps++;
+            
+            swapHistory.push({ val1: temp, val2: array[j] });
+            updateSwapHistory();
+            updateStats();
+            
+            renderBars([], [j, j + 1], sortedIndices, unsortedEnd);
+            await sleep(speed / 2);
+            
+            swapped = true;
+          }
+        }
+        
+        // Mark element as sorted
+        sortedIndices.push(n - i - 1);
+        sortedElements++;
+        updateStats();
+        
+        renderBars([], [], sortedIndices, -1);
+        highlightCode(5);
+        updateExplanation('passComplete', {
+          pass: currentPass,
+          maxElement: array[n - i - 1],
+          position: n - i - 1,
+          sortedCount: sortedElements
+        });
+        playSound('swap');
+        await sleep(speed);
+        
+        // Optimization: if no swaps, array is sorted
+        if (!swapped) {
+          for (let k = 0; k < n - i - 1; k++) {
+            if (!sortedIndices.includes(k)) {
+              sortedIndices.push(k);
+              sortedElements++;
+            }
+          }
+          updateStats();
+          break;
+        }
+      }
+      
+      // Mark first element as sorted
+      if (!sortedIndices.includes(0)) {
+        sortedIndices.push(0);
+        sortedElements = array.length;
+        updateStats();
+      }
+      
+      renderBars([], [], sortedIndices, -1);
+      return true;
+    }
+
+    // ============ CONTROLS ============
+    function startSorting() {
+      if (array.length === 0) {
+        generateRandomArray();
+      }
+      
+      sorting = true;
+      paused = false;
+      stepMode = false;
+      
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('pauseBtn').disabled = false;
+      document.getElementById('stepBtn').disabled = false;
+      document.getElementById('resetBtn').disabled = false;
+      
+      bubbleSort().then(complete => {
+        if (complete) {
+          sorting = false;
+          playSound('complete');
+          updateExplanation('complete');
+          
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('pauseBtn').disabled = true;
+          document.getElementById('stepBtn').disabled = true;
+        }
+      });
+    }
+
+    function togglePause() {
+      if (!sorting) return;
+      
+      paused = !paused;
+      const pauseBtn = document.getElementById('pauseBtn');
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      
+      if (paused) {
+        pauseText.textContent = 'Resume';
+        pauseIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+        updateExplanation('paused');
+      } else {
+        pauseText.textContent = 'Pause';
+        pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+      }
+    }
+
+    function stepForward() {
+      if (!sorting) {
+        if (array.length === 0) {
+          generateRandomArray();
+        }
+        sorting = true;
+        paused = true;
+        stepMode = true;
+        
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('pauseBtn').disabled = false;
+        document.getElementById('stepBtn').disabled = false;
+        
+        bubbleSort().then(complete => {
+          if (complete) {
+            sorting = false;
+            playSound('complete');
+            updateExplanation('complete');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stepBtn').disabled = true;
+          }
+        });
+      } else {
+        stepMode = true;
+        if (stepResolve) {
+          stepResolve();
+          stepResolve = null;
+        }
+      }
+    }
+
+    function resetVisualization() {
+      sorting = false;
+      paused = false;
+      stepMode = false;
+      
+      array = [...originalArray];
+      resetStats();
+      renderBars();
+      highlightCode(0);
+      updateExplanation('random');
+      
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('pauseBtn').disabled = true;
+      document.getElementById('stepBtn').disabled = true;
+      
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      pauseText.textContent = 'Pause';
+      pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+    }
+
+    function updateSpeed(value) {
+      speed = 1550 - parseInt(value);
+      document.getElementById('speedValue').textContent = `${speed}ms`;
+    }
+
+    function updateSize(value) {
+      arraySize = parseInt(value);
+      document.getElementById('sizeValue').textContent = arraySize;
+      if (!sorting) {
+        generateRandomArray();
+      }
+    }
+
+    // ============ MODAL ============
+    function showInfoModal() {
+      document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function hideInfoModal() {
+      document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('infoModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        hideInfoModal();
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      if (e.target.tagName === 'INPUT') return;
+      
+      switch(e.key) {
+        case ' ':
+          e.preventDefault();
+          if (sorting) {
+            togglePause();
+          } else {
+            startSorting();
+          }
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          stepForward();
+          break;
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          resetVisualization();
+          break;
+        case 'Escape':
+          hideInfoModal();
+          break;
+      }
+    });
+
+    // ============ INITIALIZATION ============
+    document.addEventListener('DOMContentLoaded', function() {
+      generateRandomArray();
+    });
+  </script>
+</body>
+</html>

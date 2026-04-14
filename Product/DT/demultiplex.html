@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1-to-4 Demultiplexer Visual</title>
+<style>
+    /* --- CSS VARIABLES & RESET --- */
+    :root {
+        --bg-dark: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.7);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --text-main: #f1f5f9;
+        --text-muted: #94a3b8;
+        
+        /* Signal Colors */
+        --color-data: #06b6d4;      /* Cyan for Data */
+        --color-select: #a855f7;    /* Purple for Selectors */
+        --color-off: #334155;       /* Grey for Low */
+        
+        --glow-data: 0 0 12px rgba(6, 182, 212, 0.6);
+        --glow-select: 0 0 12px rgba(168, 85, 247, 0.6);
+        
+        --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+        font-family: var(--font-family);
+        background-color: var(--bg-dark);
+        background-image: 
+            radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.1), transparent 50%),
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 100% 100%, 40px 40px, 40px 40px;
+        color: var(--text-main);
+        margin: 0; 
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    h1 {
+        text-align: center; 
+        margin-bottom: 40px;
+        font-size: 2.5rem;
+        font-weight: 300;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        background: linear-gradient(to right, #fff, #06b6d4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .simulator {
+        display: flex; 
+        gap: 40px; 
+        flex-wrap: wrap; 
+        justify-content: center;
+        align-items: stretch;
+        max-width: 1400px;
+        width: 100%;
+    }
+
+    /* --- CARDS --- */
+    .diagram, .panel {
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        padding: 30px; 
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .diagram {
+        flex: 2;
+        min-width: 500px; 
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .panel {
+        flex: 1;
+        min-width: 320px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .panel h2 { 
+        text-align: center; 
+        margin-bottom: 25px; 
+        font-weight: 500;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-size: 0.9rem;
+        border-bottom: 1px solid var(--card-border);
+        padding-bottom: 15px;
+    }
+
+    /* --- SVG STYLES --- */
+    svg {
+        width: 100%; 
+        height: auto;
+        max-width: 800px;
+        overflow: visible;
+    }
+
+    /* Wires */
+    .wire, .wire-data, .wire-select {
+        stroke: var(--color-off);
+        stroke-width: 3; 
+        stroke-linecap: round; 
+        fill: none;
+        transition: stroke 0.3s ease, filter 0.3s ease;
+    }
+    
+    /* Specific Wire Colors */
+    .wire-data.signal { stroke: var(--color-data); filter: drop-shadow(0 0 4px var(--color-data)); }
+    .wire-select.signal { stroke: var(--color-select); filter: drop-shadow(0 0 4px var(--color-select)); }
+
+    /* Generic signal animation */
+    .signal { stroke-dasharray: 8, 4; animation: flow 1s linear infinite; }
+    @keyframes flow { to { stroke-dashoffset: -20; } }
+
+    /* Terminals (Buttons) */
+    .terminal {
+        fill: #1e293b; 
+        stroke: #475569; 
+        stroke-width: 3; 
+        cursor: pointer; 
+        transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+    }
+
+    .terminal:hover {
+        stroke: #fff;
+        fill: #334155;
+    }
+    
+    /* Active/On States */
+    .terminal.data.on { fill: var(--color-data); stroke: #fff; filter: var(--glow-data); }
+    .terminal.select.on { fill: var(--color-select); stroke: #fff; filter: var(--glow-select); }
+    
+    .indicator {
+        fill: #1e293b; 
+        stroke: #475569; 
+        stroke-width: 3; 
+        transition: all 0.3s ease;
+    }
+    .indicator.on { fill: var(--color-data); stroke: #fff; filter: var(--glow-data); }
+
+    /* Gate Styles */
+    .gate-body {
+        fill: rgba(15, 23, 42, 0.8);
+        stroke: #475569;
+        stroke-width: 2;
+    }
+    .gate-label {
+        fill: var(--text-muted);
+        font-size: 10px;
+        text-anchor: middle;
+        dominant-baseline: middle;
+        pointer-events: none;
+    }
+
+    /* --- CONTROLS --- */
+    .toggle-container {
+        position: absolute; 
+        top: 20px; 
+        right: 20px;
+        display: flex; 
+        align-items: center; 
+        gap: 10px; 
+        color: var(--text-muted);
+        font-weight: 600; 
+        font-size: 0.85rem; 
+        z-index: 10;
+        background: rgba(0,0,0,0.4);
+        padding: 8px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--card-border);
+    }
+    .toggle-container input[type="checkbox"] {
+        width: 40px; height: 20px;
+        -webkit-appearance: none; background: #334155;
+        border-radius: 20px; position: relative; cursor: pointer;
+        transition: background 0.3s;
+    }
+    .toggle-container input[type="checkbox"]:checked { background: var(--color-data); }
+    .toggle-container input[type="checkbox"]::before {
+        content:''; position: absolute; width: 16px; height: 16px; 
+        border-radius: 50%; background: #fff; top: 2px; left: 2px; 
+        transition: left 0.3s ease;
+    }
+    .toggle-container input[type="checkbox"]:checked::before { left: 22px; }
+
+    /* --- TRUTH TABLE --- */
+    table {
+        width: 100%; 
+        border-collapse: separate; 
+        border-spacing: 0; 
+        text-align: center; 
+        font-size: 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--card-border);
+        overflow: hidden;
+    }
+    th, td { padding: 12px; font-weight: 600; }
+    th {
+        background: rgba(255,255,255,0.05);
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--card-border);
+    }
+    tr.active {
+        background: rgba(6, 182, 212, 0.2); 
+        color: #fff;
+    }
+    
+    /* Responsive */
+    @media (max-width: 900px) {
+        .simulator { flex-direction: column; }
+        .diagram { min-width: unset; }
+    }
+</style>
+</head>
+<body>
+
+<h1>1-to-4 Demultiplexer</h1>
+
+<div class="simulator">
+    <div class="diagram">
+        <div class="toggle-container">
+            Show Gates
+            <input type="checkbox" id="toggleGates"/>
+        </div>
+
+        <svg viewBox="0 0 800 550" id="svgCanvas">
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- CHIP VIEW (Abstract) -->
+            <g id="chipView">
+                <!-- Data Input -->
+                <text x="30" y="235" class="gate-label" style="font-size:14px; fill:var(--text-muted)">D</text>
+                <circle id="chipD" cx="60" cy="230" r="15" class="terminal data"/>
+                <line id="wChipD" x1="75" y1="230" x2="180" y2="230" class="wire-data"/>
+
+                <!-- Select Lines -->
+                <text x="230" y="490" class="gate-label" style="font-size:14px; fill:var(--text-muted)">S1</text>
+                <circle id="chipS1" cx="280" cy="500" r="15" class="terminal select"/>
+                <line id="wChipS1" x1="280" y1="485" x2="280" y2="420" class="wire-select"/>
+
+                <text x="330" y="490" class="gate-label" style="font-size:14px; fill:var(--text-muted)">S0</text>
+                <circle id="chipS0" cx="380" cy="500" r="15" class="terminal select"/>
+                <line id="wChipS0" x1="380" y1="485" x2="380" y2="420" class="wire-select"/>
+
+                <!-- DEMUX Shape -->
+                <path d="M180 40 L180 420 L520 420 L620 230 L520 40 Z" fill="#1e293b" stroke="#475569" stroke-width="3"/>
+                <text x="350" y="230" text-anchor="middle" fill="#fff" font-size="24px" font-weight="bold" pointer-events="none">DEMUX</text>
+                <text x="350" y="260" text-anchor="middle" fill="#94a3b8" font-size="14px">1:4</text>
+
+                <!-- Outputs -->
+                <!-- Y0 -->
+                <line id="wChipY0" x1="620" y1="230" x2="740" y2="80" class="wire-data"/>
+                <circle id="chipY0" cx="740" cy="80" r="15" class="indicator"/>
+                <text x="770" y="85" style="font-size:14px; fill:var(--text-muted)">Y0</text>
+
+                <!-- Y1 -->
+                <line id="wChipY1" x1="620" y1="230" x2="740" y2="180" class="wire-data"/>
+                <circle id="chipY1" cx="740" cy="180" r="15" class="indicator"/>
+                <text x="770" y="185" style="font-size:14px; fill:var(--text-muted)">Y1</text>
+
+                <!-- Y2 -->
+                <line id="wChipY2" x1="620" y1="230" x2="740" y2="330" class="wire-data"/>
+                <circle id="chipY2" cx="740" cy="330" r="15" class="indicator"/>
+                <text x="770" y="335" style="font-size:14px; fill:var(--text-muted)">Y2</text>
+
+                <!-- Y3 -->
+                <line id="wChipY3" x1="620" y1="230" x2="740" y2="430" class="wire-data"/>
+                <circle id="chipY3" cx="740" cy="430" r="15" class="indicator"/>
+                <text x="770" y="435" style="font-size:14px; fill:var(--text-muted)">Y3</text>
+            </g>
+
+            <!-- GATE VIEW (Aligned Grid Layout) -->
+            <g id="gateView" visibility="hidden">
+                
+                <!-- 1. INPUTS -->
+                <circle id="gD" cx="60" cy="250" r="12" class="terminal data"/>
+                <text x="40" y="255" class="gate-label" style="text-anchor:end; font-size:12px; fill:var(--text-muted)">D</text>
+                
+                <!-- Select Inputs (Bottom Left) -->
+                <circle id="gS1" cx="60" cy="400" r="12" class="terminal select"/>
+                <text x="40" y="405" class="gate-label" style="text-anchor:end; font-size:12px; fill:var(--text-muted)">S1</text>
+                
+                <circle id="gS0" cx="60" cy="480" r="12" class="terminal select"/>
+                <text x="40" y="485" class="gate-label" style="text-anchor:end; font-size:12px; fill:var(--text-muted)">S0</text>
+
+                <!-- 2. DATA DISTRIBUTION (Vertical Bus) -->
+                <!-- D goes right, then splits vertically to all AND gates -->
+                <line id="wDataMain" x1="72" y1="250" x2="200" y2="250" class="wire-data"/>
+                <line id="wDataBus" x1="200" y1="100" x2="200" y2="400" class="wire-data"/>
+                
+                <!-- Connections from Data Bus to AND Gates (Input 1) -->
+                <!-- Gate X pos = 400. Inputs at x=400 -->
+                <line id="wD0" x1="200" y1="100" x2="400" y2="100" class="wire-data"/> <!-- to Y0 -->
+                <line id="wD1" x1="200" y1="200" x2="400" y2="200" class="wire-data"/> <!-- to Y1 -->
+                <line id="wD2" x1="200" y1="300" x2="400" y2="300" class="wire-data"/> <!-- to Y2 -->
+                <line id="wD3" x1="200" y1="400" x2="400" y2="400" class="wire-data"/> <!-- to Y3 -->
+
+                <!-- 3. SELECT LOGIC (INVERTERS & BUSES) -->
+                
+                <!-- S1 Logic -->
+                <line id="wS1_in" x1="72" y1="400" x2="100" y2="400" class="wire-select"/>
+                <!-- Inverter 1 -->
+                <path d="M100 380 L100 420 L140 400 Z" class="gate-body"/> 
+                <circle cx="145" cy="400" r="5" fill="#1e293b" stroke="#475569"/>
+                
+                <!-- S1 Bus Lines -->
+                <line id="wS1_not" x1="150" y1="400" x2="150" y2="150" class="wire-select"/> <!-- !S1 goes up -->
+                <line id="wS1_true" x1="100" y1="400" x2="100" y2="350" class="wire-select"/> <!-- S1 goes up -->
+                
+                <!-- Connecting S1 to Gates -->
+                <!-- S1 to Y2, Y3 (Inputs need to go high) -->
+                <line x1="100" y1="350" x2="300" y2="350" class="wire-select"/>
+                <line x1="300" y1="350" x2="300" y2="300" class="wire-select"/> <!-- Down to Y2 -->
+                <line id="wS1_Y2" x1="300" y1="300" x2="400" y2="300" class="wire-select"/>
+                <line x1="300" y1="350" x2="300" y2="400" class="wire-select"/> <!-- Down to Y3 -->
+                <line id="wS1_Y3" x1="300" y1="400" x2="400" y2="400" class="wire-select"/>
+
+                <!-- !S1 to Y0, Y1 -->
+                <line x1="150" y1="150" x2="250" y2="150" class="wire-select"/>
+                <line x1="250" y1="150" x2="250" y2="100" class="wire-select"/> <!-- Up to Y0 -->
+                <line id="wS1n_Y0" x1="250" y1="100" x2="400" y2="100" class="wire-select"/>
+                <line x1="250" y1="150" x2="250" y2="200" class="wire-select"/> <!-- Down to Y1 -->
+                <line id="wS1n_Y1" x1="250" y1="200" x2="400" y2="200" class="wire-select"/>
+
+                <!-- S0 Logic -->
+                <line id="wS0_in" x1="72" y1="480" x2="100" y2="480" class="wire-select"/>
+                <!-- Inverter 0 -->
+                <path d="M100 460 L100 500 L140 480 Z" class="gate-body"/> 
+                <circle cx="145" cy="480" r="5" fill="#1e293b" stroke="#475569"/>
+
+                <!-- S0 Bus Lines -->
+                <line id="wS0_not" x1="150" y1="480" x2="150" y2="450" class="wire-select"/> <!-- !S0 goes right -->
+                <line id="wS0_true" x1="100" y1="480" x2="100" y2="460" class="wire-select"/> <!-- S0 goes right -->
+                
+                <!-- Connecting S0 to Gates -->
+                <!-- S0 to Y1, Y3 -->
+                <line x1="100" y1="460" x2="320" y2="460" class="wire-select"/>
+                <line x1="320" y1="460" x2="320" y2="200" class="wire-select"/> <!-- Up to Y1 -->
+                <line id="wS0_Y1" x1="320" y1="200" x2="400" y2="200" class="wire-select"/>
+                <line x1="320" y1="460" x2="320" y2="400" class="wire-select"/> /* Down to Y3 */
+                <line id="wS0_Y3" x1="320" y1="400" x2="400" y2="400" class="wire-select"/>
+
+                <!-- !S0 to Y0, Y2 -->
+                <line x1="150" y1="450" x2="340" y2="450" class="wire-select"/>
+                <line x1="340" y1="450" x2="340" y2="100" class="wire-select"/> <!-- Up to Y0 -->
+                <line id="wS0n_Y0" x1="340" y1="100" x2="400" y2="100" class="wire-select"/>
+                <line x1="340" y1="450" x2="340" y2="300" class="wire-select"/> /* Up to Y2 */
+                <line id="wS0n_Y2" x1="340" y1="300" x2="400" y2="300" class="wire-select"/>
+
+                <!-- 4. AND GATES (Aligned) -->
+                <!-- Y0 (100) -->
+                <path d="M400 80 L400 120 L440 120 A20 20 0 0 0 440 80 Z" class="gate-body"/>
+                <text x="480" y="105" class="gate-label" style="font-size:12px; text-anchor:start">Y0</text>
+                <line id="wOut0" x1="440" y1="100" x2="700" y2="100" class="wire-data"/>
+                <circle id="gY0" cx="700" cy="100" r="12" class="indicator"/>
+
+                <!-- Y1 (200) -->
+                <path d="M400 180 L400 220 L440 220 A20 20 0 0 0 440 180 Z" class="gate-body"/>
+                <text x="480" y="205" class="gate-label" style="font-size:12px; text-anchor:start">Y1</text>
+                <line id="wOut1" x1="440" y1="200" x2="700" y2="200" class="wire-data"/>
+                <circle id="gY1" cx="700" cy="200" r="12" class="indicator"/>
+
+                <!-- Y2 (300) -->
+                <path d="M400 280 L400 320 L440 320 A20 20 0 0 0 440 280 Z" class="gate-body"/>
+                <text x="480" y="305" class="gate-label" style="font-size:12px; text-anchor:start">Y2</text>
+                <line id="wOut2" x1="440" y1="300" x2="700" y2="300" class="wire-data"/>
+                <circle id="gY2" cx="700" cy="300" r="12" class="indicator"/>
+
+                <!-- Y3 (400) -->
+                <path d="M400 380 L400 420 L440 420 A20 20 0 0 0 440 380 Z" class="gate-body"/>
+                <text x="480" y="405" class="gate-label" style="font-size:12px; text-anchor:start">Y3</text>
+                <line id="wOut3" x1="440" y1="400" x2="700" y2="400" class="wire-data"/>
+                <circle id="gY3" cx="700" cy="400" r="12" class="indicator"/>
+            </g>
+        </svg>
+    </div>
+
+    <div class="panel">
+        <h2>Function Table</h2>
+        <table>
+            <tr><th>S1</th><th>S0</th><th>Output Active</th></tr>
+            <tr id="row00"><td>0</td><td>0</td><td>Y0</td></tr>
+            <tr id="row01"><td>0</td><td>1</td><td>Y1</td></tr>
+            <tr id="row10"><td>1</td><td>0</td><td>Y2</td></tr>
+            <tr id="row11"><td>1</td><td>1</td><td>Y3</td></tr>
+        </table>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--card-border);">
+            <h2>Current Values</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: center;">
+                <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px;">
+                    <div style="color: var(--color-data); font-size: 0.8rem; margin-bottom: 5px;">DATA (D)</div>
+                    <div id="dispData" style="font-size: 1.2rem; font-family: monospace">0</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px;">
+                    <div style="color: var(--color-select); font-size: 0.8rem; margin-bottom: 5px;">SELECT (S)</div>
+                    <div id="dispSelect" style="font-size: 1.2rem; font-family: monospace">00</div>
+                </div>
+            </div>
+            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-top: 15px; text-align: center;">
+                <div style="color: var(--color-data); font-size: 0.8rem; margin-bottom: 5px;">OUTPUTS (Y)</div>
+                <div id="dispOutputs" style="font-size: 1.2rem; font-family: monospace">[0, 0, 0, 0]</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // State
+    let D = 0;          // Data
+    let S = [0, 0];     // Selectors S0, S1 (S0 is LSB)
+    
+    const toggle = document.getElementById("toggleGates");
+    const chipView = document.getElementById("chipView");
+    const gateView = document.getElementById("gateView");
+
+    // Toggle View
+    toggle.addEventListener("change", () => {
+        chipView.setAttribute("visibility", toggle.checked ? "hidden" : "visible");
+        gateView.setAttribute("visibility", toggle.checked ? "visible" : "hidden");
+        updateVisuals();
+    });
+
+    // Logic
+    function calculateLogic() {
+        let Y = [0, 0, 0, 0];
+        const index = S[0] + S[1]*2; // S0 is LSB
+        Y[index] = D;
+        return Y;
+    }
+
+    // Update UI
+    function updateVisuals() {
+        const Y = calculateLogic();
+        const sIndex = S[0] + S[1]*2;
+
+        // Update Panel Text
+        document.getElementById('dispData').innerText = D;
+        document.getElementById('dispSelect').innerText = `${S[1]}${S[0]}`;
+        document.getElementById('dispOutputs').innerText = `[${Y.join(', ')}]`;
+
+        // Highlight Table Row
+        document.querySelectorAll("tr").forEach(r => r.classList.remove("active"));
+        const rowId = `row${S[1]}${S[0]}`;
+        const activeRow = document.getElementById(rowId);
+        if(activeRow) activeRow.classList.add("active");
+
+        // Update Chip View
+        document.getElementById("chipD").classList.toggle("on", D === 1);
+        document.getElementById("wChipD").classList.toggle("signal", D === 1);
+
+        document.getElementById("chipS0").classList.toggle("on", S[0] === 1);
+        document.getElementById("chipS1").classList.toggle("on", S[1] === 1);
+        document.getElementById("wChipS0").classList.toggle("signal", S[0] === 1);
+        document.getElementById("wChipS1").classList.toggle("signal", S[1] === 1);
+
+        // Update Outputs Chip
+        for(let i=0; i<4; i++) {
+            const outTerm = document.getElementById(`chipY${i}`);
+            const outWire = document.getElementById(`wChipY${i}`);
+            outTerm.classList.toggle("on", Y[i] === 1);
+            outWire.classList.toggle("signal", Y[i] === 1);
+        }
+
+        // Update Gate View
+        if(toggle.checked) {
+            updateGateView(Y);
+        }
+    }
+
+    function updateGateView(Y) {
+        // Input Active States
+        document.getElementById("gD").classList.toggle("on", D === 1);
+        document.getElementById("gS0").classList.toggle("on", S[0] === 1);
+        document.getElementById("gS1").classList.toggle("on", S[1] === 1);
+
+        // Data Lines
+        const dataSignal = D === 1;
+        document.getElementById("wDataMain").classList.toggle("signal", dataSignal);
+        document.getElementById("wDataBus").classList.toggle("signal", dataSignal);
+        document.getElementById("wD0").classList.toggle("signal", dataSignal);
+        document.getElementById("wD1").classList.toggle("signal", dataSignal);
+        document.getElementById("wD2").classList.toggle("signal", dataSignal);
+        document.getElementById("wD3").classList.toggle("signal", dataSignal);
+
+        // Select Lines Logic
+        // S1
+        document.getElementById("wS1_in").classList.toggle("signal", S[1] === 1);
+        document.getElementById("wS1_true").classList.toggle("signal", S[1] === 1);
+        document.getElementById("wS1_not").classList.toggle("signal", S[1] === 0); // Inverted
+        
+        // S0
+        document.getElementById("wS0_in").classList.toggle("signal", S[0] === 1);
+        document.getElementById("wS0_true").classList.toggle("signal", S[0] === 1);
+        document.getElementById("wS0_not").classList.toggle("signal", S[0] === 0); // Inverted
+
+        // Gate Inputs Logic (Visualizing the connection)
+        // Y0: !S1, !S0
+        document.getElementById("wS1n_Y0").classList.toggle("signal", S[1] === 0);
+        document.getElementById("wS0n_Y0").classList.toggle("signal", S[0] === 0);
+        
+        // Y1: !S1, S0
+        document.getElementById("wS1n_Y1").classList.toggle("signal", S[1] === 0);
+        document.getElementById("wS0_Y1").classList.toggle("signal", S[0] === 1);
+        
+        // Y2: S1, !S0
+        document.getElementById("wS1_Y2").classList.toggle("signal", S[1] === 1);
+        document.getElementById("wS0n_Y2").classList.toggle("signal", S[0] === 0);
+        
+        // Y3: S1, S0
+        document.getElementById("wS1_Y3").classList.toggle("signal", S[1] === 1);
+        document.getElementById("wS0_Y3").classList.toggle("signal", S[0] === 1);
+
+        // Outputs
+        for(let i=0; i<4; i++) {
+            document.getElementById(`gY${i}`).classList.toggle("on", Y[i] === 1);
+            document.getElementById(`wOut${i}`).classList.toggle("signal", Y[i] === 1);
+        }
+    }
+
+    // Input Handlers
+    function addListeners() {
+        // Chip Inputs
+        document.getElementById("chipD").onclick = () => { D = D ? 0 : 1; updateVisuals(); };
+        document.getElementById("chipS0").onclick = () => { S[0] = S[0] ? 0 : 1; updateVisuals(); };
+        document.getElementById("chipS1").onclick = () => { S[1] = S[1] ? 0 : 1; updateVisuals(); };
+        
+        // Gate Inputs
+        document.getElementById("gD").onclick = () => { D = D ? 0 : 1; updateVisuals(); };
+        document.getElementById("gS0").onclick = () => { S[0] = S[0] ? 0 : 1; updateVisuals(); };
+        document.getElementById("gS1").onclick = () => { S[1] = S[1] ? 0 : 1; updateVisuals(); };
+    }
+
+    // Init
+    addListeners();
+    updateVisuals();
+
+</script>
+</body>
+</html>

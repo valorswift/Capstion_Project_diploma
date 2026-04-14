@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Combinational Circuits</title>
+
+<!-- Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<style>
+    /* --- CSS VARIABLES & RESET --- */
+    :root {
+        --bg-dark: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.6);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --text-main: #f1f5f9;
+        --text-muted: #94a3b8;
+        
+        /* Default Accent Color (Cyan) */
+        --accent: #06b6d4; 
+        --accent-glow: 0 0 20px var(--accent);
+        
+        --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: var(--font-family);
+    }
+
+    body {
+        min-height: 100vh;
+        background-color: var(--bg-dark);
+        /* Subtle grid background matching the simulators */
+        background-image: 
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 40px 20px;
+        color: var(--text-main);
+    }
+
+    /* ---------- HEADER ---------- */
+    h1 {
+        font-size: 3rem;
+        font-weight: 300;
+        letter-spacing: 2px;
+        margin-bottom: 60px;
+        text-transform: uppercase;
+        text-align: center;
+        background: linear-gradient(to right, #fff, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* ---------- CARD CONTAINER ---------- */
+    .card-container {
+        display: grid;
+        /* Responsive grid: fits as many 280px columns as possible */
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+        width: 100%;
+        max-width: 1200px;
+        justify-items: center;
+    }
+
+    /* ---------- INDIVIDUAL CARD (Glassmorphism) ---------- */
+    .card {
+        width: 100%;
+        max-width: 350px;
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        
+        padding: 50px 30px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 220px;
+        
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    /* Card Icon */
+    .card i {
+        font-size: 3.5rem;
+        margin-bottom: 20px;
+        color: var(--text-muted); /* Default inactive color */
+        transition: all 0.3s ease;
+    }
+
+    /* Card Title */
+    .card h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-main);
+        transition: color 0.3s ease;
+    }
+
+    /* Hover Effects */
+    .card:hover {
+        transform: translateY(-8px);
+        border-color: var(--accent);
+        box-shadow: 0 0 30px rgba(0,0,0,0.5), var(--accent-glow);
+    }
+
+    .card:hover i {
+        color: var(--accent);
+        text-shadow: 0 0 15px var(--accent);
+        transform: scale(1.1);
+    }
+
+    .card:hover h3 {
+        color: #fff;
+    }
+
+    /* Unique Accent Colors for each card */
+    /* 1. Half Adder - Cyan */
+    .card-container .card:nth-child(1) { --accent: #06b6d4; }
+    
+    /* 2. Full Adder - Blue */
+    .card-container .card:nth-child(2) { --accent: #3b82f6; }
+    
+    /* 3. Half Subtractor - Emerald (Green) */
+    .card-container .card:nth-child(3) { --accent: #10b981; }
+    
+    /* 4. Full Subtractor - Rose (Red) */
+    .card-container .card:nth-child(4) { --accent: #f43f5e; }
+    
+    /* 5. Multiplexer - Amber (Orange) */
+    .card-container .card:nth-child(5) { --accent: #f59e0b; }
+    
+    /* 6. Demultiplexer - Violet (Purple) */
+    .card-container .card:nth-child(6) { --accent: #8b5cf6; }
+    
+    /* 7. Encoder - Fuchsia (Pink) */
+    .card-container .card:nth-child(7) { --accent: #d946ef; }
+    
+    /* 8. Decoder - Teal */
+    .card-container .card:nth-child(8) { --accent: #14b8a6; }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        h1 { font-size: 2.2rem; margin-bottom: 40px; }
+        .card-container { gap: 20px; }
+        .card { padding: 40px 20px; min-height: 180px; }
+        .card i { font-size: 3rem; }
+        .card h3 { font-size: 1.3rem; }
+    }
+</style>
+</head>
+<body>
+
+<h1>Combinational Circuits</h1>
+
+<div class="card-container">
+    <div class="card" onclick="openPage('halfAdder.html')">
+        <i class="fas fa-plus-minus"></i>
+        <h3>Half Adder</h3>
+    </div>
+    <div class="card" onclick="openPage('fullAdder.html')">
+        <i class="fas fa-plus-circle"></i>
+        <h3>Full Adder</h3>
+    </div>
+    <div class="card" onclick="openPage('HalfSubtractor.html')">
+        <i class="fas fa-minus"></i>
+        <h3>Half Subtractor</h3>
+    </div>
+    <div class="card" onclick="openPage('FullSubtractor.html')">
+        <i class="fas fa-minus-circle"></i>
+        <h3>Full Subtractor</h3>
+    </div>
+    <div class="card" onclick="openPage('Multiplexer.html')">
+        <i class="fas fa-stream"></i>
+        <h3>Multiplexer</h3>
+    </div>
+    <div class="card" onclick="openPage('Demultiplexer.html')">
+        <i class="fas fa-random"></i>
+        <h3>Demultiplexer</h3>
+    </div>
+    <div class="card" onclick="openPage('Encoder.html')">
+        <i class="fas fa-key"></i>
+        <h3>Encoder</h3>
+    </div>
+    <div class="card" onclick="openPage('Decoder.html')">
+        <i class="fas fa-unlock"></i>
+        <h3>Decoder</h3>
+    </div>
+</div>
+
+<script>
+function openPage(url) {
+    window.location.href = url;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logic Gates Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #00e5ff;
+  --accent-alt: #a855f7;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #22d3ee;
+  --purple: #c084fc;
+  --green: #10b981;
+  --red: #ef4444;
+  --orange: #fb923c;
+  --pink: #f472b6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.04) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.hero {
+  min-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 229, 255, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--accent); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--accent); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--cyan) 50%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 520px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 28px;
+}
+
+.card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  display: block;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), transparent, rgba(168, 85, 247, 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.card:hover::before { opacity: 1; }
+.card:hover::after { opacity: 1; }
+
+.card:hover {
+  transform: translateY(-10px) scale(1.01);
+  border-color: rgba(0, 229, 255, 0.25);
+  box-shadow: 
+    0 30px 80px -20px rgba(0, 229, 255, 0.12),
+    0 0 60px -20px rgba(168, 85, 247, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.card-preview {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at center, #0c1428 0%, #060a14 100%);
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.card-preview-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  background: rgba(4, 6, 13, 0.85);
+  padding: 6px 12px;
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+  z-index: 1;
+  border: 1px solid rgba(0, 229, 255, 0.1);
+}
+
+.card-content { padding: 24px; }
+
+.card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.tag-primitive { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+.tag-universal { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+.tag-derived { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.2); }
+
+.card h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 20px 0;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  background: linear-gradient(135deg, var(--accent), #3b82f6);
+  color: var(--bg);
+  transition: all 0.3s ease;
+}
+
+.card:hover .card-btn {
+  background: linear-gradient(135deg, var(--cyan), var(--accent));
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px -4px var(--accent);
+}
+
+.card-btn svg { transition: transform 0.3s ease; }
+.card:hover .card-btn svg { transform: translateX(4px); }
+
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .nav { padding: 16px 20px; }
+  .nav-breadcrumb { display: none; }
+  .hero { padding: 100px 20px 30px; min-height: 40vh; }
+  .card-preview { height: 180px; }
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="DTEholder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="DTEholder.html">Digital Techniques</a>
+       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Logic Gates</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Digital Logic Module</div>
+    <h1 class="main-title">Logic Gates</h1>
+    <p class="subtitle">
+      // Fundamental building blocks of digital circuits.<br>
+      // Select a gate to visualize its truth table and signal behavior.
+    </p>
+  </section>
+
+  <section class="section">
+    <div class="grid">
+      
+      <!-- AND Gate -->
+      <a href="ANDgate.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-and"></canvas>
+          <div class="card-preview-overlay">CONJUNCTION</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-primitive">Primitive</span>
+          <h3>AND Gate</h3>
+          <p>Outputs HIGH only if all inputs are HIGH. Implements logical conjunction.</p>
+          <div class="card-footer">
+            <span class="card-btn">Simulate <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- OR Gate -->
+      <a href="ORgate.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-or"></canvas>
+          <div class="card-preview-overlay">DISJUNCTION</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-primitive">Primitive</span>
+          <h3>OR Gate</h3>
+          <p>Outputs HIGH if at least one input is HIGH. Implements logical disjunction.</p>
+          <div class="card-footer">
+            <span class="card-btn">Simulate <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- NOT Gate -->
+      <a href="NOTgate.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-not"></canvas>
+          <div class="card-preview-overlay">INVERTER</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-primitive">Primitive</span>
+          <h3>NOT Gate</h3>
+          <p>Inverts the input signal. Implements logical negation.</p>
+          <div class="card-footer">
+            <span class="card-btn">Simulate <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- NAND Gate -->
+      <a href="NANDgate.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-nand"></canvas>
+          <div class="card-preview-overlay">UNIVERSAL</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-universal">Universal</span>
+          <h3>NAND Gate</h3>
+          <p>Outputs LOW only if all inputs are HIGH. The inverse of AND.</p>
+          <div class="card-footer">
+            <span class="card-btn">Simulate <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- NOR Gate -->
+      <a href="NORgate.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-nor"></canvas>
+          <div class="card-preview-overlay">UNIVERSAL</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-universal">Universal</span>
+          <h3>NOR Gate</h3>
+          <p>Outputs HIGH only if all inputs are LOW. The inverse of OR.</p>
+          <div class="card-footer">
+            <span class="card-btn">Simulate <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- XOR Gate -->
+      <a href="EX_OR.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-xor"></canvas>
+          <div class="card-preview-overlay">EXCLUSIVE</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-derived">Derived</span>
+          <h3>XOR Gate</h3>
+          <p>Outputs HIGH if inputs are different. Implements exclusive disjunction.</p>
+          <div class="card-footer">
+            <span class="card-btn">Simulate <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+      
+      <!-- XNOR Gate -->
+      <a href="EX_NOR.html" class="card reveal">
+        <div class="card-preview">
+          <canvas id="preview-xnor"></canvas>
+          <div class="card-preview-overlay">EQUIVALENCE</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-derived">Derived</span>
+          <h3>XNOR Gate</h3>
+          <p>Outputs HIGH if inputs are the same. Implements logical equality.</p>
+          <div class="card-footer">
+            <span class="card-btn">Simulate <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+let width = window.innerWidth;
+let height = window.innerHeight;
+bgCanvas.width = width;
+bgCanvas.height = height;
+let mouseX = width / 2, mouseY = height / 2;
+let targetMouseX = mouseX, targetMouseY = mouseY;
+const nodes = [];
+const nodeCount = 40;
+
+function initNodes() {
+  nodes.length = 0;
+  for (let i = 0; i < nodeCount; i++) {
+    nodes.push({
+      x: Math.random() * width, y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+      radius: Math.random() * 2 + 1, pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'cyan' : 'purple'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, width, height);
+  const time = Date.now() * 0.001;
+  bgCtx.lineWidth = 1;
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 120) {
+        const alpha = (1 - dist / 120) * 0.15 * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+        bgCtx.strokeStyle = nodes[i].type === 'cyan' ? `rgba(34, 211, 238, ${alpha})` : `rgba(168, 85, 247, ${alpha})`;
+        bgCtx.beginPath(); bgCtx.moveTo(nodes[i].x, nodes[i].y); bgCtx.lineTo(nodes[j].x, nodes[j].y); bgCtx.stroke();
+      }
+    }
+  }
+  nodes.forEach(node => {
+    node.x += node.vx; node.y += node.vy; node.pulse += 0.03;
+    if (node.x < 0 || node.x > width) node.vx *= -1;
+    if (node.y < 0 || node.y > height) node.vy *= -1;
+    const dx = mouseX - node.x, dy = mouseY - node.y;
+    if (Math.sqrt(dx * dx + dy * dy) < 150) { node.x -= dx * 0.01; node.y -= dy * 0.01; }
+    const glowRadius = Math.max(1, node.radius + Math.sin(node.pulse) * 0.5 + 4);
+    const glow = bgCtx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius);
+    glow.addColorStop(0, node.type === 'cyan' ? 'rgba(34, 211, 238, 0.4)' : 'rgba(168, 85, 247, 0.4)');
+    glow.addColorStop(1, 'transparent');
+    bgCtx.fillStyle = glow; bgCtx.beginPath(); bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2); bgCtx.fill();
+    bgCtx.fillStyle = node.type === 'cyan' ? '#22d3ee' : '#a855f7';
+    bgCtx.beginPath(); bgCtx.arc(node.x, node.y, Math.max(0.5, node.radius), 0, Math.PI * 2); bgCtx.fill();
+  });
+}
+
+function animateBg() {
+  mouseX += (targetMouseX - mouseX) * 0.08; mouseY += (targetMouseY - mouseY) * 0.08;
+  drawBackground();
+  requestAnimationFrame(animateBg);
+}
+
+// === GATE PREVIEW ANIMATIONS ===
+
+// Generic Logic Gate Animation Loop
+function initGatePreview(canvasId, gateType) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.offsetWidth;
+  canvas.height = canvas.parentElement.offsetHeight;
+  
+  let time = 0;
+  let stateIndex = 0;
+  let timer = 0;
+  
+  // States: [A, B] -> 0: [0,0], 1: [0,1], 2: [1,0], 3: [1,1]
+  const states = [[0,0], [0,1], [1,0], [1,1]];
+  
+  // Signal particles
+  let particles = [];
+  
+  function getOutput(A, B) {
+    switch(gateType) {
+      case 'AND': return A && B;
+      case 'OR': return A || B;
+      case 'NOT': return !A; // Only uses A
+      case 'NAND': return !(A && B);
+      case 'NOR': return !(A || B);
+      case 'XOR': return A !== B;
+      case 'XNOR': return A === B;
+      default: return 0;
+    }
+  }
+  
+  function drawGateShape(x, y, w, h, type) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    switch(type) {
+      case 'AND':
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + w/2, y);
+        ctx.arc(x + w/2, y + h/2, h/2, -Math.PI/2, Math.PI/2);
+        ctx.lineTo(x, y + h);
+        ctx.closePath();
+        break;
+      case 'OR':
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + w/2, y, x + w, y + h/2);
+        ctx.quadraticCurveTo(x + w/2, y + h, x, y + h);
+        ctx.quadraticCurveTo(x + w/3, y + h/2, x, y);
+        break;
+      case 'NOT':
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + w, y + h/2);
+        ctx.lineTo(x, y + h);
+        ctx.closePath();
+        // Bubble
+        ctx.moveTo(x + w + 6, y + h/2);
+        ctx.arc(x + w + 3, y + h/2, 4, 0, Math.PI*2);
+        break;
+      case 'NAND':
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + w/2 - 5, y);
+        ctx.arc(x + w/2 - 5, y + h/2, h/2, -Math.PI/2, Math.PI/2);
+        ctx.lineTo(x, y + h);
+        ctx.closePath();
+        // Bubble
+        ctx.moveTo(x + w/2 + 2, y + h/2);
+        ctx.arc(x + w/2 - 1, y + h/2, 4, 0, Math.PI*2);
+        break;
+      case 'NOR':
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + w/2 - 5, y, x + w - 5, y + h/2);
+        ctx.quadraticCurveTo(x + w/2 - 5, y + h, x, y + h);
+        ctx.quadraticCurveTo(x + w/3, y + h/2, x, y);
+        // Bubble
+        ctx.moveTo(x + w + 2, y + h/2);
+        ctx.arc(x + w - 1, y + h/2, 4, 0, Math.PI*2);
+        break;
+      case 'XOR':
+         // Back curve
+         ctx.moveTo(x + 5, y);
+         ctx.quadraticCurveTo(x + w/3, y + h/2, x + 5, y + h);
+         // Front curve
+         ctx.moveTo(x + 5, y);
+         ctx.quadraticCurveTo(x + w/2, y, x + w, y + h/2);
+         ctx.quadraticCurveTo(x + w/2, y + h, x + 5, y + h);
+         break;
+      case 'XNOR':
+         // Back curve
+         ctx.moveTo(x + 5, y);
+         ctx.quadraticCurveTo(x + w/3, y + h/2, x + 5, y + h);
+         // Front curve
+         ctx.moveTo(x + 5, y);
+         ctx.quadraticCurveTo(x + w/2 - 5, y, x + w - 5, y + h/2);
+         ctx.quadraticCurveTo(x + w/2 - 5, y + h, x + 5, y + h);
+         // Bubble
+         ctx.moveTo(x + w + 2, y + h/2);
+         ctx.arc(x + w - 1, y + h/2, 4, 0, Math.PI*2);
+         break;
+    }
+    ctx.stroke();
+  }
+  
+  function draw() {
+    time += 0.02;
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Update state every ~60 frames
+    timer++;
+    if(timer % 80 === 0) {
+      stateIndex = (stateIndex + 1) % 4;
+      // Spawn particles on transitions
+      const inputA = states[stateIndex][0];
+      const inputB = states[stateIndex][1];
+      
+      if(gateType !== 'NOT') {
+        particles.push({x: 30, y: 70, targetX: 100, targetY: 90, active: inputA, speed: 3});
+        particles.push({x: 30, y: 130, targetX: 100, targetY: 110, active: inputB, speed: 3});
+      } else {
+        particles.push({x: 30, y: 100, targetX: 80, targetY: 100, active: inputA, speed: 3});
+      }
+    }
+    
+    const currentInputs = states[stateIndex];
+    const A = currentInputs[0];
+    const B = currentInputs[1];
+    const output = getOutput(A, B);
+    
+    // Draw Logic Symbol
+    const gateW = 50;
+    const gateH = 60;
+    const gateX = gateType === 'NOT' ? 80 : 100;
+    const gateY = 70;
+    
+    drawGateShape(gateX, gateY, gateW, gateH, gateType);
+    
+    // Draw Input Wires & LEDs
+    ctx.fillStyle = A ? '#22d3ee' : '#2a2a3e';
+    ctx.shadowBlur = A ? 10 : 0; ctx.shadowColor = '#22d3ee';
+    ctx.beginPath(); ctx.arc(30, 90, 6, 0, Math.PI*2); ctx.fill();
+    
+    if(gateType !== 'NOT') {
+      ctx.fillStyle = B ? '#a855f7' : '#2a2a3e';
+      ctx.shadowColor = '#a855f7';
+      ctx.beginPath(); ctx.arc(30, 110, 6, 0, Math.PI*2); ctx.fill();
+      // Wire B
+      ctx.strokeStyle = B ? '#a855f7' : '#152035';
+      ctx.beginPath(); ctx.moveTo(36, 110); ctx.lineTo(gateX, 110); ctx.stroke();
+    }
+    
+    // Wire A
+    ctx.strokeStyle = A ? '#22d3ee' : '#152035';
+    ctx.beginPath(); ctx.moveTo(36, 90); ctx.lineTo(gateType === 'NOT' ? gateX : gateX, gateType === 'NOT' ? 100 : 90); ctx.stroke();
+    
+    // Draw Output Wire & LED
+    const outX = gateType === 'NOT' ? gateX + gateW + 15 : gateX + gateW + 10;
+    ctx.strokeStyle = output ? '#10b981' : '#152035';
+    ctx.beginPath(); ctx.moveTo(outX, 100); ctx.lineTo(canvas.width - 30, 100); ctx.stroke();
+    
+    ctx.fillStyle = output ? '#10b981' : '#2a2a3e';
+    ctx.shadowColor = '#10b981';
+    ctx.shadowBlur = output ? 15 : 0;
+    ctx.beginPath(); ctx.arc(canvas.width - 30, 100, 6, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // Draw Truth Table Mini
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(10, canvas.height - 60, 80, 50);
+    ctx.strokeStyle = '#152035';
+    ctx.strokeRect(10, canvas.height - 60, 80, 50);
+    
+    ctx.font = '9px JetBrains Mono';
+    ctx.fillStyle = '#5c7090';
+    ctx.fillText('A B | Y', 15, canvas.height - 48);
+    ctx.fillStyle = '#fff';
+    
+    // Draw current state row highlighted
+    states.forEach((s, i) => {
+       const y = canvas.height - 35 + (i * 11);
+       ctx.fillStyle = i === stateIndex ? '#fff' : '#5c7090';
+       const res = getOutput(s[0], s[1]) ? 1 : 0;
+       ctx.fillText(`${s[0]} ${s[1]} | ${res}`, 15, y);
+       if(i === stateIndex) {
+         ctx.beginPath(); ctx.arc(85, y - 3, 2, 0, Math.PI*2); ctx.fill();
+       }
+    });
+    
+    // Update & Draw Particles
+    for(let i=particles.length-1; i>=0; i--) {
+       let p = particles[i];
+       p.x += (p.targetX - p.x) * 0.05 * p.speed;
+       p.y += (p.targetY - p.y) * 0.05 * p.speed;
+       
+       // Draw particle
+       if(p.active) {
+         ctx.fillStyle = '#ffffff';
+         ctx.shadowBlur = 10; ctx.shadowColor = '#fff';
+         ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+         ctx.shadowBlur = 0;
+       }
+       
+       // Remove if reached
+       if(Math.abs(p.x - p.targetX) < 1) particles.splice(i, 1);
+    }
+    
+    // Gate Label
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px Space Grotesk';
+    ctx.textAlign = 'center';
+    ctx.fillText(gateType, canvas.width/2, 30);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => { entry.target.classList.add('visible'); }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) { targetMouseX = e.clientX; targetMouseY = e.clientY; });
+window.addEventListener('resize', function() {
+  width = window.innerWidth; height = window.innerHeight;
+  bgCanvas.width = width; bgCanvas.height = height;
+  initNodes();
+  // Re-init previews
+  initGatePreview('preview-and', 'AND');
+  initGatePreview('preview-or', 'OR');
+  initGatePreview('preview-not', 'NOT');
+  initGatePreview('preview-nand', 'NAND');
+  initGatePreview('preview-nor', 'NOR');
+  initGatePreview('preview-xor', 'XOR');
+  initGatePreview('preview-xnor', 'XNOR');
+});
+
+// === INITIALIZE ===
+initNodes();
+animateBg();
+initScrollReveal();
+
+requestAnimationFrame(function() {
+  initGatePreview('preview-and', 'AND');
+  initGatePreview('preview-or', 'OR');
+  initGatePreview('preview-not', 'NOT');
+  initGatePreview('preview-nand', 'NAND');
+  initGatePreview('preview-nor', 'NOR');
+  initGatePreview('preview-xor', 'XOR');
+  initGatePreview('preview-xnor', 'XNOR');
+});
+</script>
+</body>
+</html>

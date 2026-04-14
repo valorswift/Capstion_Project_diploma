@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Maze Greedy Best-First Visualization</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --glass-bg: rgba(20, 20, 20, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --primary: #6c5ce7;
+            --secondary: #00cec9;
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --danger: #d63031;
+            --font-family: 'Segoe UI', sans-serif;
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+        body { margin: 0; overflow: hidden; font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-main); }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+
+        /* --- Buttons --- */
+        .toggle-btn {
+            position: absolute;
+            top: 20px;
+            width: 40px; height: 40px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; z-index: 100;
+            backdrop-filter: blur(5px);
+            transition: background 0.2s;
+        }
+        .toggle-btn:hover { background: rgba(255,255,255,0.1); }
+        .toggle-btn svg { width: 20px; height: 20px; fill: white; }
+        #btn-settings { left: 20px; }
+        #btn-info { right: 20px; }
+
+        /* --- Panels --- */
+        .panel {
+            position: absolute;
+            top: 20px;
+            width: 300px;
+            max-height: 80vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; gap: 15px;
+            z-index: 50;
+            opacity: 1; transform: translateY(0);
+            transition: opacity 0.4s, transform 0.4s;
+            overflow-y: auto;
+        }
+        .panel.hidden { opacity: 0; transform: translateY(-20px); pointer-events: none; }
+        
+        #control-panel { left: 80px; }
+        #info-panel { right: 80px; }
+
+        h1 { font-size: 1rem; margin: 0; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; color: var(--secondary); }
+
+        /* Controls */
+        .control-row { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between; }
+        
+        input[type="range"] {
+            width: 100%; cursor: pointer; accent-color: var(--primary);
+        }
+
+        .btn-group { display: flex; gap: 10px; }
+        button {
+            flex: 1; padding: 10px; border: none; border-radius: 6px;
+            font-weight: 600; font-size: 0.85rem; cursor: pointer;
+            transition: 0.2s; color: white;
+        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        
+        .b-gen { background: var(--primary); }
+        .b-run { background: var(--success); }
+        .b-pause { background: var(--warning); color: #000; }
+        .b-stop { background: var(--danger); }
+        .b-reset { background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted); }
+        .b-reset:hover { border-color: white; color: white; }
+
+        /* Log */
+        #log-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px; padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem; color: #ccc;
+            height: 200px; overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .log-item { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
+
+        /* Legend */
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.75rem; color: var(--text-muted); }
+        .l-item { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        #status {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #000; padding: 10px 20px; border-radius: 20px;
+            font-size: 0.9rem; border: 1px solid var(--glass-border);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        }
+        #status.visible { opacity: 1; }
+
+        #loader {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.9); z-index: 200;
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+        }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: var(--secondary) solid; border-radius: 50%; animation: spin 1s infinite linear; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Buttons -->
+    <div id="btn-settings" class="toggle-btn" title="Settings">
+        <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+    </div>
+    <div id="btn-info" class="toggle-btn" title="Logs">
+        <svg viewBox="0 0 24 24"><path d="M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z"/></svg>
+    </div>
+
+    <!-- Left Panel -->
+    <div id="control-panel" class="panel">
+        <h1>Greedy Best-First</h1>
+        
+        <div class="control-row">
+            <label>Size: <span id="sz-val">15</span></label>
+            <input type="range" id="size-in" min="5" max="40" value="15">
+        </div>
+
+        <div class="control-row">
+            <label>Speed: <span id="sp-val">50%</span></label>
+            <input type="range" id="speed-in" min="1" max="100" value="50">
+        </div>
+
+        <div class="btn-group">
+            <button id="gen-btn" class="b-gen">Generate</button>
+            <button id="run-btn" class="b-run" disabled>Start</button>
+        </div>
+
+        <div class="btn-group">
+            <button id="pause-btn" class="b-pause" disabled>Pause</button>
+            <button id="stop-btn" class="b-stop" disabled>Stop</button>
+        </div>
+
+        <button id="cam-btn" class="b-reset">Reset Camera</button>
+
+        <div class="legend">
+            <div class="l-item"><div class="dot" style="background:#00b894"></div>Start</div>
+            <div class="l-item"><div class="dot" style="background:#d63031"></div>End</div>
+            <div class="l-item"><div class="dot" style="background:#00cec9"></div>Agent</div>
+            <div class="l-item"><div class="dot" style="background:#f1c40f"></div>Path</div>
+            <div class="l-item"><div class="dot" style="background:#0984e3"></div>Open Set</div>
+            <div class="l-item"><div class="dot" style="background:#485460"></div>Closed Set</div>
+        </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div id="info-panel" class="panel hidden">
+        <h1>Algorithm Log</h1>
+        <div id="log-box"></div>
+    </div>
+
+    <div id="status">Ready</div>
+    <div id="loader"><div class="spinner"></div><div style="margin-top:10px; color:white;">Generating...</div></div>
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Configuration ---
+        const CS = 2; // Cell Size
+        const WH = 1.2; // Wall Height
+        const WT = 0.15; // Wall Thickness
+        
+        const COLOR = {
+            WALL: 0x303030, FLOOR: 0x1e1e1e, START: 0x00b894, END: 0xd63031,
+            OPEN: 0x0984e3,      // Blue (Candidates)
+            CLOSED: 0x2d3436,    // Dark Grey (Evaluated)
+            PATH: 0xf1c40f, 
+            AGENT: 0x00cec9
+        };
+
+        // --- State ---
+        let cols, rows;
+        let grid = [], stack = [], floorTiles = [];
+        let isRunning = false, isPaused = false, stopReq = false;
+        let scene, camera, renderer, controls, agent, mazeGroup;
+
+        // --- DOM Elements ---
+        const get = (id) => document.getElementById(id);
+        const ui = {
+            sizeIn: get('size-in'), szVal: get('sz-val'),
+            speedIn: get('speed-in'), spVal: get('sp-val'),
+            genBtn: get('gen-btn'), runBtn: get('run-btn'),
+            pauseBtn: get('pause-btn'), stopBtn: get('stop-btn'),
+            camBtn: get('cam-btn'),
+            logBox: get('log-box'),
+            status: get('status'),
+            loader: get('loader'),
+            cPanel: get('control-panel'),
+            iPanel: get('info-panel'),
+            tSettings: get('btn-settings'),
+            tInfo: get('btn-info')
+        };
+
+        // --- Logging ---
+        function log(msg) {
+            const div = document.createElement('div');
+            div.className = 'log-item';
+            div.innerText = `> ${msg}`;
+            ui.logBox.appendChild(div);
+            ui.logBox.scrollTop = ui.logBox.scrollHeight;
+        }
+
+        // --- Initialization ---
+        function init() {
+            try {
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x121212);
+                scene.fog = new THREE.Fog(0x121212, 40, 200);
+
+                camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 500);
+                camera.position.set(0, 40, 30);
+
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+                controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.maxPolarAngle = Math.PI/2 - 0.05;
+
+                // Lights
+                scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+                const dLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                dLight.position.set(20, 60, 20);
+                dLight.castShadow = true;
+                dLight.shadow.mapSize.set(2048, 2048);
+                scene.add(dLight);
+
+                // Ground Grid
+                const gridHelper = new THREE.GridHelper(200, 100, 0x333333, 0x222222);
+                gridHelper.position.y = -0.05;
+                scene.add(gridHelper);
+
+                mazeGroup = new THREE.Group();
+                scene.add(mazeGroup);
+
+                // Event Listeners
+                window.addEventListener('resize', onResize);
+                ui.tSettings.onclick = () => ui.cPanel.classList.toggle('hidden');
+                ui.tInfo.onclick = () => ui.iPanel.classList.toggle('hidden');
+                ui.sizeIn.oninput = (e) => ui.szVal.innerText = e.target.value;
+                ui.speedIn.oninput = (e) => ui.spVal.innerText = e.target.value + '%';
+                ui.genBtn.onclick = generateMaze;
+                ui.runBtn.onclick = startGreedy;
+                ui.pauseBtn.onclick = togglePause;
+                ui.stopBtn.onclick = stopSearch;
+                ui.camBtn.onclick = resetCam;
+
+                generateMaze();
+                animate();
+
+            } catch (e) {
+                console.error("Init Error:", e);
+                alert("Initialization failed: " + e.message);
+            }
+        }
+
+        // --- Maze Logic (Same as before) ---
+        class Cell {
+            constructor(c, r) {
+                this.c = c; this.r = r;
+                this.walls = [true, true, true, true];
+                this.visited = false;
+            }
+            checkNeighbors() {
+                let n = [];
+                let tIdx = getIdx(this.c, this.r-1);
+                if (tIdx !== -1) { let t = grid[tIdx]; if (!t.visited) n.push(t); }
+                let rIdx = getIdx(this.c+1, this.r);
+                if (rIdx !== -1) { let rCell = grid[rIdx]; if (!rCell.visited) n.push(rCell); }
+                let bIdx = getIdx(this.c, this.r+1);
+                if (bIdx !== -1) { let b = grid[bIdx]; if (!b.visited) n.push(b); }
+                let lIdx = getIdx(this.c-1, this.r);
+                if (lIdx !== -1) { let l = grid[lIdx]; if (!l.visited) n.push(l); }
+                if (n.length > 0) return n[Math.floor(Math.random()*n.length)];
+                return undefined;
+            }
+        }
+
+        function getIdx(c, r) {
+            if (c<0 || r<0 || c>=cols || r>=rows) return -1;
+            return c + r*cols;
+        }
+
+        function removeWalls(a, b) {
+            let x = a.c - b.c;
+            if (x===1) { a.walls[3]=false; b.walls[1]=false; }
+            if (x===-1) { a.walls[1]=false; b.walls[3]=false; }
+            let y = a.r - b.r;
+            if (y===1) { a.walls[0]=false; b.walls[2]=false; }
+            if (y===-1) { a.walls[2]=false; b.walls[0]=false; }
+        }
+
+        async function generateMaze() {
+            if (isRunning) stopSearch();
+            ui.loader.style.display = 'flex';
+            await new Promise(r => setTimeout(r, 50));
+            try {
+                cols = parseInt(ui.sizeIn.value);
+                rows = cols;
+                grid = []; stack = []; floorTiles = [];
+                while(mazeGroup.children.length > 0){ mazeGroup.remove(mazeGroup.children[0]); }
+                for (let r=0; r<rows; r++) {
+                    for (let c=0; c<cols; c++) { grid.push(new Cell(c, r)); }
+                }
+                let curr = grid[0]; curr.visited = true; stack.push(curr);
+                while (stack.length > 0) {
+                    let next = curr.checkNeighbors();
+                    if (next) { next.visited = true; stack.push(curr); removeWalls(curr, next); curr = next; } 
+                    else { curr = stack.pop(); }
+                }
+                build3D(); createAgent(); resetCam(); setButtons('idle'); log("Maze Generated. Ready.");
+            } catch (e) { console.error(e); log("Error generating maze: " + e.message); }
+            finally { ui.loader.style.display = 'none'; }
+        }
+
+        function build3D() {
+            const wGeo = new THREE.BoxGeometry(CS, WH, WT);
+            const wMat = new THREE.MeshStandardMaterial({ color: COLOR.WALL });
+            const fGeo = new THREE.PlaneGeometry(CS-0.1, CS-0.1);
+            const fMat = new THREE.MeshStandardMaterial({ color: COLOR.FLOOR });
+            const offX = (cols*CS)/2, offZ = (rows*CS)/2;
+            for (let i=0; i<grid.length; i++) {
+                let c = grid[i];
+                let x = c.c * CS - offX + CS/2;
+                let z = c.r * CS - offZ + CS/2;
+                let floor = new THREE.Mesh(fGeo, fMat.clone());
+                floor.rotation.x = -Math.PI/2; floor.position.set(x, 0, z); floor.receiveShadow = true;
+                mazeGroup.add(floor); floorTiles[i] = floor;
+                if (c.walls[0]) addWall(x, z-CS/2, wGeo, wMat);
+                if (c.walls[1]) addWall(x+CS/2, z, wGeo, wMat, true);
+                if (c.walls[2]) addWall(x, z+CS/2, wGeo, wMat);
+                if (c.walls[3]) addWall(x-CS/2, z, wGeo, wMat, true);
+            }
+            floorTiles[0].material.color.setHex(COLOR.START);
+            floorTiles[grid.length-1].material.color.setHex(COLOR.END);
+        }
+
+        function addWall(x, z, geo, mat, rot=false) {
+            let w = new THREE.Mesh(geo, mat); w.position.set(x, WH/2, z);
+            if (rot) w.rotation.y = Math.PI/2; w.castShadow = true; mazeGroup.add(w);
+        }
+
+        function createAgent() {
+            if (agent) mazeGroup.remove(agent);
+            let g = new THREE.SphereGeometry(CS*0.25, 16, 16);
+            let m = new THREE.MeshStandardMaterial({ color: COLOR.AGENT, emissive: COLOR.AGENT, emissiveIntensity: 0.5 });
+            agent = new THREE.Mesh(g, m); agent.castShadow = true; agent.add(new THREE.PointLight(COLOR.AGENT, 1, 10));
+            let p = getPos(0); agent.position.set(p.x, 0.5, p.z); mazeGroup.add(agent);
+        }
+
+        function getPos(i) {
+            let c = i%cols, r = Math.floor(i/cols);
+            return { x: c*CS - (cols*CS)/2 + CS/2, z: r*CS - (rows*CS)/2 + CS/2 };
+        }
+
+        // --- GREEDY BEST FIRST SEARCH LOGIC ---
+
+        // Heuristic: Manhattan Distance
+        function heuristic(nodeIdx, goalIdx) {
+            let n = grid[nodeIdx];
+            let g = grid[goalIdx];
+            return Math.abs(n.c - g.c) + Math.abs(n.r - g.r);
+        }
+
+        async function startGreedy() {
+            isRunning = true; isPaused = false; stopReq = false;
+            setButtons('running');
+            log("Greedy Best-First Started...");
+
+            // Reset colors
+            for(let i=1; i<floorTiles.length-1; i++) {
+                floorTiles[i].material.color.setHex(COLOR.FLOOR);
+                floorTiles[i].material.emissive.setHex(0x000000);
+            }
+
+            let openSet = [0]; // Indices
+            let closedSet = new Set();
+            let cameFrom = new Map(); 
+
+            let found = false;
+            let path = [];
+            const goalIdx = grid.length - 1;
+
+            try {
+                while (openSet.length > 0) {
+                    if (stopReq) throw new Error("Stopped");
+                    while (isPaused) { if (stopReq) throw new Error("Stopped"); await new Promise(r => setTimeout(r, 100)); }
+
+                    // 1. Pick node with lowest Heuristic ONLY
+                    openSet.sort((a,b) => heuristic(a, goalIdx) - heuristic(b, goalIdx));
+                    let currentIdx = openSet.shift(); 
+
+                    // 2. Move Agent
+                    let currCell = grid[currentIdx];
+                    let pos = getPos(currentIdx);
+
+                    const currentSpeed = parseInt(ui.speedIn.value);
+                    const currentDuration = Math.max(0.02, 0.4 - (currentSpeed * 0.0038));
+
+                    await moveAgent(pos.x, pos.z, currentDuration);
+
+                    if (currentIdx === goalIdx) {
+                        found = true;
+                        break;
+                    }
+
+                    // Mark as Closed
+                    closedSet.add(currentIdx);
+                    if (currentIdx !== 0) {
+                        floorTiles[currentIdx].material.color.setHex(COLOR.CLOSED);
+                        floorTiles[currentIdx].material.emissive.setHex(0x050505);
+                    }
+
+                    let neighbors = getNeighbors(currCell);
+                    
+                    for (let neighborIdx of neighbors) {
+                        // Greedy doesn't track G score, so just check sets
+                        if (!closedSet.has(neighborIdx) && !openSet.includes(neighborIdx)) {
+                            cameFrom.set(neighborIdx, currentIdx);
+                            openSet.push(neighborIdx);
+                            
+                            // Visual: Mark as Open
+                            floorTiles[neighborIdx].material.color.setHex(COLOR.OPEN);
+                            floorTiles[neighborIdx].material.emissive.setHex(0x001133);
+                        }
+                    }
+                }
+
+                if (found) {
+                    log("GOAL REACHED!", "success");
+                    setButtons('finished');
+                    
+                    // Reconstruct Path
+                    let curr = goalIdx;
+                    while (curr !== 0) {
+                        path.push(curr);
+                        curr = cameFrom.get(curr);
+                    }
+                    path.push(0);
+                    path.reverse();
+
+                    // Animate Path
+                    for (let idx of path) {
+                        floorTiles[idx].material.color.setHex(COLOR.PATH);
+                        floorTiles[idx].material.emissive.setHex(0x554400);
+                        await new Promise(r => setTimeout(r, 20));
+                    }
+                    
+                    let endP = getPos(goalIdx);
+                    await moveAgent(endP.x, endP.z, 0.5);
+                    log(`Path length: ${path.length}`);
+                } else {
+                    log("No path found.");
+                }
+
+            } catch (e) {
+                log("Search interrupted.");
+                console.log(e.message);
+            } finally {
+                isRunning = false; isPaused = false; stopReq = false;
+                setButtons('idle');
+            }
+        }
+
+        function getNeighbors(c) {
+            let n = [];
+            if (!c.walls[0]) { let i = getIdx(c.c, c.r-1); if (i !== -1) n.push(i); }
+            if (!c.walls[1]) { let i = getIdx(c.c+1, c.r); if (i !== -1) n.push(i); }
+            if (!c.walls[2]) { let i = getIdx(c.c, c.r+1); if (i !== -1) n.push(i); }
+            if (!c.walls[3]) { let i = getIdx(c.c-1, c.r); if (i !== -1) n.push(i); }
+            return n;
+        }
+
+        async function moveAgent(x, z, dur) {
+            let start = agent.position.clone();
+            let end = new THREE.Vector3(x, 0.5, z);
+            let time = 0;
+            return new Promise(res => {
+                function loop() {
+                    time += 1/60; let p = Math.min(time / dur, 1);
+                    p = 1 - Math.pow(1-p, 3);
+                    agent.position.lerpVectors(start, end, p);
+                    agent.position.y = 0.5 + Math.sin(p*Math.PI)*0.5;
+                    if (p < 1) requestAnimationFrame(loop); else res();
+                }
+                loop();
+            });
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            setButtons(isPaused ? 'paused' : 'running');
+            log(isPaused ? "Paused." : "Resumed.");
+        }
+
+        function stopSearch() {
+            if (!isRunning) return;
+            stopReq = true;
+            log("Stopping...");
+        }
+
+        function setButtons(state) {
+            if (state === 'idle') {
+                ui.genBtn.disabled = false; ui.runBtn.disabled = false;
+                ui.pauseBtn.disabled = true; ui.stopBtn.disabled = true;
+                ui.pauseBtn.innerText = "Pause"; ui.pauseBtn.style.background = 'var(--warning)';
+            } else if (state === 'running') {
+                ui.genBtn.disabled = true; ui.runBtn.disabled = true;
+                ui.pauseBtn.disabled = false; ui.stopBtn.disabled = false;
+                ui.pauseBtn.innerText = "Pause"; ui.pauseBtn.style.background = 'var(--warning)';
+            } else if (state === 'paused') {
+                ui.pauseBtn.innerText = "Resume"; ui.pauseBtn.style.background = 'var(--success)'; ui.pauseBtn.style.color = '#fff';
+            } else if (state === 'finished') {
+                ui.genBtn.disabled = false; ui.runBtn.disabled = false;
+                ui.pauseBtn.disabled = true; ui.stopBtn.disabled = true;
+            }
+        }
+
+        function resetCam() {
+            const dist = Math.max(cols, rows) * CS * 1.5;
+            camera.position.set(0, dist*0.8, dist*0.5);
+            controls.target.set(0,0,0); controls.update();
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate); controls.update();
+            if(agent && !isRunning) { agent.position.y = 0.5 + Math.sin(Date.now()*0.005)*0.1; }
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>

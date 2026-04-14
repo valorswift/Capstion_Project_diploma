@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Pro: Array Dashboard</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+<style>
+:root {
+  /* Dark Mode Variables Only */
+  --bg-body: #0f172a;
+  --bg-sidebar: rgba(30, 41, 59, 0.95);
+  --bg-card: rgba(30, 41, 59, 0.6);
+  --bg-input: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-light: rgba(59, 130, 246, 0.2);
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --purple: #8b5cf6;
+  --purple-light: rgba(139, 92, 246, 0.2);
+
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --sidebar-width: 280px;
+  
+  --bar-default: linear-gradient(180deg, #60a5fa, #3b82f6);
+  --bar-compare: #facc15;
+  --bar-swap: #22c55e;
+  --bar-search: #a855f7;
+  --bar-found: #16a34a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body {
+  min-height: 100vh;
+  background: var(--bg-body);
+  color: var(--text-main);
+  overflow-x: hidden;
+}
+
+/* --- Layout Structure --- */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* --- Header (Mobile) --- */
+.mobile-header {
+  display: none; /* Hidden on desktop */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--border-color);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
+  z-index: 50;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-brand {
+  font-size: 1.25rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-menu {
+  padding: 20px 12px;
+  flex: 1;
+}
+
+.nav-group-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 20px 12px 8px;
+  font-weight: 700;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.nav-item:hover {
+  background: var(--bg-body);
+  color: var(--primary);
+}
+
+.nav-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.nav-item i { font-size: 1.2rem; }
+
+.sidebar-footer {
+  padding: 20px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+/* --- Main Content --- */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding: 30px 40px;
+  transition: margin-left 0.3s ease, padding 0.3s ease;
+  position: relative;
+}
+
+/* --- Header in Main Content --- */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.breadcrumbs {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.breadcrumbs span.current { color: var(--primary); font-weight: 600; }
+
+.btn-icon {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-icon:hover { background: var(--bg-input); transform: translateY(-2px); }
+
+/* --- View Switching --- */
+.view-section {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+.view-section.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: var(--text-main);
+}
+.section-subtitle {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 30px;
+  max-width: 600px;
+  line-height: 1.6;
+}
+
+/* --- Cards & Content --- */
+.card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.info-box h3 {
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+  color: var(--primary);
+}
+.info-box p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.5; }
+
+/* --- Visualizer Specifics --- */
+.controls-wrapper {
+  background: var(--bg-input);
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.input-group { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.input-field { flex: 1; min-width: 140px; position: relative; }
+.input-field label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
+
+input {
+  width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);
+  background: var(--bg-body); color: var(--text-main); font-size: 0.95rem; transition: 0.2s;
+}
+input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+
+.button-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+
+button {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 16px; border-radius: 10px; border: none; font-weight: 600;
+  font-size: 0.9rem; cursor: pointer; transition: all 0.2s; color: white;
+}
+button:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+.btn-primary { background: var(--primary); }
+.btn-success { background: var(--success); }
+.btn-danger { background: var(--danger); }
+.btn-purple { background: var(--purple); }
+.btn-gray { background: var(--text-muted); }
+
+.visual-container {
+  height: 400px; 
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.5), rgba(15, 23, 42, 0));
+  border-radius: 16px; border: 1px dashed #334155; display: flex;
+  align-items: flex-end; justify-content: center; padding: 20px 40px; position: relative;
+  overflow: hidden; margin-bottom: 16px;
+}
+
+.bar-wrap {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  margin: 0 6px; height: 100%; flex: 1; max-width: 60px; position: relative;
+  transition: transform 0.3s ease;
+}
+.bar {
+  width: 100%; background: var(--bar-default); border-radius: 8px 8px 0 0;
+  color: white; font-weight: 700; font-size: 0.85rem; display: flex;
+  align-items: flex-end; justify-content: center; padding-bottom: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: height 0.3s ease, background-color 0.3s ease, transform 0.2s ease;
+}
+.index-label { margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+
+.bar.compare { background: var(--bar-compare); color: black; }
+.bar.swap { background: var(--bar-swap); color: white; }
+.bar.search { background: var(--bar-search); }
+.bar.found { background: var(--bar-found); transform: scale(1.1); z-index: 2; box-shadow: 0 0 15px rgba(22, 163, 74, 0.4); }
+
+/* --- Concept Explanation Panel --- */
+.concept-panel {
+  background: var(--primary-light);
+  border-radius: 12px;
+  padding: 20px;
+  border-left: 5px solid var(--primary);
+  margin-top: 20px;
+}
+.concept-panel h4 { color: var(--primary); margin-bottom: 8px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+.concept-panel p { font-size: 0.95rem; color: var(--text-main); margin-bottom: 10px; line-height: 1.5; }
+.code-block {
+  background: rgba(0,0,0,0.3);
+  padding: 10px;
+  border-radius: 6px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+/* --- Diagrams & Visuals --- */
+.diagram-container {
+  display: flex;
+  justify-content: center;
+  margin: 30px 0;
+}
+
+.memory-block {
+  display: flex;
+  gap: 2px;
+}
+.mem-cell {
+  width: 60px;
+  height: 80px;
+  border: 2px solid var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: var(--bg-card);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.8rem;
+}
+.mem-addr {
+  position: absolute;
+  bottom: -25px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.mem-cell.active { border-color: var(--primary); background: var(--primary-light); }
+.mem-value { font-weight: 700; font-size: 1rem; }
+.mem-index { position: absolute; top: -20px; color: var(--text-muted); font-size: 0.7rem; }
+
+/* --- Quiz Section --- */
+.quiz-container {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+.quiz-options { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.quiz-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.quiz-btn:hover { border-color: var(--primary); color: var(--primary); }
+.quiz-btn.correct { background: var(--success); color: white; border-color: var(--success); }
+.quiz-btn.wrong { background: var(--danger); color: white; border-color: var(--danger); }
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); width: 260px; }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; padding: 80px 20px 20px 20px; }
+  .mobile-header { display: flex; }
+  .visual-container { height: 300px; }
+  .bar { font-size: 0px; } /* Hide numbers on very small screens */
+  .button-grid { grid-template-columns: 1fr 1fr; }
+  .input-group { flex-direction: column; }
+}
+
+/* --- Utility --- */
+.hidden { display: none !important; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Mobile Header -->
+<div class="mobile-header">
+  <div class="sidebar-brand">
+    <i class="ri-braces-line"></i> DSA Pro
+  </div>
+  <button class="btn-icon" onclick="toggleSidebar()" aria-label="Toggle Menu">
+    <i class="ri-menu-4-line"></i>
+  </button>
+</div>
+
+<div class="app-layout">
+  
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <i class="ri-braces-line"></i> DSA Pro
+      </div>
+      <button class="btn-icon" style="width:30px; height:30px;" onclick="open('../linear.html')" class="desktop-only">
+        <i class="ri-arrow-left-s-line"></i>
+      </button>
+    </div>
+
+    <div class="nav-menu">
+      <div class="nav-item active" onclick="navigate('visualizer')">
+        <i class="ri-bar-chart-box-line"></i> Visualizer
+      </div>
+
+      <div class="nav-group-label">Core Concepts</div>
+      <div class="nav-item" onclick="navigate('basics')">
+        <i class="ri-book-open-line"></i> Array Basics
+      </div>
+      <div class="nav-item" onclick="navigate('memory')">
+        <i class="ri-microscope-line"></i> Memory Model
+      </div>
+      <div class="nav-item" onclick="navigate('operations')">
+        <i class="ri-function-line"></i> Operations
+      </div>
+      
+      <div class="nav-group-label">Analysis</div>
+      <div class="nav-item" onclick="navigate('complexity')">
+        <i class="ri-time-line"></i> Time Complexity
+      </div>
+      <div class="nav-item" onclick="navigate('advanced')">
+        <i class="ri-grid-fill"></i> 1D vs 2D Arrays
+      </div>
+
+      <div class="nav-group-label">Real World</div>
+      <div class="nav-item" onclick="navigate('microprocessor')">
+        <i class="ri-cpu-line"></i> Microprocessor
+      </div>
+      <div class="nav-item" onclick="navigate('applications')">
+        <i class="ri-rocket-line"></i> Applications
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span style="font-size: 0.8rem; color: var(--text-muted);">© 2023 DSA Visuals</span>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    
+    <!-- Top Bar (Breadcrumbs & Title) -->
+    <div class="top-bar">
+      <div style="display: flex; gap: 10px;">
+        <!-- Additional top actions can go here -->
+         <a href="linear.html" class="btn-back">
+        <i class="ri-arrow-left-line"></i> Back
+      </a>
+      </div>
+    </div>
+
+    <!-- VIEW 1: INTERACTIVE VISUALIZER -->
+    <section id="view-visualizer" class="view-section active">
+      <h2 class="section-title">Interactive Array Visualizer</h2>
+      <p class="section-subtitle">Visualize operations like Insertion, Deletion, Searching (Linear), and Sorting (Bubble) in real-time.</p>
+
+      <div class="controls-wrapper">
+        <div class="input-group">
+          <div class="input-field">
+            <label>Value</label>
+            <input type="number" id="valueInput" placeholder="e.g. 50" onkeydown="handleEnter(event)">
+          </div>
+          <div class="input-field">
+            <label>Index (Optional)</label>
+            <input type="number" id="indexInput" placeholder="0-" onkeydown="handleEnter(event)">
+          </div>
+        </div>
+
+        <div class="button-grid">
+          <button class="btn-primary" onclick="generate()">
+            <i class="ri-refresh-line"></i> Generate
+          </button>
+          <button class="btn-success" onclick="add()">
+            <i class="ri-add-line"></i> Add
+          </button>
+          <button class="btn-danger" onclick="removeItem()">
+            <i class="ri-delete-bin-line"></i> Delete
+          </button>
+          <button class="btn-gray" onclick="clearArray()">
+            <i class="ri-eraser-line"></i> Clear
+          </button>
+          
+          <button class="btn-purple" onclick="sortArray(true)">
+            <i class="ri-sort-asc"></i> Sort Asc
+          </button>
+          <button class="btn-purple" onclick="sortArray(false)">
+            <i class="ri-sort-desc"></i> Sort Desc
+          </button>
+          <button class="btn-primary" onclick="searchValue()" style="grid-column: span 2;">
+            <i class="ri-search-eye-line"></i> Linear Search
+          </button>
+        </div>
+      </div>
+
+      <div class="visual-container" id="visual">
+        <!-- Bars injected via JS -->
+      </div>
+
+      <div class="status-bar" id="statusBox" style="background:var(--bg-input); padding:12px; border-radius:8px; border-left:4px solid var(--primary); color:var(--text-muted);">
+        <i class="ri-information-line"></i> Ready. Generate an array to start.
+      </div>
+
+      <!-- Dynamic Concept Explanation -->
+      <div class="concept-panel hidden" id="conceptPanel">
+        <h4 id="conceptTitle"><i class="ri-lightbulb-flash-line"></i> Algorithm Logic</h4>
+        <div id="conceptContent"></div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: BASICS -->
+    <section id="view-basics" class="view-section">
+      <h2 class="section-title">Array Basics</h2>
+      <p class="section-subtitle">A collection of items stored at contiguous memory locations.</p>
+
+      <div class="card">
+        <h3>What is an Array?</h3>
+        <p style="margin-top:10px; line-height:1.6; color:var(--text-muted);">
+          An array is a data structure consisting of a collection of elements, each identified by at least one array index or key. 
+          Unlike linked lists, arrays store data in a <strong>contiguous</strong> block of memory. This allows for extremely fast access 
+          using simple math.
+        </p>
+      </div>
+
+      <div class="info-grid">
+        <div class="card info-box">
+          <h3>Static Arrays</h3>
+          <p>Fixed size allocated at compile time. Memory is reserved upfront. Fast, but size cannot change.</p>
+        </div>
+        <div class="card info-box">
+          <h3>Dynamic Arrays</h3>
+          <p>Size can grow. When full, a larger block is allocated, data is copied, and old block is freed (e.g., ArrayList in Java, std::vector in C++).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: MEMORY MODEL -->
+    <section id="view-memory" class="view-section">
+      <h2 class="section-title">Memory Representation</h2>
+      <p class="section-subtitle">How arrays map to physical RAM addresses.</p>
+
+      <div class="card">
+        <h3>Address Calculation Formula</h3>
+        <p style="margin-bottom: 15px; color: var(--text-muted);">
+          Because memory is contiguous, we can calculate the address of any element instantly using:
+        </p>
+        <div class="code-block" style="text-align: center; font-size: 1.1rem; margin-bottom: 20px;">
+          Address(A[i]) = Base_Address + (i × Element_Size)
+        </div>
+
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
+            <div>
+                <label style="display:block; margin-bottom:5px; font-size:0.9rem; font-weight:600;">Base Address (Decimal)</label>
+                <input type="number" id="memBase" value="1000" style="width: 120px;">
+            </div>
+            <div>
+                <label style="display:block; margin-bottom:5px; font-size:0.9rem; font-weight:600;">Element Size (Bytes)</label>
+                <input type="number" id="memSize" value="4" style="width: 120px;">
+            </div>
+            <div>
+                <label style="display:block; margin-bottom:5px; font-size:0.9rem; font-weight:600;">Target Index (i)</label>
+                <input type="number" id="memIndex" value="0" style="width: 120px;" oninput="updateMemoryCalc()">
+            </div>
+        </div>
+      </div>
+
+      <div class="card" style="text-align: center;">
+        <h3>Visual Memory Layout</h3>
+        <div class="diagram-container">
+            <div class="memory-block" id="memVisual">
+                <!-- JS generated blocks -->
+            </div>
+        </div>
+        <p id="memResult" style="font-weight: 700; color: var(--primary); font-size: 1.2rem;">
+            Address of arr[0]: 1000
+        </p>
+      </div>
+    </section>
+
+    <!-- VIEW 4: OPERATIONS -->
+    <section id="view-operations" class="view-section">
+      <h2 class="section-title">Common Operations</h2>
+      <div class="info-grid">
+        <div class="card">
+          <h3><i class="ri-search-line" style="color:var(--purple)"></i> Traversal</h3>
+          <p>Visiting every element exactly once. Used for printing, searching, or aggregating.</p>
+        </div>
+        <div class="card">
+          <h3><i class="ri-edit-line" style="color:var(--primary)"></i> Insertion</h3>
+          <p>Adding an element. In static arrays, this requires shifting all subsequent elements to make space.</p>
+        </div>
+        <div class="card">
+          <h3><i class="ri-delete-bin-line" style="color:var(--danger)"></i> Deletion</h3>
+          <p>Removing an element. Requires shifting the trailing elements left to fill the gap.</p>
+        </div>
+        <div class="card">
+          <h3><i class="ri-sort-asc" style="color:var(--success)"></i> Sorting</h3>
+          <p>Arranging elements in a specific order (Asc/Desc). Algorithms include Bubble, Quick, and Merge Sort.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: TIME COMPLEXITY -->
+    <section id="view-complexity" class="view-section">
+      <h2 class="section-title">Time Complexity</h2>
+      <p class="section-subtitle">Measuring the efficiency of array operations.</p>
+
+      <div class="card">
+        <table style="width: 100%; border-collapse: collapse; color: var(--text-main);">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                    <th style="padding: 10px;">Operation</th>
+                    <th style="padding: 10px;">Best Case</th>
+                    <th style="padding: 10px;">Average Case</th>
+                    <th style="padding: 10px;">Worst Case</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 10px; font-weight:600;">Access</td>
+                    <td style="padding: 10px; color:var(--success);">O(1)</td>
+                    <td style="padding: 10px; color:var(--success);">O(1)</td>
+                    <td style="padding: 10px; color:var(--success);">O(1)</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 10px; font-weight:600;">Search</td>
+                    <td style="padding: 10px; color:var(--success);">O(1)</td>
+                    <td style="padding: 10px; color:var(--warning);">O(n)</td>
+                    <td style="padding: 10px; color:var(--danger);">O(n)</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; font-weight:600;">Insert/Delete (at end)</td>
+                    <td style="padding: 10px; color:var(--success);">O(1)</td>
+                    <td style="padding: 10px; color:var(--success);">O(1)</td>
+                    <td style="padding: 10px; color:var(--success);">O(1)</td>
+                </tr>
+            </tbody>
+        </table>
+      </div>
+
+      <div class="quiz-container">
+        <h3>Quick Quiz</h3>
+        <p style="color:var(--text-muted);">What is the time complexity to access the 500th element in an array?</p>
+        <div class="quiz-options">
+            <button class="quiz-btn" onclick="checkQuiz(this, false)">O(n)</button>
+            <button class="quiz-btn" onclick="checkQuiz(this, false)">O(log n)</button>
+            <button class="quiz-btn" onclick="checkQuiz(this, true)">O(1)</button>
+            <button class="quiz-btn" onclick="checkQuiz(this, false)">O(n²)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 6: ADVANCED (1D vs 2D) -->
+    <section id="view-advanced" class="view-section">
+      <h2 class="section-title">1D vs 2D Arrays</h2>
+      
+      <div class="info-grid">
+        <div class="card">
+            <h3>1D Array (Linear)</h3>
+            <p>A single row of elements. Memory addresses are sequential.</p>
+            <div class="code-block">int arr[5] = {1, 2, 3, 4, 5};</div>
+        </div>
+        <div class="card">
+            <h3>2D Array (Matrix)</h3>
+            <p>Can be thought of as an array of arrays. Stored linearly in memory using Row-Major or Column-Major order.</p>
+            <div class="code-block">int matrix[2][3] = {{1,2,3}, {4,5,6}};</div>
+        </div>
+      </div>
+
+      <div class="card">
+          <h3>Row-Major Order Addressing</h3>
+          <p>In most languages (C, C++, Java), 2D arrays are stored row by row.</p>
+          <div class="code-block">
+              Address(arr[i][j]) = Base + ((i * cols) + j) * size
+          </div>
+      </div>
+    </section>
+
+    <!-- VIEW 7: MICROPROCESSOR -->
+    <section id="view-microprocessor" class="view-section">
+      <h2 class="section-title">Arrays in Microprocessors</h2>
+      <p class="section-subtitle">How hardware handles array data.</p>
+
+      <div class="card">
+        <h3>Hardware Data Flow</h3>
+        <div class="diagram-container">
+            <!-- Simple SVG Diagram -->
+            <svg width="400" height="250" viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg">
+                <!-- CPU -->
+                <rect x="140" y="20" width="120" height="60" rx="5" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2"/>
+                <text x="200" y="55" text-anchor="middle" font-family="Inter" font-weight="bold" fill="#f8fafc">CPU</text>
+                
+                <!-- Registers -->
+                <rect x="160" y="90" width="80" height="30" rx="3" fill="#e2e8f0" stroke="#94a3b8"/>
+                <text x="200" y="110" text-anchor="middle" font-size="12" fill="#64748b">Registers</text>
+
+                <!-- Arrow -->
+                <line x1="200" y1="120" x2="200" y2="150" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                <!-- RAM -->
+                <rect x="50" y="150" width="300" height="80" rx="5" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="2"/>
+                <text x="200" y="175" text-anchor="middle" font-family="Inter" font-weight="bold" fill="#f8fafc">RAM (Main Memory)</text>
+
+                <!-- Array Blocks inside RAM -->
+                <rect x="70" y="190" width="30" height="30" fill="white" stroke="#333"/>
+                <text x="85" y="210" text-anchor="middle" font-size="10">10</text>
+                
+                <rect x="105" y="190" width="30" height="30" fill="white" stroke="#333"/>
+                <text x="120" y="210" text-anchor="middle" font-size="10">20</text>
+
+                <rect x="140" y="190" width="30" height="30" fill="#22c55e" stroke="#333"/> <!-- Highlighted -->
+                <text x="155" y="210" text-anchor="middle" font-size="10">30</text>
+
+                <rect x="175" y="190" width="30" height="30" fill="white" stroke="#333"/>
+                <text x="190" y="210" text-anchor="middle" font-size="10">40</text>
+                
+                <text x="320" y="210" text-anchor="start" font-size="12" fill="#64748b">Contiguous Blocks</text>
+
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+        <ul style="margin-left: 20px; color: var(--text-muted); line-height: 1.6;">
+            <li><strong>Base Address Register:</strong> CPU holds the starting address of the array.</li>
+            <li><strong>Indexed Addressing:</strong> CPU calculates physical address using Base + (Index * Offset) in one cycle.</li>
+            <li><strong>Cache Locality:</strong> Because arrays are contiguous, reading one element loads the next few into the CPU cache automatically.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW 8: APPLICATIONS -->
+    <section id="view-applications" class="view-section">
+      <h2 class="section-title">Real-World Applications</h2>
+      <div class="info-grid">
+        <div class="card">
+            <h3><i class="ri-image-line"></i> Image Processing</h3>
+            <p>Images are 2D arrays (matrices) of pixels. Each pixel contains color values (RGB).</p>
+        </div>
+        <div class="card">
+            <h3><i class="ri-database-2-line"></i> Databases</h3>
+            <p>While DBs use B-Trees, the underlying buffer pool stores data pages in arrays.</p>
+        </div>
+        <div class="card">
+            <h3><i class="ri-gamepad-line"></i> Game Dev</h3>
+            <p>Used for inventory systems, tile maps, and entity lists for performance.</p>
+        </div>
+        <div class="card">
+            <h3><i class="ri-stack-line"></i> Stacks & Queues</h3>
+            <p>These abstract data types are typically implemented using arrays for efficiency.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* --- GLOBAL STATE & CONFIG --- */
+let arr = [];
+let isBusy = false;
+const visual = document.getElementById("visual");
+const statusBox = document.getElementById("statusBox");
+const conceptPanel = document.getElementById("conceptPanel");
+const conceptTitle = document.getElementById("conceptTitle");
+const conceptContent = document.getElementById("conceptContent");
+const inputs = document.querySelectorAll("input:not(.static-mem)");
+const buttons = document.querySelectorAll("button:not(.quiz-btn):not(.btn-icon)");
+
+/* --- UTILS --- */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const setStatus = (msg) => statusBox.innerHTML = `<i class="ri-information-line"></i> ${msg}`;
+const setWorking = (state) => {
+  isBusy = state;
+  buttons.forEach(b => b.disabled = state);
+  inputs.forEach(i => i.disabled = state);
+};
+
+/* --- SIDEBAR LOGIC --- */
+const sidebar = document.getElementById('sidebar');
+
+function toggleSidebar() {
+  sidebar.classList.toggle('open');
+  // Close sidebar when clicking outside on mobile
+  if (window.innerWidth <= 900 && sidebar.classList.contains('open')) {
+    document.addEventListener('click', closeSidebarOutside);
+  }
+}
+
+function closeSidebarOutside(e) {
+  if (!sidebar.contains(e.target) && !e.target.closest('.btn-icon')) {
+    sidebar.classList.remove('open');
+    document.removeEventListener('click', closeSidebarOutside);
+  }
+}
+
+function navigate(viewId) {
+  // Update Active Sidebar Item
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const activeItem = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick').includes(viewId));
+  if(activeItem) activeItem.classList.add('active');
+
+  // Hide all sections, show target
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.getElementById(`view-${viewId}`).classList.add('active');
+  
+  // Update Breadcrumb
+  document.getElementById('page-title').textContent = activeItem ? activeItem.innerText.trim() : 'Dashboard';
+
+  // Close sidebar on mobile after selection
+  if (window.innerWidth <= 900) {
+    sidebar.classList.remove('open');
+  }
+
+  // Special init for Memory view
+  if(viewId === 'memory') updateMemoryCalc();
+}
+
+/* --- VISUALIZER CORE --- */
+function render() {
+  visual.innerHTML = "";
+  if (arr.length === 0) {
+    visual.innerHTML = `<div style="color:var(--text-muted); opacity:0.6;">Array is empty</div>`;
+    return;
+  }
+  const maxVal = Math.max(...arr, 100);
+  arr.forEach((val, idx) => {
+    const wrap = document.createElement("div");
+    wrap.className = "bar-wrap";
+    const heightPct = (val / maxVal) * 80; 
+    wrap.innerHTML = `
+      <div class="bar" style="height: ${heightPct}%" id="bar-${idx}">${val}</div>
+      <div class="index-label">${idx}</div>
+    `;
+    visual.appendChild(wrap);
+  });
+}
+
+function generate() {
+  if (isBusy) return;
+  arr = Array.from({length: 10}, () => Math.floor(Math.random() * 95) + 5);
+  render();
+  setStatus("New random array generated.");
+  hideConcept();
+}
+
+function handleEnter(e) { if (e.key === "Enter") add(); }
+
+function add() {
+  if (isBusy) return;
+  const val = parseInt(document.getElementById("valueInput").value);
+  const idx = parseInt(document.getElementById("indexInput").value);
+  if (isNaN(val)) return setStatus("Please enter a valid Value.");
+  
+  if (!isNaN(idx) && idx >= 0 && idx <= arr.length) {
+    arr.splice(idx, 0, val);
+    setStatus(`Inserted ${val} at index ${idx}.`);
+  } else {
+    arr.push(val);
+    setStatus(`Appended ${val} to the end.`);
+  }
+  document.getElementById("valueInput").value = "";
+  document.getElementById("indexInput").value = "";
+  render();
+  hideConcept();
+}
+
+function removeItem() {
+  if (isBusy) return;
+  const idx = parseInt(document.getElementById("indexInput").value);
+  if (isNaN(idx) || idx < 0 || idx >= arr.length) {
+    return setStatus("Invalid Index.");
+  }
+  const removed = arr[idx];
+  arr.splice(idx, 1);
+  document.getElementById("indexInput").value = "";
+  render();
+  setStatus(`Removed value ${removed} from index ${idx}.`);
+  hideConcept();
+}
+
+function clearArray() {
+  if (isBusy) return;
+  arr = [];
+  render();
+  setStatus("Array cleared.");
+  hideConcept();
+}
+
+/* --- SEARCH --- */
+async function searchValue() {
+  if (isBusy || arr.length === 0) return;
+  const val = parseInt(document.getElementById("valueInput").value);
+  if (isNaN(val)) return setStatus("Enter a value to search for.");
+  
+  setWorking(true);
+  setStatus(`Searching for ${val}...`);
+  
+  showConcept("Linear Search", `
+    <p><strong>Goal:</strong> Find target value ${val}.</p>
+    <p><strong>Logic:</strong> Iterate from index 0 to n-1. Compare current element with target.</p>
+    <div class="code-block">
+for i = 0 to n:<br>
+&nbsp;&nbsp;if arr[i] == target:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return i
+    </div>
+  `);
+
+  for (let i = 0; i < arr.length; i++) {
+    const bar = document.getElementById(`bar-${i}`);
+    bar.classList.add("search");
+    updateConceptContent(`Checking Index ${i}: Value is ${arr[i]}. ${arr[i] === val ? 'Match Found!' : 'Not a match.'}`);
+    await sleep(400);
+    
+    if (arr[i] === val) {
+      bar.classList.remove("search");
+      bar.classList.add("found");
+      setStatus(`Found ${val} at index ${i}!`);
+      setWorking(false);
+      return;
+    }
+    bar.classList.remove("search");
+  }
+  setStatus(`Value ${val} not found.`);
+  setWorking(false);
+}
+
+/* --- SORTING --- */
+async function sortArray(ascending) {
+  if (isBusy || arr.length < 2) return;
+  setWorking(true);
+  setStatus(ascending ? "Sorting Ascending..." : "Sorting Descending...");
+
+  showConcept("Bubble Sort", `
+    <p><strong>Algorithm:</strong> Repeatedly swap adjacent elements if they are in wrong order.</p>
+    <p><strong>Complexity:</strong> O(n²) Comparisons.</p>
+  `);
+
+  const n = arr.length;
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+      const bar1 = document.getElementById(`bar-${j}`);
+      const bar2 = document.getElementById(`bar-${j+1}`);
+      
+      bar1.classList.add("compare");
+      bar2.classList.add("compare");
+      
+      updateConceptContent(`
+        <strong>Pass ${i+1}, Compare ${j} vs ${j+1}:</strong><br>
+        Is ${arr[j]} > ${arr[j+1]}? ${ascending ? (arr[j] > arr[j+1] ? 'Yes (Swap)' : 'No') : (arr[j] < arr[j+1] ? 'Yes (Swap)' : 'No')}
+      `);
+      
+      await sleep(300);
+
+      let shouldSwap = ascending ? (arr[j] > arr[j+1]) : (arr[j] < arr[j+1]);
+
+      if (shouldSwap) {
+        bar1.classList.remove("compare");
+        bar2.classList.remove("compare");
+        bar1.classList.add("swap");
+        bar2.classList.add("swap");
+        
+        let temp = arr[j];
+        arr[j] = arr[j+1];
+        arr[j+1] = temp;
+
+        bar1.style.height = `${(arr[j] / Math.max(...arr)) * 80}%`;
+        bar1.textContent = arr[j];
+        bar2.style.height = `${(arr[j+1] / Math.max(...arr)) * 80}%`;
+        bar2.textContent = arr[j+1];
+
+        await sleep(500);
+        
+        bar1.classList.remove("swap");
+        bar2.classList.remove("swap");
+      } else {
+        bar1.classList.remove("compare");
+        bar2.classList.remove("compare");
+      }
+    }
+    document.getElementById(`bar-${n - 1 - i}`).style.background = "var(--bar-found)";
+  }
+  if(arr.length > 0) document.getElementById(`bar-0`).style.background = "var(--bar-found)";
+  
+  setStatus("Sorting complete!");
+  setWorking(false);
+  updateConceptContent("Sorting Finished! The array is now in order.");
+  
+  setTimeout(() => {
+    const bars = document.querySelectorAll(".bar");
+    bars.forEach(b => b.style.background = "");
+  }, 2000);
+}
+
+/* --- CONCEPT PANEL HELPERS --- */
+function showConcept(title, html) {
+  conceptPanel.classList.remove('hidden');
+  conceptTitle.innerHTML = `<i class="ri-lightbulb-flash-line"></i> ${title}`;
+  conceptContent.innerHTML = html;
+}
+function updateConceptContent(html) {
+  conceptContent.innerHTML = html;
+}
+function hideConcept() {
+  conceptPanel.classList.add('hidden');
+}
+
+/* --- MEMORY VISUALIZER LOGIC --- */
+function updateMemoryCalc() {
+  const base = parseInt(document.getElementById('memBase').value) || 1000;
+  const size = parseInt(document.getElementById('memSize').value) || 4;
+  const targetIdx = parseInt(document.getElementById('memIndex').value) || 0;
+  const container = document.getElementById('memVisual');
+  
+  container.innerHTML = '';
+  
+  // Render 5 blocks for visualization
+  for(let i=0; i<5; i++) {
+    const addr = base + (i * size);
+    const isActive = (i === targetIdx);
+    const div = document.createElement('div');
+    div.className = `mem-cell ${isActive ? 'active' : ''}`;
+    div.innerHTML = `
+      <div class="mem-index">[${i}]</div>
+      <div class="mem-value">val</div>
+      <div class="mem-addr">${addr}</div>
+    `;
+    container.appendChild(div);
+  }
+
+  // Update text result
+  const finalAddr = base + (targetIdx * size);
+  document.getElementById('memResult').innerHTML = `
+    Address of arr[${targetIdx}]: <span style="font-family:'Fira Code'">${finalAddr}</span>
+    <div style="font-size:0.8rem; color:var(--text-muted); font-weight:400; margin-top:5px;">
+      Calculation: ${base} + (${targetIdx} × ${size})
+    </div>
+  `;
+}
+
+/* --- QUIZ LOGIC --- */
+function checkQuiz(btn, isCorrect) {
+  const parent = btn.parentElement;
+  // Reset all buttons in this group
+  parent.querySelectorAll('.quiz-btn').forEach(b => {
+    b.classList.remove('correct', 'wrong');
+  });
+  
+  if(isCorrect) {
+    btn.classList.add('correct');
+    btn.innerHTML += ' <i class="ri-check-line"></i>';
+  } else {
+    btn.classList.add('wrong');
+    btn.innerHTML += ' <i class="ri-close-line"></i>';
+  }
+}
+
+// Initialize
+generate();
+
+</script>
+</body>
+</html>

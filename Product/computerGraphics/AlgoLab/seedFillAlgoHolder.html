@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Filling Algorithms | Computer Graphics</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #05080c;
+  --bg-elevated: #0a1018;
+  --card: #0d1520;
+  --border: #1a2535;
+  --accent: #00ffc8;
+  --accent-alt: #ff6b4a;
+  --text: #e4e8ec;
+  --muted: #5a6a7a;
+  --cyan-blue: #00d4ff;
+  --warm-gold: #ffa94d;
+  --violet: #b464ff;
+  --magenta: #ff64b4;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 8, 12, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--violet), var(--magenta));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--violet);
+}
+
+.nav-breadcrumb span {
+  color: var(--violet);
+}
+
+.hero {
+  min-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--violet);
+  background: rgba(180, 100, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(180, 100, 255, 0.2);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--violet);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.main-title {
+  font-size: clamp(36px, 7vw, 56px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  color: var(--text);
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 550px;
+  line-height: 1.8;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 28px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  display: block;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--violet), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(180, 100, 255, 0.3);
+  box-shadow: 
+    0 20px 60px -20px rgba(180, 100, 255, 0.15),
+    0 0 0 1px rgba(180, 100, 255, 0.1);
+}
+
+.card-preview {
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: #080c10;
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.card-preview-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--violet);
+  background: rgba(5, 8, 12, 0.85);
+  padding: 6px 10px;
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+  z-index: 1;
+}
+
+.card-content {
+  padding: 28px;
+}
+
+.card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.tag-seed { 
+  background: linear-gradient(135deg, rgba(180, 100, 255, 0.15), rgba(0, 212, 255, 0.15)); 
+  color: var(--violet); 
+}
+.tag-boundary { 
+  background: linear-gradient(135deg, rgba(255, 100, 180, 0.15), rgba(180, 100, 255, 0.15)); 
+  color: var(--magenta); 
+}
+
+.card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 24px 0;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--violet);
+  color: var(--bg);
+  transition: all 0.3s ease;
+}
+
+.card:hover .card-btn {
+  background: #c474ff;
+  transform: translateX(4px);
+}
+
+.card-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.card:hover .card-btn svg {
+  transform: translateX(4px);
+}
+
+.card-meta {
+  text-align: right;
+}
+
+.card-meta-difficulty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.difficulty-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.difficulty-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.difficulty-dots span.active {
+  background: var(--violet);
+}
+
+.connectivity-section {
+  margin-top: 80px;
+  padding: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.connectivity-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.connectivity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 32px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.connectivity-item {
+  text-align: center;
+  padding: 24px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+}
+
+.connectivity-item h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--violet);
+}
+
+.connectivity-visual {
+  display: grid;
+  grid-template-columns: repeat(3, 24px);
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.connectivity-visual span {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.connectivity-visual span.center {
+  background: var(--violet);
+  color: var(--bg);
+}
+
+.connectivity-visual span.neighbor {
+  background: rgba(180, 100, 255, 0.3);
+  color: var(--violet);
+  border: 1px solid rgba(180, 100, 255, 0.4);
+}
+
+.connectivity-visual span.empty {
+  background: transparent;
+  border: 1px dashed var(--border);
+}
+
+.connectivity-desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 40vh;
+  }
+  
+  .card-preview {
+    height: 180px;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .connectivity-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="AlgoLabHolder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#05080c" stroke-width="2.5">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">CG Lab</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="algorithm_lab.html">Algorithms</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Filling Algorithms</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Region Filling</div>
+    <h1 class="main-title">Filling Algorithms</h1>
+    <p class="subtitle">
+      // Fill enclosed regions using seed-based and boundary-based approaches.<br>
+      // Understand connectivity, recursion, and stack-based implementations.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <div class="grid">
+      
+      <!-- Seed Fill -->
+      <a href="filling/seedFillingAlgo1.html" class="card">
+        <div class="card-preview">
+          <canvas id="preview-seed"></canvas>
+          <div class="card-preview-overlay">FLOOD FILL</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-seed">Seed Fill</span>
+          <h3>Seed Fill Algorithm</h3>
+          <p>
+            Start from a seed point and recursively fill all connected pixels 
+            with the same original color. Supports 4-way and 8-way connectivity.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Open Lab
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-difficulty">
+                <span>Intermediate</span>
+                <div class="difficulty-dots">
+                  <span class="active"></span>
+                  <span class="active"></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- Boundary Fill -->
+      <a href="filling/boundaryFillAlgo.html" class="card">
+        <div class="card-preview">
+          <canvas id="preview-boundary"></canvas>
+          <div class="card-preview-overlay">BOUNDARY</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-boundary">Boundary Fill</span>
+          <h3>Boundary Fill Algorithm</h3>
+          <p>
+            Fill an enclosed region by detecting boundary color pixels. 
+            Continue filling until reaching pixels of the specified boundary color.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Open Lab
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-difficulty">
+                <span>Advanced</span>
+                <div class="difficulty-dots">
+                  <span class="active"></span>
+                  <span class="active"></span>
+                  <span class="active"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+
+    <div class="connectivity-section">
+      <h3 class="connectivity-title">Pixel Connectivity Types</h3>
+      <div class="connectivity-grid">
+        <div class="connectivity-item">
+          <h4>4-Way Connectivity</h4>
+          <div class="connectivity-visual">
+            <span class="empty"></span>
+            <span class="neighbor">N</span>
+            <span class="empty"></span>
+            <span class="neighbor">W</span>
+            <span class="center">P</span>
+            <span class="neighbor">E</span>
+            <span class="empty"></span>
+            <span class="neighbor">S</span>
+            <span class="empty"></span>
+          </div>
+          <p class="connectivity-desc">Up, Down, Left, Right neighbors</p>
+        </div>
+        <div class="connectivity-item">
+          <h4>8-Way Connectivity</h4>
+          <div class="connectivity-visual">
+            <span class="neighbor">NW</span>
+            <span class="neighbor">N</span>
+            <span class="neighbor">NE</span>
+            <span class="neighbor">W</span>
+            <span class="center">P</span>
+            <span class="neighbor">E</span>
+            <span class="neighbor">SW</span>
+            <span class="neighbor">S</span>
+            <span class="neighbor">SE</span>
+          </div>
+          <p class="connectivity-desc">Includes diagonal neighbors</p>
+        </div>
+      </div>
+    </div>
+    
+  </section>
+
+  <footer>
+    <p>// Region filling algorithms for raster graphics</p>
+  </footer>
+  
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+bgCanvas.width = width;
+bgCanvas.height = height;
+
+let mouseX = width / 2;
+let mouseY = height / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const particles = [];
+const particleCount = 30;
+
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.12,
+      vy: (Math.random() - 0.5) * 0.12,
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.15 + 0.05
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#05080c';
+  bgCtx.fillRect(0, 0, width, height);
+  
+  const time = Date.now() * 0.001;
+  
+  // Subtle grid pattern
+  bgCtx.strokeStyle = 'rgba(180, 100, 255, 0.02)';
+  bgCtx.lineWidth = 1;
+  
+  const gridSize = 50;
+  for (let x = 0; x < width; x += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(x, 0);
+    bgCtx.lineTo(x, height);
+    bgCtx.stroke();
+  }
+  for (let y = 0; y < height; y += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, y);
+    bgCtx.lineTo(width, y);
+    bgCtx.stroke();
+  }
+  
+  // Floating shapes
+  bgCtx.strokeStyle = 'rgba(180, 100, 255, 0.03)';
+  for (let i = 0; i < 5; i++) {
+    const cx = (Math.sin(time * 0.2 + i * 1.5) * 0.5 + 0.5) * width;
+    const cy = (Math.cos(time * 0.15 + i * 2) * 0.5 + 0.5) * height;
+    const size = 100 + i * 30;
+    
+    bgCtx.beginPath();
+    bgCtx.rect(cx - size / 2, cy - size / 2, size, size);
+    bgCtx.stroke();
+  }
+  
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    if (p.x < 0) p.x = width;
+    if (p.x > width) p.x = 0;
+    if (p.y < 0) p.y = height;
+    if (p.y > height) p.y = 0;
+    
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 100) {
+      p.x -= dx * 0.005;
+      p.y -= dy * 0.005;
+    }
+    
+    bgCtx.fillStyle = 'rgba(180, 100, 255, ' + p.opacity + ')';
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  // Mouse glow
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 120);
+  gradient.addColorStop(0, 'rgba(180, 100, 255, 0.03)');
+  gradient.addColorStop(1, 'rgba(180, 100, 255, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, width, height);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.1;
+  mouseY += (targetMouseY - mouseY) * 0.1;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === PREVIEW CANVASES ===
+function initPreviewSeed() {
+  const canvas = document.getElementById('preview-seed');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const pixelSize = 8;
+  const cols = Math.floor(canvas.width / pixelSize);
+  const rows = Math.floor(canvas.height / pixelSize);
+  
+  // Create irregular shape boundary
+  const grid = [];
+  for (let y = 0; y < rows; y++) {
+    grid[y] = [];
+    for (let x = 0; x < cols; x++) {
+      grid[y][x] = 0; // 0 = empty, 1 = boundary, 2 = filled
+    }
+  }
+  
+  // Draw organic blob boundary
+  const cx = cols / 2;
+  const cy = rows / 2;
+  
+  for (let angle = 0; angle < Math.PI * 2; angle += 0.1) {
+    const noise = Math.sin(angle * 3) * 2 + Math.cos(angle * 5) * 1.5;
+    const radius = Math.min(cols, rows) / 2 - 5 + noise;
+    const bx = Math.round(cx + Math.cos(angle) * radius);
+    const by = Math.round(cy + Math.sin(angle) * radius);
+    
+    if (bx >= 0 && bx < cols && by >= 0 && by < rows) {
+      grid[by][bx] = 1;
+      // Thicken boundary
+      if (bx + 1 < cols) grid[by][bx + 1] = 1;
+      if (by + 1 < rows) grid[by + 1][bx] = 1;
+    }
+  }
+  
+  // Animation state
+  const fillQueue = [];
+  const filledSet = new Set();
+  let animating = false;
+  let animT = 0;
+  let seedX = Math.floor(cols / 2);
+  let seedY = Math.floor(rows / 2);
+  
+  function resetFill() {
+    // Clear fill
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (grid[y][x] === 2) grid[y][x] = 0;
+      }
+    }
+    
+    fillQueue.length = 0;
+    filledSet.clear();
+    
+    // Random seed position inside shape
+    seedX = Math.floor(cols / 2 + (Math.random() - 0.5) * 6);
+    seedY = Math.floor(rows / 2 + (Math.random() - 0.5) * 6);
+    
+    fillQueue.push({ x: seedX, y: seedY });
+    animating = true;
+    animT = 0;
+  }
+  
+  function floodFillStep() {
+    if (!animating || fillQueue.length === 0) return;
+    
+    const batchSize = 5;
+    for (let i = 0; i < batchSize && fillQueue.length > 0; i++) {
+      const current = fillQueue.shift();
+      const key = current.x + ',' + current.y;
+      
+      if (filledSet.has(key)) continue;
+      if (current.x < 0 || current.x >= cols || current.y < 0 || current.y >= rows) continue;
+      if (grid[current.y][current.x] === 1) continue;
+      if (grid[current.y][current.x] === 2) continue;
+      
+      grid[current.y][current.x] = 2;
+      filledSet.add(key);
+      
+      // 4-way connectivity
+      fillQueue.push({ x: current.x + 1, y: current.y });
+      fillQueue.push({ x: current.x - 1, y: current.y });
+      fillQueue.push({ x: current.x, y: current.y + 1 });
+      fillQueue.push({ x: current.x, y: current.y - 1 });
+    }
+    
+    if (fillQueue.length === 0) {
+      animating = false;
+    }
+  }
+  
+  resetFill();
+  
+  function draw() {
+    animT += 0.016;
+    
+    if (animT > 0.03) {
+      floodFillStep();
+      animT = 0;
+    }
+    
+    if (!animating && Math.random() < 0.003) {
+      resetFill();
+    }
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw grid
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (grid[y][x] === 1) {
+          // Boundary
+          ctx.fillStyle = 'rgba(180, 100, 255, 0.8)';
+          ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+        } else if (grid[y][x] === 2) {
+          // Filled - wave effect
+          const wave = Math.sin(Date.now() * 0.003 + x * 0.1 + y * 0.1) * 0.15 + 0.75;
+          const gradient = ctx.createLinearGradient(
+            x * pixelSize, y * pixelSize,
+            x * pixelSize + pixelSize, y * pixelSize + pixelSize
+          );
+          gradient.addColorStop(0, 'rgba(0, 212, 255, ' + wave + ')');
+          gradient.addColorStop(1, 'rgba(180, 100, 255, ' + wave + ')');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+        }
+      }
+    }
+    
+    // Draw seed point
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(seedX * pixelSize + pixelSize / 2, seedY * pixelSize + pixelSize / 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Current fill frontier
+    if (fillQueue.length > 0) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1;
+      fillQueue.slice(0, 10).forEach(p => {
+        ctx.strokeRect(p.x * pixelSize, p.y * pixelSize, pixelSize, pixelSize);
+      });
+    }
+    
+    // Queue size indicator
+    ctx.fillStyle = 'rgba(180, 100, 255, 0.6)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText('QUEUE: ' + fillQueue.length, 10, 20);
+    ctx.fillText('FILLED: ' + filledSet.size, 10, 34);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function initPreviewBoundary() {
+  const canvas = document.getElementById('preview-boundary');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+  
+  const pixelSize = 8;
+  const cols = Math.floor(canvas.width / pixelSize);
+  const rows = Math.floor(canvas.height / pixelSize);
+  
+  // Create grid with nested shapes
+  const grid = [];
+  for (let y = 0; y < rows; y++) {
+    grid[y] = [];
+    for (let x = 0; x < cols; x++) {
+      grid[y][x] = { type: 0, fill: 0 }; // type: 0=empty, 1=boundary, 2=inner boundary
+    }
+  }
+  
+  // Outer boundary (magenta)
+  const cx = cols / 2;
+  const cy = rows / 2;
+  
+  for (let angle = 0; angle < Math.PI * 2; angle += 0.08) {
+    const noise = Math.sin(angle * 4) * 1.5;
+    const radius = Math.min(cols, rows) / 2 - 4 + noise;
+    const bx = Math.round(cx + Math.cos(angle) * radius);
+    const by = Math.round(cy + Math.sin(angle) * radius);
+    
+    if (bx >= 0 && bx < cols && by >= 0 && by < rows) {
+      grid[by][bx].type = 1;
+    }
+  }
+  
+  // Inner boundary (violet)
+  for (let angle = 0; angle < Math.PI * 2; angle += 0.15) {
+    const radius = 4 + Math.sin(angle * 3) * 1;
+    const bx = Math.round(cx + Math.cos(angle) * radius);
+    const by = Math.round(cy + Math.sin(angle) * radius);
+    
+    if (bx >= 0 && bx < cols && by >= 0 && by < rows) {
+      grid[by][bx].type = 2;
+    }
+  }
+  
+  // Animation state
+  const fillQueue = [];
+  const filledSet = new Set();
+  let animating = false;
+  let animT = 0;
+  let phase = 0;
+  let fillColors = ['rgba(255, 100, 180, 0.8)', 'rgba(180, 100, 255, 0.8)'];
+  let currentColor = 0;
+  
+  function resetFill() {
+    // Clear fill
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        grid[y][x].fill = 0;
+      }
+    }
+    
+    fillQueue.length = 0;
+    filledSet.clear();
+    
+    // Start from outer region
+    fillQueue.push({ x: Math.floor(cols / 2), y: 3 });
+    currentColor = 0;
+    animating = true;
+    animT = 0;
+    phase = 0;
+  }
+  
+  function boundaryFillStep() {
+    if (!animating || fillQueue.length === 0) return;
+    
+    const batchSize = 4;
+    for (let i = 0; i < batchSize && fillQueue.length > 0; i++) {
+      const current = fillQueue.shift();
+      const key = current.x + ',' + current.y;
+      
+      if (filledSet.has(key)) continue;
+      if (current.x < 0 || current.x >= cols || current.y < 0 || current.y >= rows) continue;
+      
+      const cell = grid[current.y][current.x];
+      if (cell.type === 1 || cell.type === 2) continue; // Hit boundary
+      if (cell.fill !== 0) continue;
+      
+      cell.fill = currentColor + 1;
+      filledSet.add(key);
+      
+      // 4-way connectivity
+      fillQueue.push({ x: current.x + 1, y: current.y });
+      fillQueue.push({ x: current.x - 1, y: current.y });
+      fillQueue.push({ x: current.x, y: current.y + 1 });
+      fillQueue.push({ x: current.x, y: current.y - 1 });
+    }
+    
+    if (fillQueue.length === 0) {
+      if (phase === 0) {
+        // Start inner fill
+        phase = 1;
+        currentColor = 1;
+        fillQueue.push({ x: Math.floor(cols / 2), y: Math.floor(rows / 2) });
+      } else {
+        animating = false;
+      }
+    }
+  }
+  
+  resetFill();
+  
+  function draw() {
+    animT += 0.016;
+    
+    if (animT > 0.04) {
+      boundaryFillStep();
+      animT = 0;
+    }
+    
+    if (!animating && Math.random() < 0.002) {
+      resetFill();
+    }
+    
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw grid
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const cell = grid[y][x];
+        
+        if (cell.type === 1) {
+          // Outer boundary (magenta)
+          ctx.fillStyle = 'rgba(255, 100, 180, 0.9)';
+          ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+        } else if (cell.type === 2) {
+          // Inner boundary (violet)
+          ctx.fillStyle = 'rgba(180, 100, 255, 0.9)';
+          ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+        } else if (cell.fill === 1) {
+          // Outer fill (pink)
+          const wave = Math.sin(Date.now() * 0.002 + x * 0.08 + y * 0.08) * 0.15 + 0.75;
+          ctx.fillStyle = 'rgba(255, 100, 180, ' + wave + ')';
+          ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+        } else if (cell.fill === 2) {
+          // Inner fill (cyan)
+          const wave = Math.sin(Date.now() * 0.002 + x * 0.08 + y * 0.08) * 0.15 + 0.75;
+          ctx.fillStyle = 'rgba(0, 212, 255, ' + wave + ')';
+          ctx.fillRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
+        }
+      }
+    }
+    
+    // Draw current fill point
+    if (fillQueue.length > 0) {
+      const current = fillQueue[0];
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(current.x * pixelSize, current.y * pixelSize, pixelSize, pixelSize);
+    }
+    
+    // Legend
+    ctx.fillStyle = 'rgba(255, 100, 180, 0.7)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText('BOUNDARY: MAGENTA', 10, 20);
+    
+    ctx.fillStyle = 'rgba(180, 100, 255, 0.7)';
+    ctx.fillText('INNER: VIOLET', 10, 34);
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.textAlign = 'right';
+    ctx.fillText('PHASE ' + (phase + 1) + '/2', canvas.width - 10, 20);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  bgCanvas.width = width;
+  bgCanvas.height = height;
+  initParticles();
+  
+  initPreviewSeed();
+  initPreviewBoundary();
+});
+
+// === INITIALIZE ===
+initParticles();
+animate();
+
+requestAnimationFrame(function() {
+  initPreviewSeed();
+  initPreviewBoundary();
+});
+</script>
+
+</body>
+</html>

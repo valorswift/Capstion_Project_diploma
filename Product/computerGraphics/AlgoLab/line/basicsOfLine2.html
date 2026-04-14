@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basics of Line in Computer Graphics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'monospace'],
+                        sans: ['Space Grotesk', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #0a0e14;
+            --bg-secondary: #0f1419;
+            --bg-tertiary: #151b23;
+            --fg: #e6e6e6;
+            --fg-muted: #8b949e;
+            --accent: #00d9ff;
+            --accent-secondary: #00ff9d;
+            --accent-dim: rgba(0, 217, 255, 0.15);
+            --grid-line: #1e2632;
+            --grid-line-major: #2d3848;
+            --pixel-fill: #00d9ff;
+            --pixel-stroke: #00ff9d;
+            --warning: #ffb800;
+            --card: #111820;
+            --border: #21262d;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html {
+                scroll-behavior: auto;
+            }
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .gradient-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 20% 20%, rgba(0, 217, 255, 0.08), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0, 255, 157, 0.05), transparent);
+        }
+
+        .section-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .formula-box {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .pixel-canvas {
+            image-rendering: pixelated;
+            cursor: crosshair;
+        }
+
+        .nav-link {
+            position: relative;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .slope-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #00b8d9);
+            color: var(--bg);
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 217, 255, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--fg);
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.6s ease forwards;
+            opacity: 0;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+
+        .info-tooltip {
+            position: relative;
+        }
+
+        .info-tooltip::before {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+        }
+
+        .info-tooltip:hover::before {
+            opacity: 1;
+        }
+
+        .progress-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--accent);
+            z-index: 1000;
+            transition: width 0.1s linear;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 40px rgba(0, 217, 255, 0.5);
+        }
+
+        .code-block {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: var(--fg-muted);
+        }
+    </style>
+</head>
+<body class="min-h-screen scrollbar-thin">
+    <div class="gradient-mesh"></div>
+    <div class="progress-indicator" id="progressBar"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0a0e14]/80 border-b border-[#21262d]">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
+                    <line x1="4" y1="28" x2="28" y2="4" stroke="#00d9ff" stroke-width="2.5" stroke-linecap="round"/>
+                    <circle cx="4" cy="28" r="3" fill="#00ff9d"/>
+                    <circle cx="28" cy="4" r="3" fill="#00ff9d"/>
+                </svg>
+                <span class="font-mono font-semibold text-lg">LineCG</span>
+            </div>
+            <div class="hidden md:flex items-center gap-8 font-mono text-sm">
+                <a href="#introduction" class="nav-link text-[#8b949e] hover:text-[#e6e6e6]">Introduction</a>
+                <a href="#interactive" class="nav-link text-[#8b949e] hover:text-[#e6e6e6]">Interactive</a>
+                <a href="#mathematics" class="nav-link text-[#8b949e] hover:text-[#e6e6e6]">Mathematics</a>
+                <a href="#types" class="nav-link text-[#8b949e] hover:text-[#e6e6e6]">Line Types</a>
+                <a href="#pixel" class="nav-link text-[#8b949e] hover:text-[#e6e6e6]">Pixel Concept</a>
+                <a href="#algorithms" class="nav-link text-[#8b949e] hover:text-[#e6e6e6]">Algorithms</a>
+            </div>
+            <button id="menuToggle" class="md:hidden p-2 rounded-lg hover:bg-[#151b23]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-20">
+        <!-- Hero Section -->
+        <section id="introduction" class="min-h-screen flex items-center px-6 py-20">
+            <div class="max-w-7xl mx-auto w-full">
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-8">
+                        <div class="animate-in">
+                            <span class="inline-block px-4 py-1.5 rounded-full text-xs font-mono font-medium bg-[#00d9ff]/10 text-[#00d9ff] border border-[#00d9ff]/20 mb-4">
+                                COMPUTER GRAPHICS FUNDAMENTALS
+                            </span>
+                            <h1 class="text-4xl md:text-6xl font-bold leading-tight">
+                                <span class="text-[#e6e6e6]">Basics of</span><br>
+                                <span class="text-[#00d9ff] glow-text">Line Drawing</span>
+                            </h1>
+                        </div>
+                        <p class="animate-in delay-1 text-lg text-[#8b949e] leading-relaxed max-w-xl">
+                            Understanding how lines are represented and drawn is foundational to computer graphics. 
+                            Before diving into algorithms, let's explore the fundamental concepts.
+                        </p>
+                        <div class="animate-in delay-2 flex flex-wrap gap-4">
+                            <a href="#interactive" class="btn-primary inline-flex items-center gap-2">
+                                Start Learning
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </a>
+                            <a href="#mathematics" class="btn-secondary">View Mathematics</a>
+                        </div>
+                    </div>
+                    
+                    <!-- Coordinate Grid Demo -->
+                    <div class="animate-in delay-3">
+                        <div class="section-card p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="font-mono text-sm text-[#8b949e]">COORDINATE SYSTEM</span>
+                                <div class="flex gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-[#ff5f56]"></span>
+                                    <span class="w-3 h-3 rounded-full bg-[#ffbd2e]"></span>
+                                    <span class="w-3 h-3 rounded-full bg-[#27ca40]"></span>
+                                </div>
+                            </div>
+                            <canvas id="heroCanvas" class="pixel-canvas w-full rounded-lg" width="400" height="400"></canvas>
+                            <div class="mt-4 flex items-center justify-between text-sm font-mono">
+                                <span class="text-[#8b949e]">P1: <span class="text-[#00ff9d]" id="heroP1">(2, 3)</span></span>
+                                <span class="text-[#8b949e]">P2: <span class="text-[#00d9ff]" id="heroP2">(8, 7)</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Definition Cards -->
+                <div class="grid md:grid-cols-3 gap-6 mt-20">
+                    <div class="section-card p-6 animate-in delay-2">
+                        <div class="w-12 h-12 rounded-lg bg-[#00d9ff]/10 flex items-center justify-center mb-4">
+                            <svg class="w-6 h-6 text-[#00d9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-semibold text-lg mb-2">What is a Line?</h3>
+                        <p class="text-[#8b949e] text-sm leading-relaxed">
+                            In computer graphics, a line is the shortest path between two points in a 2D or 3D space. 
+                            It's defined by two endpoints P1(x1, y1) and P2(x2, y2).
+                        </p>
+                    </div>
+                    <div class="section-card p-6 animate-in delay-3">
+                        <div class="w-12 h-12 rounded-lg bg-[#00ff9d]/10 flex items-center justify-center mb-4">
+                            <svg class="w-6 h-6 text-[#00ff9d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-semibold text-lg mb-2">Pixel Representation</h3>
+                        <p class="text-[#8b949e] text-sm leading-relaxed">
+                            On a computer screen, lines are drawn using pixels. Each pixel is a small square that can be illuminated to create the visual representation of a line.
+                        </p>
+                    </div>
+                    <div class="section-card p-6 animate-in delay-4">
+                        <div class="w-12 h-12 rounded-lg bg-[#ffb800]/10 flex items-center justify-center mb-4">
+                            <svg class="w-6 h-6 text-[#ffb800]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-semibold text-lg mb-2">Mathematical Foundation</h3>
+                        <p class="text-[#8b949e] text-sm leading-relaxed">
+                            Lines follow the equation y = mx + c, where m is the slope and c is the y-intercept. This forms the basis for all line drawing algorithms.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Line Drawing Section -->
+        <section id="interactive" class="min-h-screen px-6 py-20 border-t border-[#21262d]">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Interactive Line Drawing</h2>
+                    <p class="text-[#8b949e] max-w-2xl mx-auto">
+                        Click two points on the pixel grid below to draw a line. Observe how the line connects the two points through the grid.
+                    </p>
+                </div>
+
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <!-- Canvas Area -->
+                    <div class="lg:col-span-2">
+                        <div class="section-card p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-4">
+                                    <span class="font-mono text-sm text-[#8b949e]">PIXEL GRID</span>
+                                    <span class="slope-badge bg-[#00d9ff]/10 text-[#00d9ff]" id="gridStatus">
+                                        Click to select P1
+                                    </span>
+                                </div>
+                                <button id="clearCanvas" class="btn-secondary text-sm py-2 px-4">Clear Grid</button>
+                            </div>
+                            <canvas id="interactiveCanvas" class="pixel-canvas w-full rounded-lg border border-[#21262d]" width="600" height="500"></canvas>
+                            <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-mono">
+                                <div class="bg-[#0a0e14] rounded-lg p-3">
+                                    <span class="text-[#8b949e] block text-xs mb-1">Point 1</span>
+                                    <span class="text-[#00ff9d]" id="p1Display">Not selected</span>
+                                </div>
+                                <div class="bg-[#0a0e14] rounded-lg p-3">
+                                    <span class="text-[#8b949e] block text-xs mb-1">Point 2</span>
+                                    <span class="text-[#00d9ff]" id="p2Display">Not selected</span>
+                                </div>
+                                <div class="bg-[#0a0e14] rounded-lg p-3">
+                                    <span class="text-[#8b949e] block text-xs mb-1">Slope (m)</span>
+                                    <span class="text-[#ffb800]" id="slopeDisplay">--</span>
+                                </div>
+                                <div class="bg-[#0a0e14] rounded-lg p-3">
+                                    <span class="text-[#8b949e] block text-xs mb-1">Y-Intercept (c)</span>
+                                    <span class="text-[#ff6b6b]" id="interceptDisplay">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instructions Panel -->
+                    <div class="space-y-6">
+                        <div class="section-card p-6">
+                            <h3 class="font-semibold mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-[#00d9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Instructions
+                            </h3>
+                            <ol class="space-y-3 text-sm text-[#8b949e]">
+                                <li class="flex gap-3">
+                                    <span class="w-6 h-6 rounded-full bg-[#00ff9d]/10 text-[#00ff9d] flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                                    <span>Click anywhere on the grid to set Point 1 (P1)</span>
+                                </li>
+                                <li class="flex gap-3">
+                                    <span class="w-6 h-6 rounded-full bg-[#00d9ff]/10 text-[#00d9ff] flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                                    <span>Click another location to set Point 2 (P2)</span>
+                                </li>
+                                <li class="flex gap-3">
+                                    <span class="w-6 h-6 rounded-full bg-[#ffb800]/10 text-[#ffb800] flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                                    <span>Observe the line connecting both points</span>
+                                </li>
+                                <li class="flex gap-3">
+                                    <span class="w-6 h-6 rounded-full bg-[#ff6b6b]/10 text-[#ff6b6b] flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                                    <span>View calculated slope and intercept values</span>
+                                </li>
+                            </ol>
+                        </div>
+
+                        <div class="section-card p-6">
+                            <h3 class="font-semibold mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-[#00ff9d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                                Line Statistics
+                            </h3>
+                            <div class="space-y-3 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Delta X (dx)</span>
+                                    <span class="font-mono" id="dxDisplay">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Delta Y (dy)</span>
+                                    <span class="font-mono" id="dyDisplay">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Line Length</span>
+                                    <span class="font-mono" id="lengthDisplay">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Angle (degrees)</span>
+                                    <span class="font-mono" id="angleDisplay">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mathematical Representation Section -->
+        <section id="mathematics" class="min-h-screen px-6 py-20 border-t border-[#21262d] bg-[#0f1419]/50">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Mathematical Representation</h2>
+                    <p class="text-[#8b949e] max-w-2xl mx-auto">
+                        Understanding the mathematical foundation of lines is essential for implementing line drawing algorithms.
+                    </p>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <!-- Line Equation -->
+                    <div class="section-card p-8">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-lg bg-[#00d9ff]/10 flex items-center justify-center">
+                                <span class="font-mono font-bold text-[#00d9ff]">y</span>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-lg">Line Equation</h3>
+                                <p class="text-sm text-[#8b949e]">Slope-Intercept Form</p>
+                            </div>
+                        </div>
+                        
+                        <div class="formula-box p-6 rounded-lg mb-6 text-center">
+                            <span class="text-3xl font-mono">
+                                <span class="text-[#00d9ff]">y</span> = 
+                                <span class="text-[#00ff9d]">m</span>x + 
+                                <span class="text-[#ffb800]">c</span>
+                            </span>
+                        </div>
+
+                        <div class="space-y-4 text-sm">
+                            <div class="flex items-start gap-3">
+                                <span class="w-6 h-6 rounded bg-[#00d9ff]/20 text-[#00d9ff] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">y</span>
+                                <div>
+                                    <span class="text-[#e6e6e6]">Dependent variable</span>
+                                    <span class="text-[#8b949e]"> - The vertical coordinate value</span>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="w-6 h-6 rounded bg-[#00ff9d]/20 text-[#00ff9d] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">m</span>
+                                <div>
+                                    <span class="text-[#e6e6e6]">Slope of the line</span>
+                                    <span class="text-[#8b949e]"> - Determines the steepness and direction</span>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="w-6 h-6 rounded bg-[#ffb800]/20 text-[#ffb800] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">c</span>
+                                <div>
+                                    <span class="text-[#e6e6e6]">Y-intercept</span>
+                                    <span class="text-[#8b949e]"> - Where the line crosses the Y-axis</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slope Formula -->
+                    <div class="section-card p-8">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-lg bg-[#00ff9d]/10 flex items-center justify-center">
+                                <span class="font-mono font-bold text-[#00ff9d]">m</span>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-lg">Slope Formula</h3>
+                                <p class="text-sm text-[#8b949e]">Calculate slope from two points</p>
+                            </div>
+                        </div>
+                        
+                        <div class="formula-box p-6 rounded-lg mb-6 text-center">
+                            <span class="text-2xl font-mono">
+                                <span class="text-[#00ff9d]">m</span> = 
+                                <span class="text-[#e6e6e6]">(</span>
+                                <span class="text-[#00d9ff]">y<sub>2</sub></span> - 
+                                <span class="text-[#00ff9d]">y<sub>1</sub></span>
+                                <span class="text-[#e6e6e6]">) / (</span>
+                                <span class="text-[#00d9ff]">x<sub>2</sub></span> - 
+                                <span class="text-[#00ff9d]">x<sub>1</sub></span>
+                                <span class="text-[#e6e6e6]">)</span>
+                            </span>
+                        </div>
+
+                        <div class="code-block p-4">
+                            <pre class="text-[#8b949e]"><code><span class="text-[#ff6b6b]">// Calculate slope from two points</span>
+<span class="text-[#00d9ff]">function</span> <span class="text-[#00ff9d]">calculateSlope</span>(p1, p2) {
+    <span class="text-[#00d9ff]">const</span> dx = p2.x - p1.x;
+    <span class="text-[#00d9ff]">const</span> dy = p2.y - p1.y;
+    
+    <span class="text-[#ffb800]">if</span> (dx === <span class="text-[#ff6b6b]">0</span>) {
+        <span class="text-[#ffb800]">return</span> <span class="text-[#00d9ff]">undefined</span>; <span class="text-[#ff6b6b]">// Vertical line</span>
+    }
+    
+    <span class="text-[#ffb800]">return</span> dy / dx;
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Calculator -->
+                <div class="section-card p-8 mt-8">
+                    <h3 class="font-semibold text-xl mb-6 text-center">Live Slope Calculator</h3>
+                    <div class="grid md:grid-cols-4 gap-6 items-end">
+                        <div>
+                            <label class="block text-sm text-[#8b949e] mb-2">Point 1 (x1, y1)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="calcX1" value="2" class="w-full bg-[#0a0e14] border border-[#21262d] rounded-lg px-4 py-2 font-mono focus:border-[#00d9ff] focus:outline-none transition-colors" aria-label="X1 coordinate">
+                                <input type="number" id="calcY1" value="3" class="w-full bg-[#0a0e14] border border-[#21262d] rounded-lg px-4 py-2 font-mono focus:border-[#00d9ff] focus:outline-none transition-colors" aria-label="Y1 coordinate">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-[#8b949e] mb-2">Point 2 (x2, y2)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="calcX2" value="8" class="w-full bg-[#0a0e14] border border-[#21262d] rounded-lg px-4 py-2 font-mono focus:border-[#00d9ff] focus:outline-none transition-colors" aria-label="X2 coordinate">
+                                <input type="number" id="calcY2" value="7" class="w-full bg-[#0a0e14] border border-[#21262d] rounded-lg px-4 py-2 font-mono focus:border-[#00d9ff] focus:outline-none transition-colors" aria-label="Y2 coordinate">
+                            </div>
+                        </div>
+                        <button id="calculateBtn" class="btn-primary h-10">Calculate</button>
+                        <div class="bg-[#0a0e14] rounded-lg p-4 border border-[#21262d]">
+                            <span class="text-sm text-[#8b949e] block mb-1">Result</span>
+                            <span class="font-mono text-lg text-[#00ff9d]" id="calcResult">m = 0.67</span>
+                        </div>
+                    </div>
+                    <div class="mt-6 grid md:grid-cols-3 gap-4 text-sm font-mono" id="calculationSteps">
+                        <div class="bg-[#0a0e14] rounded-lg p-4 border border-[#21262d]">
+                            <span class="text-[#8b949e] block text-xs mb-1">Delta X</span>
+                            <span class="text-[#00d9ff]" id="calcDx">x2 - x1 = 8 - 2 = 6</span>
+                        </div>
+                        <div class="bg-[#0a0e14] rounded-lg p-4 border border-[#21262d]">
+                            <span class="text-[#8b949e] block text-xs mb-1">Delta Y</span>
+                            <span class="text-[#00ff9d]" id="calcDy">y2 - y1 = 7 - 3 = 4</span>
+                        </div>
+                        <div class="bg-[#0a0e14] rounded-lg p-4 border border-[#21262d]">
+                            <span class="text-[#8b949e] block text-xs mb-1">Y-Intercept</span>
+                            <span class="text-[#ffb800]" id="calcC">c = y1 - m*x1 = 1.67</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Types of Lines Section -->
+        <section id="types" class="min-h-screen px-6 py-20 border-t border-[#21262d]">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Types of Lines</h2>
+                    <p class="text-[#8b949e] max-w-2xl mx-auto">
+                        The slope of a line determines its orientation. Different slope values create different types of lines.
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Horizontal Line -->
+                    <div class="section-card overflow-hidden group hover:border-[#00d9ff]/50 transition-colors">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-lg">Horizontal Line</h3>
+                                <span class="slope-badge bg-[#00ff9d]/10 text-[#00ff9d]">m = 0</span>
+                            </div>
+                            <p class="text-sm text-[#8b949e] mb-4">
+                                A horizontal line has zero slope. All points on the line have the same y-coordinate.
+                            </p>
+                            <div class="formula-box p-3 rounded-lg text-center text-sm font-mono mb-4">
+                                y = c (constant)
+                            </div>
+                        </div>
+                        <canvas id="horizontalCanvas" class="w-full h-40" width="400" height="160"></canvas>
+                    </div>
+
+                    <!-- Vertical Line -->
+                    <div class="section-card overflow-hidden group hover:border-[#00d9ff]/50 transition-colors">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-lg">Vertical Line</h3>
+                                <span class="slope-badge bg-[#ff6b6b]/10 text-[#ff6b6b]">m = undefined</span>
+                            </div>
+                            <p class="text-sm text-[#8b949e] mb-4">
+                                A vertical line has undefined slope. All points have the same x-coordinate. Division by zero occurs.
+                            </p>
+                            <div class="formula-box p-3 rounded-lg text-center text-sm font-mono mb-4">
+                                x = c (constant)
+                            </div>
+                        </div>
+                        <canvas id="verticalCanvas" class="w-full h-40" width="400" height="160"></canvas>
+                    </div>
+
+                    <!-- Positive Slope -->
+                    <div class="section-card overflow-hidden group hover:border-[#00d9ff]/50 transition-colors">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-lg">Positive Slope</h3>
+                                <span class="slope-badge bg-[#00d9ff]/10 text-[#00d9ff]">m > 0</span>
+                            </div>
+                            <p class="text-sm text-[#8b949e] mb-4">
+                                A line with positive slope rises from left to right. As x increases, y also increases.
+                            </p>
+                            <div class="formula-box p-3 rounded-lg text-center text-sm font-mono mb-4">
+                                y = mx + c where m > 0
+                            </div>
+                        </div>
+                        <canvas id="positiveCanvas" class="w-full h-40" width="400" height="160"></canvas>
+                    </div>
+
+                    <!-- Negative Slope -->
+                    <div class="section-card overflow-hidden group hover:border-[#00d9ff]/50 transition-colors">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-lg">Negative Slope</h3>
+                                <span class="slope-badge bg-[#ffb800]/10 text-[#ffb800]">m < 0</span>
+                            </div>
+                            <p class="text-sm text-[#8b949e] mb-4">
+                                A line with negative slope falls from left to right. As x increases, y decreases.
+                            </p>
+                            <div class="formula-box p-3 rounded-lg text-center text-sm font-mono mb-4">
+                                y = mx + c where m < 0
+                            </div>
+                        </div>
+                        <canvas id="negativeCanvas" class="w-full h-40" width="400" height="160"></canvas>
+                    </div>
+                </div>
+
+                <!-- Slope Comparison -->
+                <div class="section-card p-8 mt-8">
+                    <h3 class="font-semibold text-xl mb-6 text-center">Slope Comparison Visualization</h3>
+                    <canvas id="comparisonCanvas" class="w-full h-64 rounded-lg" width="800" height="256"></canvas>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-1 rounded bg-[#00ff9d]"></span>
+                            <span class="text-[#8b949e]">m = 0 (Horizontal)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-1 rounded bg-[#00d9ff]"></span>
+                            <span class="text-[#8b949e]">m = 1 (45 degrees)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-1 rounded bg-[#ffb800]"></span>
+                            <span class="text-[#8b949e]">m = -0.5 (Negative)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-1 rounded bg-[#ff6b6b]"></span>
+                            <span class="text-[#8b949e]">m = 2 (Steep)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pixel Approximation Section -->
+        <section id="pixel" class="min-h-screen px-6 py-20 border-t border-[#21262d] bg-[#0f1419]/50">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Pixel Approximation Concept</h2>
+                    <p class="text-[#8b949e] max-w-2xl mx-auto">
+                        Understanding how ideal mathematical lines become pixel-based representations on screen.
+                    </p>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-8 items-center">
+                    <!-- Explanation -->
+                    <div class="space-y-6">
+                        <div class="section-card p-6">
+                            <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-[#00d9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                </svg>
+                                The Challenge
+                            </h3>
+                            <p class="text-[#8b949e] text-sm leading-relaxed">
+                                A mathematical line is continuous and infinite. However, computer screens are made of discrete pixels. 
+                                We need to determine which pixels to illuminate to best represent the line.
+                            </p>
+                        </div>
+
+                        <div class="section-card p-6">
+                            <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-[#00ff9d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z"/>
+                                </svg>
+                                Rounding to Pixels
+                            </h3>
+                            <p class="text-[#8b949e] text-sm leading-relaxed">
+                                When we calculate y = mx + c, we get decimal values. Since pixels are at integer coordinates, 
+                                we must round these values. This rounding creates the "staircase" effect seen in pixel lines.
+                            </p>
+                        </div>
+
+                        <div class="section-card p-6 border-l-4 border-l-[#ffb800]">
+                            <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-[#ffb800]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                The Problem
+                            </h3>
+                            <p class="text-[#8b949e] text-sm leading-relaxed">
+                                Calculating y = mx + c for every pixel position requires floating-point multiplication and rounding, 
+                                which is computationally expensive. This is why we need efficient algorithms.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Visualization -->
+                    <div class="section-card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-mono text-sm text-[#8b949e]">IDEAL VS PIXEL LINE</span>
+                            <div class="flex items-center gap-4 text-xs">
+                                <span class="flex items-center gap-1">
+                                    <span class="w-3 h-3 rounded-sm bg-[#00d9ff]/30 border border-[#00d9ff]"></span>
+                                    Ideal Line
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <span class="w-3 h-3 rounded-sm bg-[#00ff9d]"></span>
+                                    Pixels
+                                </span>
+                            </div>
+                        </div>
+                        <canvas id="pixelApproxCanvas" class="pixel-canvas w-full rounded-lg border border-[#21262d]" width="500" height="400"></canvas>
+                        <div class="mt-4 flex gap-4">
+                            <button id="toggleIdeal" class="btn-secondary text-sm flex-1">Toggle Ideal Line</button>
+                            <button id="togglePixels" class="btn-secondary text-sm flex-1">Toggle Pixels</button>
+                        </div>
+                        <div class="mt-4 bg-[#0a0e14] rounded-lg p-4 border border-[#21262d]">
+                            <span class="text-xs text-[#8b949e] block mb-2">Pixel Coordinates (rounded from y = mx + c)</span>
+                            <div class="font-mono text-xs text-[#00ff9d] overflow-x-auto whitespace-nowrap" id="pixelCoords">
+                                (0,1) (1,2) (2,3) (3,3) (4,4) (5,5) (6,6) (7,6) (8,7)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transition to Algorithms Section -->
+        <section id="algorithms" class="min-h-screen px-6 py-20 border-t border-[#21262d]">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Transition to Algorithms</h2>
+                    <p class="text-[#8b949e] max-w-2xl mx-auto">
+                        Direct calculation using the line equation is inefficient. Specialized algorithms solve this problem.
+                    </p>
+                </div>
+
+                <!-- Why We Need Algorithms -->
+                <div class="section-card p-8 mb-8">
+                    <h3 class="font-semibold text-xl mb-6">Why Not Just Use y = mx + c?</h3>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-[#0a0e14] rounded-lg p-6 border border-[#21262d]">
+                            <div class="text-3xl font-mono text-[#ff6b6b] mb-3">1</div>
+                            <h4 class="font-semibold mb-2">Floating Point Operations</h4>
+                            <p class="text-sm text-[#8b949e]">
+                                Multiplication and division are expensive operations. For each pixel, we need to compute y = mx + c.
+                            </p>
+                        </div>
+                        <div class="bg-[#0a0e14] rounded-lg p-6 border border-[#21262d]">
+                            <div class="text-3xl font-mono text-[#ffb800] mb-3">2</div>
+                            <h4 class="font-semibold mb-2">Rounding Errors</h4>
+                            <p class="text-sm text-[#8b949e]">
+                                Converting floating-point results to integers introduces cumulative rounding errors that affect line quality.
+                            </p>
+                        </div>
+                        <div class="bg-[#0a0e14] rounded-lg p-6 border border-[#21262d]">
+                            <div class="text-3xl font-mono text-[#00d9ff] mb-3">3</div>
+                            <h4 class="font-semibold mb-2">Performance</h4>
+                            <p class="text-sm text-[#8b949e]">
+                                For real-time graphics with millions of lines, we need algorithms that use only integer arithmetic.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Algorithm Cards -->
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- DDA Algorithm -->
+                    <div class="section-card p-8 relative overflow-hidden group hover:border-[#00d9ff]/50 transition-colors">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-[#00d9ff]/5 rounded-full blur-3xl group-hover:bg-[#00d9ff]/10 transition-colors"></div>
+                        <div class="relative">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-[#00d9ff]/10 flex items-center justify-center">
+                                    <span class="font-mono font-bold text-[#00d9ff]">DDA</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-lg">Digital Differential Analyzer</h3>
+                                    <span class="text-xs text-[#8b949e]">Incremental Algorithm</span>
+                                </div>
+                            </div>
+                            <p class="text-[#8b949e] text-sm mb-4">
+                                DDA uses incremental calculations. Instead of computing y = mx + c for each x, 
+                                it adds the slope incrementally: y(n+1) = y(n) + m
+                            </p>
+                            <div class="code-block p-4 mb-4">
+                                <pre class="text-xs text-[#8b949e] overflow-x-auto"><code><span class="text-[#00d9ff]">// DDA approach</span>
+<span class="text-[#00d9ff]">let</span> y = y1;
+<span class="text-[#ffb800]">for</span> (<span class="text-[#00d9ff]">let</span> x = x1; x <= x2; x++) {
+    plot(x, <span class="text-[#00ff9d]">Math.round</span>(y));
+    y = y + slope; <span class="text-[#ff6b6b]">// Incremental</span>
+}</code></pre>
+                            </div>
+                            <div class="flex items-center gap-2 text-sm">
+                                <span class="text-[#00ff9d]">Pros:</span>
+                                <span class="text-[#8b949e]">Simple to implement</span>
+                                <span class="text-[#ff6b6b] ml-4">Cons:</span>
+                                <span class="text-[#8b949e]">Still uses floating-point</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bresenham Algorithm -->
+                    <div class="section-card p-8 relative overflow-hidden group hover:border-[#00ff9d]/50 transition-colors">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-[#00ff9d]/5 rounded-full blur-3xl group-hover:bg-[#00ff9d]/10 transition-colors"></div>
+                        <div class="relative">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-[#00ff9d]/10 flex items-center justify-center">
+                                    <span class="font-mono font-bold text-[#00ff9d]">BA</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-lg">Bresenham Line Algorithm</h3>
+                                    <span class="text-xs text-[#8b949e]">Integer-Only Algorithm</span>
+                                </div>
+                            </div>
+                            <p class="text-[#8b949e] text-sm mb-4">
+                                Bresenham's algorithm uses only integer addition and subtraction. It uses a decision parameter 
+                                to determine which pixel is closer to the ideal line.
+                            </p>
+                            <div class="code-block p-4 mb-4">
+                                <pre class="text-xs text-[#8b949e] overflow-x-auto"><code><span class="text-[#00d9ff]">// Bresenham approach</span>
+<span class="text-[#00d9ff]">let</span> d = 2*dy - dx; <span class="text-[#ff6b6b]">// Decision param</span>
+<span class="text-[#ffb800]">for</span> (<span class="text-[#00d9ff]">let</span> x = x1; x <= x2; x++) {
+    plot(x, y);
+    <span class="text-[#ffb800]">if</span> (d > <span class="text-[#ff6b6b]">0</span>) { y++; d -= 2*dx; }
+    d += 2*dy; <span class="text-[#ff6b6b]">// Integer only!</span>
+}</code></pre>
+                            </div>
+                            <div class="flex items-center gap-2 text-sm">
+                                <span class="text-[#00ff9d]">Pros:</span>
+                                <span class="text-[#8b949e]">Fast, integer-only</span>
+                                <span class="text-[#ffb800] ml-4">Note:</span>
+                                <span class="text-[#8b949e]">Industry standard</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="section-card p-8 mt-8 text-center">
+                    <h3 class="font-semibold text-xl mb-4">Ready to Learn the Algorithms?</h3>
+                    <p class="text-[#8b949e] max-w-2xl mx-auto mb-6">
+                        Now that you understand the fundamentals of line representation, slope calculation, and pixel approximation, 
+                        you're ready to dive deeper into DDA and Bresenham algorithms.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-4">
+                        <button class="btn-primary" id="restartBtn">Restart Module</button>
+                        <a href="#introduction" class="btn-secondary">Back to Top</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="border-t border-[#21262d] py-8 px-6">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-[#8b949e]">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5" viewBox="0 0 32 32" fill="none">
+                        <line x1="4" y1="28" x2="28" y2="4" stroke="#00d9ff" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="4" cy="28" r="3" fill="#00ff9d"/>
+                        <circle cx="28" cy="4" r="3" fill="#00ff9d"/>
+                    </svg>
+                    <span class="font-mono">LineCG Educational Tool</span>
+                </div>
+                <div class="font-mono text-xs">
+                    Computer Graphics Fundamentals
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        // Constants and configuration
+        const CONFIG = {
+            gridSize: 20,
+            pixelSize: 25,
+            colors: {
+                bg: '#0a0e14',
+                grid: '#1e2632',
+                gridMajor: '#2d3848',
+                accent: '#00d9ff',
+                accentSecondary: '#00ff9d',
+                warning: '#ffb800',
+                error: '#ff6b6b',
+                text: '#8b949e'
+            }
+        };
+
+        // State management
+        const state = {
+            p1: null,
+            p2: null,
+            showIdealLine: true,
+            showPixels: true,
+            animationFrame: null
+        };
+
+        // Utility functions
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function safeColor(color) {
+            // Validate and return safe color format
+            if (/^#[0-9A-Fa-f]{6}$/.test(color)) return color;
+            if (/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/.test(color)) return color;
+            return '#ffffff';
+        }
+
+        function drawGrid(ctx, width, height, pixelSize, offsetX = 0, offsetY = 0) {
+            ctx.strokeStyle = safeColor(CONFIG.colors.grid);
+            ctx.lineWidth = 1;
+            
+            const cols = Math.ceil(width / pixelSize);
+            const rows = Math.ceil(height / pixelSize);
+            
+            for (let i = 0; i <= cols; i++) {
+                const x = offsetX + i * pixelSize;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            
+            for (let j = 0; j <= rows; j++) {
+                const y = offsetY + j * pixelSize;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawPixel(ctx, x, y, pixelSize, color, offsetX = 0, offsetY = 0) {
+            const safeX = clamp(Math.floor(x), 0, 100);
+            const safeY = clamp(Math.floor(y), 0, 100);
+            ctx.fillStyle = safeColor(color);
+            ctx.fillRect(
+                offsetX + safeX * pixelSize + 1,
+                offsetY + safeY * pixelSize + 1,
+                pixelSize - 2,
+                pixelSize - 2
+            );
+        }
+
+        function drawLine(ctx, x1, y1, x2, y2, color, lineWidth = 2) {
+            ctx.strokeStyle = safeColor(color);
+            ctx.lineWidth = clamp(lineWidth, 1, 10);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        function drawPoint(ctx, x, y, radius, color, label = '') {
+            const safeRadius = clamp(radius, 2, 20);
+            ctx.fillStyle = safeColor(color);
+            ctx.beginPath();
+            ctx.arc(x, y, safeRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            if (label) {
+                ctx.fillStyle = safeColor(CONFIG.colors.text);
+                ctx.font = '12px JetBrains Mono';
+                ctx.fillText(label, x + safeRadius + 5, y + 4);
+            }
+        }
+
+        // Hero Canvas Animation
+        function initHeroCanvas() {
+            const canvas = document.getElementById('heroCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const pixelSize = 30;
+            let time = 0;
+            
+            function animate() {
+                const width = canvas.width;
+                const height = canvas.height;
+                
+                ctx.fillStyle = safeColor(CONFIG.colors.bg);
+                ctx.fillRect(0, 0, width, height);
+                
+                drawGrid(ctx, width, height, pixelSize, 20, 20);
+                
+                // Animated line
+                const animSpeed = 0.001;
+                const t = (Math.sin(time * animSpeed) + 1) / 2;
+                
+                const x1 = 2, y1 = 3;
+                const x2 = 8 + t * 2, y2 = 7 - t;
+                
+                // Draw ideal line
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.strokeStyle = safeColor(CONFIG.colors.accent);
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(20 + x1 * pixelSize + pixelSize/2, 20 + (10 - y1) * pixelSize + pixelSize/2);
+                ctx.lineTo(20 + x2 * pixelSize + pixelSize/2, 20 + (10 - y2) * pixelSize + pixelSize/2);
+                ctx.stroke();
+                ctx.restore();
+                
+                // Draw pixels along line
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const steps = Math.max(Math.abs(dx), Math.abs(dy));
+                
+                for (let i = 0; i <= steps; i++) {
+                    const px = Math.round(x1 + (dx * i / steps));
+                    const py = Math.round(y1 + (dy * i / steps));
+                    drawPixel(ctx, px, 10 - py - 1, pixelSize, CONFIG.colors.accentSecondary, 20, 20);
+                }
+                
+                // Draw endpoints
+                drawPoint(ctx, 20 + x1 * pixelSize + pixelSize/2, 20 + (10 - y1) * pixelSize + pixelSize/2, 6, CONFIG.colors.accentSecondary, 'P1');
+                drawPoint(ctx, 20 + x2 * pixelSize + pixelSize/2, 20 + (10 - y2) * pixelSize + pixelSize/2, 6, CONFIG.colors.accent, 'P2');
+                
+                // Update display
+                document.getElementById('heroP1').textContent = `(${x1}, ${y1})`;
+                document.getElementById('heroP2').textContent = `(${Math.round(x2)}, ${Math.round(y2)})`;
+                
+                time += 16;
+                state.animationFrame = requestAnimationFrame(animate);
+            }
+            
+            // Check for reduced motion preference
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                time = 0;
+                animate();
+            } else {
+                animate();
+            }
+        }
+
+        // Interactive Canvas
+        function initInteractiveCanvas() {
+            const canvas = document.getElementById('interactiveCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const pixelSize = 25;
+            const cols = Math.floor(canvas.width / pixelSize);
+            const rows = Math.floor(canvas.height / pixelSize);
+            
+            function redraw() {
+                ctx.fillStyle = safeColor(CONFIG.colors.bg);
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                drawGrid(ctx, canvas.width, canvas.height, pixelSize);
+                
+                // Draw axis labels
+                ctx.fillStyle = safeColor(CONFIG.colors.text);
+                ctx.font = '10px JetBrains Mono';
+                for (let i = 0; i < cols; i++) {
+                    ctx.fillText(i.toString(), i * pixelSize + pixelSize/2 - 3, canvas.height - 5);
+                }
+                for (let j = 0; j < rows; j++) {
+                    ctx.fillText((rows - 1 - j).toString(), 5, j * pixelSize + pixelSize/2 + 3);
+                }
+                
+                // Draw line and pixels if both points exist
+                if (state.p1 && state.p2) {
+                    const dx = state.p2.x - state.p1.x;
+                    const dy = state.p2.y - state.p1.y;
+                    const steps = Math.max(Math.abs(dx), Math.abs(dy), 1);
+                    
+                    // Draw pixels
+                    for (let i = 0; i <= steps; i++) {
+                        const px = Math.round(state.p1.x + (dx * i / steps));
+                        const py = Math.round(state.p1.y + (dy * i / steps));
+                        const screenY = rows - 1 - py;
+                        drawPixel(ctx, px, screenY, pixelSize, CONFIG.colors.accentSecondary);
+                    }
+                    
+                    // Draw ideal line
+                    ctx.save();
+                    ctx.globalAlpha = 0.3;
+                    ctx.strokeStyle = safeColor(CONFIG.colors.accent);
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(state.p1.x * pixelSize + pixelSize/2, (rows - 1 - state.p1.y) * pixelSize + pixelSize/2);
+                    ctx.lineTo(state.p2.x * pixelSize + pixelSize/2, (rows - 1 - state.p2.y) * pixelSize + pixelSize/2);
+                    ctx.stroke();
+                    ctx.restore();
+                    
+                    // Update statistics
+                    updateStatistics();
+                }
+                
+                // Draw selected points
+                if (state.p1) {
+                    const screenY1 = rows - 1 - state.p1.y;
+                    drawPoint(ctx, state.p1.x * pixelSize + pixelSize/2, screenY1 * pixelSize + pixelSize/2, 8, CONFIG.colors.accentSecondary);
+                    ctx.fillStyle = safeColor(CONFIG.colors.accentSecondary);
+                    ctx.font = 'bold 11px JetBrains Mono';
+                    ctx.fillText(`P1(${state.p1.x},${state.p1.y})`, state.p1.x * pixelSize + pixelSize/2 + 12, screenY1 * pixelSize + pixelSize/2 + 4);
+                }
+                
+                if (state.p2) {
+                    const screenY2 = rows - 1 - state.p2.y;
+                    drawPoint(ctx, state.p2.x * pixelSize + pixelSize/2, screenY2 * pixelSize + pixelSize/2, 8, CONFIG.colors.accent);
+                    ctx.fillStyle = safeColor(CONFIG.colors.accent);
+                    ctx.font = 'bold 11px JetBrains Mono';
+                    ctx.fillText(`P2(${state.p2.x},${state.p2.y})`, state.p2.x * pixelSize + pixelSize/2 + 12, screenY2 * pixelSize + pixelSize/2 + 4);
+                }
+            }
+            
+            function updateStatistics() {
+                if (!state.p1 || !state.p2) return;
+                
+                const dx = state.p2.x - state.p1.x;
+                const dy = state.p2.y - state.p1.y;
+                
+                document.getElementById('p1Display').textContent = `(${state.p1.x}, ${state.p1.y})`;
+                document.getElementById('p2Display').textContent = `(${state.p2.x}, ${state.p2.y})`;
+                document.getElementById('dxDisplay').textContent = Math.abs(dx);
+                document.getElementById('dyDisplay').textContent = Math.abs(dy);
+                
+                if (dx === 0) {
+                    document.getElementById('slopeDisplay').textContent = 'undefined';
+                    document.getElementById('interceptDisplay').textContent = '--';
+                    document.getElementById('angleDisplay').textContent = '90.00';
+                } else {
+                    const slope = dy / dx;
+                    const intercept = state.p1.y - slope * state.p1.x;
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    
+                    document.getElementById('slopeDisplay').textContent = slope.toFixed(3);
+                    document.getElementById('interceptDisplay').textContent = intercept.toFixed(3);
+                    document.getElementById('angleDisplay').textContent = angle.toFixed(2);
+                }
+                
+                const length = Math.sqrt(dx * dx + dy * dy);
+                document.getElementById('lengthDisplay').textContent = length.toFixed(2);
+            }
+            
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                const x = Math.floor((e.clientX - rect.left) * scaleX / pixelSize);
+                const y = rows - 1 - Math.floor((e.clientY - rect.top) * scaleY / pixelSize);
+                
+                const clampedX = clamp(x, 0, cols - 1);
+                const clampedY = clamp(y, 0, rows - 1);
+                
+                if (!state.p1) {
+                    state.p1 = { x: clampedX, y: clampedY };
+                    document.getElementById('gridStatus').textContent = 'Click to select P2';
+                    document.getElementById('gridStatus').className = 'slope-badge bg-[#00d9ff]/10 text-[#00d9ff]';
+                } else if (!state.p2) {
+                    state.p2 = { x: clampedX, y: clampedY };
+                    document.getElementById('gridStatus').textContent = 'Line drawn!';
+                    document.getElementById('gridStatus').className = 'slope-badge bg-[#00ff9d]/10 text-[#00ff9d]';
+                } else {
+                    state.p1 = { x: clampedX, y: clampedY };
+                    state.p2 = null;
+                    document.getElementById('gridStatus').textContent = 'Click to select P2';
+                    document.getElementById('gridStatus').className = 'slope-badge bg-[#00d9ff]/10 text-[#00d9ff]';
+                }
+                
+                redraw();
+            });
+            
+            document.getElementById('clearCanvas').addEventListener('click', () => {
+                state.p1 = null;
+                state.p2 = null;
+                document.getElementById('gridStatus').textContent = 'Click to select P1';
+                document.getElementById('gridStatus').className = 'slope-badge bg-[#00d9ff]/10 text-[#00d9ff]';
+                document.getElementById('p1Display').textContent = 'Not selected';
+                document.getElementById('p2Display').textContent = 'Not selected';
+                document.getElementById('slopeDisplay').textContent = '--';
+                document.getElementById('interceptDisplay').textContent = '--';
+                document.getElementById('dxDisplay').textContent = '--';
+                document.getElementById('dyDisplay').textContent = '--';
+                document.getElementById('lengthDisplay').textContent = '--';
+                document.getElementById('angleDisplay').textContent = '--';
+                redraw();
+            });
+            
+            redraw();
+        }
+
+        // Line Type Canvases
+        function initLineTypeCanvases() {
+            const types = [
+                { id: 'horizontalCanvas', type: 'horizontal' },
+                { id: 'verticalCanvas', type: 'vertical' },
+                { id: 'positiveCanvas', type: 'positive' },
+                { id: 'negativeCanvas', type: 'negative' }
+            ];
+            
+            types.forEach(({ id, type }) => {
+                const canvas = document.getElementById(id);
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                const width = canvas.width;
+                const height = canvas.height;
+                const pixelSize = 16;
+                
+                ctx.fillStyle = safeColor(CONFIG.colors.bg);
+                ctx.fillRect(0, 0, width, height);
+                
+                drawGrid(ctx, width, height, pixelSize);
+                
+                let pixels = [];
+                
+                switch (type) {
+                    case 'horizontal':
+                        for (let x = 2; x < 22; x++) {
+                            pixels.push({ x, y: 5 });
+                        }
+                        break;
+                    case 'vertical':
+                        for (let y = 1; y < 9; y++) {
+                            pixels.push({ x: 12, y });
+                        }
+                        break;
+                    case 'positive':
+                        for (let i = 0; i < 18; i++) {
+                            pixels.push({ x: 2 + i, y: Math.floor(2 + i * 0.4) });
+                        }
+                        break;
+                    case 'negative':
+                        for (let i = 0; i < 18; i++) {
+                            pixels.push({ x: 2 + i, y: Math.floor(8 - i * 0.4) });
+                        }
+                        break;
+                }
+                
+                pixels.forEach(p => {
+                    drawPixel(ctx, p.x, p.y, pixelSize, CONFIG.colors.accentSecondary);
+                });
+            });
+        }
+
+        // Comparison Canvas
+        function initComparisonCanvas() {
+            const canvas = document.getElementById('comparisonCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            ctx.fillStyle = safeColor(CONFIG.colors.bg);
+            ctx.fillRect(0, 0, width, height);
+            
+            // Draw grid
+            ctx.strokeStyle = safeColor(CONFIG.colors.grid);
+            ctx.lineWidth = 1;
+            for (let x = 0; x < width; x += 20) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < height; y += 20) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+            
+            // Draw axes
+            ctx.strokeStyle = safeColor(CONFIG.colors.gridMajor);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(width, centerY);
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(centerX, height);
+            ctx.stroke();
+            
+            // Draw lines with different slopes
+            const lines = [
+                { slope: 0, color: CONFIG.colors.accentSecondary },
+                { slope: 1, color: CONFIG.colors.accent },
+                { slope: -0.5, color: CONFIG.colors.warning },
+                { slope: 2, color: CONFIG.colors.error }
+            ];
+            
+            lines.forEach(({ slope, color }) => {
+                ctx.strokeStyle = safeColor(color);
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                const startX = -centerX;
+                const endX = centerX;
+                
+                for (let dx = startX; dx <= endX; dx += 5) {
+                    const dy = slope * dx;
+                    const screenX = centerX + dx;
+                    const screenY = centerY - dy;
+                    
+                    if (dx === startX) {
+                        ctx.moveTo(screenX, screenY);
+                    } else {
+                        ctx.lineTo(screenX, screenY);
+                    }
+                }
+                ctx.stroke();
+            });
+        }
+
+        // Pixel Approximation Canvas
+        function initPixelApproxCanvas() {
+            const canvas = document.getElementById('pixelApproxCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const pixelSize = 30;
+            const cols = Math.floor(canvas.width / pixelSize);
+            const rows = Math.floor(canvas.height / pixelSize);
+            
+            const p1 = { x: 1, y: 2 };
+            const p2 = { x: 14, y: 10 };
+            
+            function redraw() {
+                ctx.fillStyle = safeColor(CONFIG.colors.bg);
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                drawGrid(ctx, canvas.width, canvas.height, pixelSize);
+                
+                // Calculate line pixels
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const steps = Math.max(Math.abs(dx), Math.abs(dy), 1);
+                const pixels = [];
+                
+                for (let i = 0; i <= steps; i++) {
+                    const px = Math.round(p1.x + (dx * i / steps));
+                    const py = Math.round(p1.y + (dy * i / steps));
+                    pixels.push({ x: px, y: py });
+                }
+                
+                // Draw ideal line
+                if (state.showIdealLine) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.4;
+                    ctx.strokeStyle = safeColor(CONFIG.colors.accent);
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x * pixelSize + pixelSize/2, (rows - 1 - p1.y) * pixelSize + pixelSize/2);
+                    ctx.lineTo(p2.x * pixelSize + pixelSize/2, (rows - 1 - p2.y) * pixelSize + pixelSize/2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                
+                // Draw pixels
+                if (state.showPixels) {
+                    pixels.forEach(p => {
+                        drawPixel(ctx, p.x, rows - 1 - p.y, pixelSize, CONFIG.colors.accentSecondary);
+                    });
+                }
+                
+                // Draw endpoints
+                drawPoint(ctx, p1.x * pixelSize + pixelSize/2, (rows - 1 - p1.y) * pixelSize + pixelSize/2, 6, CONFIG.colors.accentSecondary);
+                drawPoint(ctx, p2.x * pixelSize + pixelSize/2, (rows - 1 - p2.y) * pixelSize + pixelSize/2, 6, CONFIG.colors.accent);
+                
+                // Update pixel coordinates display
+                const coordStr = pixels.slice(0, 12).map(p => `(${p.x},${p.y})`).join(' ');
+                document.getElementById('pixelCoords').textContent = coordStr + (pixels.length > 12 ? ' ...' : '');
+            }
+            
+            document.getElementById('toggleIdeal').addEventListener('click', () => {
+                state.showIdealLine = !state.showIdealLine;
+                redraw();
+            });
+            
+            document.getElementById('togglePixels').addEventListener('click', () => {
+                state.showPixels = !state.showPixels;
+                redraw();
+            });
+            
+            redraw();
+        }
+
+        // Calculator
+        function initCalculator() {
+            const calcBtn = document.getElementById('calculateBtn');
+            if (!calcBtn) return;
+            
+            function calculate() {
+                const x1 = parseFloat(document.getElementById('calcX1').value) || 0;
+                const y1 = parseFloat(document.getElementById('calcY1').value) || 0;
+                const x2 = parseFloat(document.getElementById('calcX2').value) || 0;
+                const y2 = parseFloat(document.getElementById('calcY2').value) || 0;
+                
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                
+                document.getElementById('calcDx').textContent = `x2 - x1 = ${x2} - ${x1} = ${dx}`;
+                document.getElementById('calcDy').textContent = `y2 - y1 = ${y2} - ${y1} = ${dy}`;
+                
+                if (dx === 0) {
+                    document.getElementById('calcResult').textContent = 'm = undefined (vertical line)';
+                    document.getElementById('calcC').textContent = 'Y-intercept does not exist';
+                } else {
+                    const slope = dy / dx;
+                    const intercept = y1 - slope * x1;
+                    
+                    document.getElementById('calcResult').textContent = `m = ${slope.toFixed(4)}`;
+                    document.getElementById('calcC').textContent = `c = y1 - m*x1 = ${intercept.toFixed(4)}`;
+                }
+            }
+            
+            calcBtn.addEventListener('click', calculate);
+            
+            // Calculate on input change
+            ['calcX1', 'calcY1', 'calcX2', 'calcY2'].forEach(id => {
+                document.getElementById(id).addEventListener('input', calculate);
+            });
+            
+            calculate();
+        }
+
+        // Progress bar
+        function initProgressBar() {
+            const progressBar = document.getElementById('progressBar');
+            if (!progressBar) return;
+            
+            window.addEventListener('scroll', () => {
+                const scrollTop = window.scrollY;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const progress = (scrollTop / docHeight) * 100;
+                progressBar.style.width = `${clamp(progress, 0, 100)}%`;
+            });
+        }
+
+        // Scroll animations
+        function initScrollAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate-in');
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            document.querySelectorAll('.section-card').forEach(el => {
+                observer.observe(el);
+            });
+        }
+
+        // Smooth scroll for navigation
+        function initSmoothScroll() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
+        }
+
+        // Restart button
+        function initRestartButton() {
+            const restartBtn = document.getElementById('restartBtn');
+            if (restartBtn) {
+                restartBtn.addEventListener('click', () => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    state.p1 = null;
+                    state.p2 = null;
+                    const clearBtn = document.getElementById('clearCanvas');
+                    if (clearBtn) clearBtn.click();
+                });
+            }
+        }
+
+        // Mobile menu toggle
+        function initMobileMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            if (!menuToggle) return;
+            
+            menuToggle.addEventListener('click', () => {
+                // Simple toggle - in production would show mobile menu
+                const nav = menuToggle.closest('nav');
+                const links = nav.querySelector('.hidden');
+                if (links) {
+                    links.classList.toggle('hidden');
+                    links.classList.toggle('flex');
+                    links.classList.toggle('flex-col');
+                    links.classList.toggle('absolute');
+                    links.classList.toggle('top-full');
+                    links.classList.toggle('left-0');
+                    links.classList.toggle('right-0');
+                    links.classList.toggle('bg-[#0a0e14]');
+                    links.classList.toggle('p-4');
+                    links.classList.toggle('border-b');
+                    links.classList.toggle('border-[#21262d]');
+                }
+            });
+        }
+
+        // Initialize all components
+        function init() {
+            initProgressBar();
+            initHeroCanvas();
+            initInteractiveCanvas();
+            initLineTypeCanvases();
+            initComparisonCanvas();
+            initPixelApproxCanvas();
+            initCalculator();
+            initScrollAnimations();
+            initSmoothScroll();
+            initRestartButton();
+            initMobileMenu();
+        }
+
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

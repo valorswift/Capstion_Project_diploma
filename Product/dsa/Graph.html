@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Graph Visualization | PROTO D</title>
+    <!-- Vis.js -->
+    <script src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+    <link href="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.css" rel="stylesheet">
+    <!-- Remix Icon -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Theme Variables --- */
+        :root {
+            --bg-body: #f0f4f8;
+            --bg-card: rgba(255, 255, 255, 0.65);
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --primary: #6366f1; /* Indigo */
+            --secondary: #0ea5e9; /* Sky Blue */
+            --border: rgba(255, 255, 255, 0.5);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            --sidebar-width: 280px;
+            --sidebar-learning-width: 700px; /* Expanded for split view */
+        }
+
+        body.dark {
+            --bg-body: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Inter", system-ui, -apple-system, sans-serif;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+        body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: radial-gradient(circle at center, var(--bg-body), #cbd5e1);
+            color: var(--text-main);
+            transition: background 0.3s ease;
+        }
+        
+        body.dark {
+            background: radial-gradient(circle at center, #0f172a, #1e293b);
+        }
+
+        /* --- Layout --- */
+        .container {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* --- LEFT SIDEBAR --- */
+        .sidebar-left {
+            width: var(--sidebar-width);
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 20; /* Above graph */
+            box-shadow: var(--shadow);
+            transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            overflow: hidden; /* Important for split view logic */
+        }
+
+        /* Learning Mode: Widen Sidebar */
+        .sidebar-left.learning-mode {
+            width: var(--sidebar-learning-width);
+        }
+
+        /* --- Sidebar Content Containers --- */
+        .sidebar-content-wrapper {
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+        }
+        .sidebar-content-wrapper.active {
+            display: flex;
+        }
+
+        /* 1. Visualizer Sidebar (Node List) */
+        .visualizer-sidebar {
+            padding: 20px;
+        }
+
+        .exit-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            transition: 0.2s;
+        }
+        .exit-btn:hover { background: #ef4444; color: white; }
+
+        .sidebar-header {
+            font-size: 1.2rem; font-weight: 700; margin-bottom: 15px;
+            display: flex; align-items: center; gap: 10px; color: var(--primary);
+        }
+
+        .search-box { position: relative; margin-bottom: 15px; }
+        .search-box input {
+            width: 100%; padding: 10px 10px 10px 35px; border-radius: 12px;
+            border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main); outline: none;
+        }
+        .search-box i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+
+        .node-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .node-item {
+            padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: all 0.2s;
+            font-size: 0.9rem; border: 1px solid transparent; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .node-item:hover { background: var(--primary); color: white; transform: translateX(5px); }
+
+        /* 2. Learning Sidebar (Split View) */
+        .learning-sidebar {
+            display: flex;
+            height: 100%;
+        }
+
+        /* Learning Menu (Left part of sidebar) */
+        .learning-menu {
+            width: 220px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 15px 0;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.02);
+            flex-shrink: 0;
+        }
+        .menu-header {
+            padding: 0 15px 15px 15px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+        .menu-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .menu-item:hover { background: rgba(255,255,255,0.05); color: var(--primary); }
+        .menu-item.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Learning Content (Right part of sidebar) */
+        .learning-content {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            background: var(--bg-card);
+        }
+        .back-to-vis-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            transition: 0.2s;
+        }
+        .back-to-vis-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+        .topic-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .content-text {
+            line-height: 1.7;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+        
+        .concept-block {
+            background: rgba(0,0,0,0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .sub-title {
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sub-title i { color: var(--secondary); }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            background: rgba(0,0,0,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--primary);
+            font-size: 0.9em;
+        }
+
+        .diagram-container {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #333;
+            overflow-x: auto;
+        }
+        body.dark .diagram-container {
+            background: #1e293b;
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+
+        /* Memory Diagram Styles */
+        .mem-hierarchy {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+        .mem-box {
+            width: 80%; padding: 8px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.5);
+            border-radius: 4px;
+            text-align: center;
+        }
+        .mem-arrow { font-size: 1.2rem; color: var(--text-muted); }
+
+        /* --- CENTER GRAPH --- */
+        .graph-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            /* Graph remains visible */
+        }
+
+        .top-bar {
+            position: absolute;
+            top: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between;
+            z-index: 10; pointer-events: none;
+        }
+        .nav-btn {
+            pointer-events: auto;
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s;
+            box-shadow: var(--shadow);
+        }
+        .nav-btn:hover { background: var(--primary); color: white; }
+
+        .controls-panel {
+            position: absolute;
+            bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 700px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: var(--shadow-hover);
+            z-index: 15;
+            display: flex; flex-direction: column; gap: 15px;
+            /* No transform transition requested to be removed, keeping it static or simple */
+        }
+
+        .control-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .group-label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); width: 80px; text-transform: uppercase; }
+        .input-group { display: flex; gap: 8px; flex: 1; }
+        
+        input[type="text"], input[type="number"] {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 8px 12px; border-radius: 8px;
+            outline: none; width: 100%; font-size: 0.9rem;
+        }
+        input:focus { border-color: var(--secondary); background: rgba(255,255,255,0.1); }
+
+        .btn {
+            padding: 8px 16px; border: none; border-radius: 8px;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s; color: white;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), #4f46e5); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+        .btn-secondary { background: linear-gradient(135deg, var(--secondary), #0284c7); box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+
+        #graph { width: 100%; height: 100%; background: transparent; }
+
+        /* Right Sidebar (Logs) */
+        .sidebar-right {
+            position: absolute;
+            top: 0; right: 0; bottom: 0;
+            width: 320px; padding: 25px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border);
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 30; box-shadow: -5px 0 30px rgba(0,0,0,0.1);
+        }
+        .sidebar-right.open { transform: translateX(0); }
+        .log-container { height: calc(100% - 50px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .log-entry { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border-left: 3px solid var(--primary); font-size: 0.85rem; }
+        .log-entry .time { font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar-left { position: absolute; height: 100%; width: 100%; transform: translateX(-100%); transition: transform 0.3s; z-index: 25; }
+            .sidebar-left.mobile-open { transform: translateX(0); }
+            /* On mobile, learning mode fills screen mostly */
+            .sidebar-left.learning-mode { width: 100%; }
+            .learning-menu { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+            .learning-sidebar { flex-direction: column; }
+            .learning-menu { height: 200px; flex-shrink: 0; }
+            
+            .controls-panel { width: 95%; bottom: 15px; padding: 15px; max-height: 40vh; overflow-y: auto; }
+            .control-group { flex-direction: column; align-items: stretch; }
+            .input-group { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar-left" id="sidebarLeft">
+        
+        <!-- MODE 1: VISUALIZER UI (Node List) -->
+        <div id="visualizer-content" class="sidebar-content-wrapper active">
+            <div class="visualizer-sidebar">
+                <div class="exit-btn" onclick="toggleMode()">
+                    <i class="ri-arrow-left-circle-line"></i> Exit Visualizer
+                </div>
+                
+                <div class="sidebar-header">
+                    <i class="ri-node-tree"></i> Nodes
+                </div>
+
+                <div class="search-box">
+                    <i class="ri-search-line"></i>
+                    <input type="text" id="searchNode" placeholder="Search nodes...">
+                </div>
+                
+                <div class="node-list" id="nodeList"></div>
+            </div>
+        </div>
+
+        <!-- MODE 2: LEARNING UI (Split Sidebar) -->
+        <div id="learning-content" class="sidebar-content-wrapper">
+            <div class="learning-sidebar">
+                <!-- Left: Menu -->
+                <div class="learning-menu">
+                    <div class="menu-header">📘 Graph Learning</div>
+                    
+                    <div class="menu-item active" onclick="loadTopic('what')">
+                        <i class="ri-question-mark"></i> What is Graph?
+                    </div>
+                    <div class="menu-item" onclick="loadTopic('types')">
+                        <i class="ri-shape-line"></i> Types of Graph
+                    </div>
+                    <div class="menu-item" onclick="loadTopic('representation')">
+                        <i class="ri-database-2-line"></i> Representation
+                    </div>
+                    <div class="menu-item" onclick="loadTopic('memory')">
+                        <i class="ri-cpu-line"></i> Graph in Memory
+                    </div>
+                    <div class="menu-item" onclick="loadTopic('traversal')">
+                        <i class="ri-git-branch-line"></i> Traversal
+                    </div>
+                    <div class="menu-item" onclick="loadTopic('algorithms')">
+                        <i class="ri-algorithm-line"></i> Algorithms
+                    </div>
+                    <div class="menu-item" onclick="loadTopic('microprocessor')">
+                        <i class="ri-server-line"></i> In Microprocessor
+                    </div>
+                    <div class="menu-item" onclick="loadTopic('advanced')">
+                        <i class="ri-code-s-slash-line"></i> Advanced Topics
+                    </div>
+                </div>
+
+                <!-- Right: Explanation -->
+                <div class="learning-content">
+                    <button class="back-to-vis-btn" onclick="toggleMode()">
+                        <i class="ri-arrow-go-back-line"></i> Back to Visualizer
+                    </button>
+                    <div id="dynamic-content">
+                        <!-- Content Injected Here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CENTER GRAPH WRAPPER -->
+    <div class="graph-wrapper">
+        <div class="top-bar">
+            <!-- Mobile Menu Toggle -->
+            <button class="nav-btn" onclick="toggleMobileSidebar()" style="display: none;" id="mobileMenuBtn">
+                <i class="ri-menu-line"></i>
+            </button>
+            <!-- Back Button -->
+            <button class="nav-btn" onclick="goBack()">
+                <i class="ri-arrow-left-line"></i>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button class="nav-btn" onclick="toggleTheme()" id="themeBtn">
+                <i class="ri-moon-line" id="themeIcon"></i>
+            </button>
+        </div>
+
+        <div id="graph"></div>
+
+        <!-- Floating Controls -->
+        <div class="controls-panel">
+            <div class="control-group">
+                <div class="group-label">Nodes</div>
+                <div class="input-group">
+                    <input type="text" id="nodeLabel" placeholder="Label (e.g. 'A')">
+                    <button class="btn btn-primary" onclick="addNode()">
+                        <i class="ri-add-circle-line"></i> Add
+                    </button>
+                    <input type="number" id="deleteNodeId" placeholder="ID" style="max-width: 80px;">
+                    <button class="btn btn-danger" onclick="deleteNode()">
+                        <i class="ri-delete-bin-line"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="group-label">Edges</div>
+                <div class="input-group">
+                    <input type="number" id="fromNode" placeholder="From ID">
+                    <input type="number" id="toNode" placeholder="To ID">
+                    <button class="btn btn-secondary" onclick="addEdge()">
+                        <i class="ri-link"></i> Connect
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="group-label">Analysis</div>
+                <div class="input-group">
+                    <button class="btn btn-primary" onclick="showDegrees()" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);">
+                        <i class="ri-pie-chart-line"></i> Calc Degrees
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Log Toggle Button -->
+        <button class="nav-btn" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; background: var(--secondary); color: white;" onclick="toggleRightSidebar()">
+            <i class="ri-file-list-3-line"></i>
+        </button>
+    </div>
+
+    <!-- RIGHT SIDEBAR (Logs) -->
+    <div class="sidebar-right" id="sidebarRight">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3>Activity Log</h3>
+            <button onclick="toggleRightSidebar()" style="background:none; border:none; font-size:1.5rem; color:var(--text-muted); cursor:pointer;"><i class="ri-close-line"></i></button>
+        </div>
+        <div class="log-container" id="explanationLog"></div>
+    </div>
+</div>
+
+<script>
+  // --- 1. Dark Mode ---
+  const themeIcon = document.getElementById('themeIcon');
+  const body = document.body;
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  
+  if(window.innerWidth <= 768) mobileMenuBtn.style.display = 'flex';
+
+  const savedTheme = localStorage.getItem('theme');
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+    applyTheme(true);
+  } else {
+    applyTheme(false);
+  }
+
+  function toggleTheme() {
+    const isDark = body.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    applyTheme(isDark);
+    updateNetworkTheme(isDark);
+  }
+
+  function applyTheme(isDark) {
+    if (isDark) {
+      body.classList.add('dark');
+      themeIcon.className = 'ri-sun-line';
+    } else {
+      body.classList.remove('dark');
+      themeIcon.className = 'ri-moon-line';
+    }
+  }
+
+  // --- 2. Mode Toggling ---
+  let isLearningMode = false;
+
+  function toggleMode() {
+    isLearningMode = !isLearningMode;
+    const visualDiv = document.getElementById("visualizer-content");
+    const learningDiv = document.getElementById("learning-content");
+    const sidebar = document.getElementById("sidebarLeft");
+
+    if (isLearningMode) {
+        // Switch to Learning Mode
+        visualDiv.classList.remove('active');
+        learningDiv.classList.add('active');
+        sidebar.classList.add('learning-mode');
+        loadTopic('what'); // Default load
+    } else {
+        // Switch to Visualizer Mode
+        learningDiv.classList.remove('active');
+        visualDiv.classList.add('active');
+        sidebar.classList.remove('learning-mode');
+    }
+  }
+
+  // --- 3. Content Data (Deep & Technical) ---
+  const contentData = {
+    what: `
+        <h2 class="topic-title">What is a Graph?</h2>
+        <p class="content-text">A graph is a non-linear data structure consisting of vertices (also called nodes) and a set of edges that connect these vertices.</p>
+        
+        <div class="concept-block">
+            <strong>Mathematical Definition:</strong><br>
+            <code>G = (V, E)</code>
+            <br><br>
+            Where:
+            <ul style="margin-left: 20px; color: var(--text-muted);">
+                <li><strong>V</strong>: A finite, non-empty set of vertices.</li>
+                <li><strong>E</strong>: A set of edges. Each edge is a pair (u, v), where u, v ∈ V.</li>
+            </ul>
+        </div>
+
+        <h3 class="sub-title"><i class="ri-global-line"></i> Real-World Modeling</h3>
+        <p class="content-text">Graphs model pairwise relations between objects.</p>
+        <ul style="margin-left: 20px; line-height: 2; color: var(--text-muted);">
+            <li><strong>Social Networks:</strong> Nodes = Users, Edges = Friendships.</li>
+            <li><strong>Road Maps:</strong> Nodes = Intersections, Edges = Roads.</li>
+            <li><strong>Web:</strong> Nodes = Pages, Edges = Hyperlinks.</li>
+        </ul>
+    `,
+
+    types: `
+        <h2 class="topic-title">Types of Graphs</h2>
+        
+        <h3 class="sub-title">Directed vs Undirected</h3>
+        <div class="diagram-container">
+Directed:  A <span style="color:red">→</span> B  (One way)<br>
+Undirected: A — B  (Two way)
+        </div>
+
+        <h3 class="sub-title">Weighted vs Unweighted</h3>
+        <p class="content-text">Edges carry values (cost, distance, time) in weighted graphs.</p>
+
+        <h3 class="sub-title">Cyclic vs Acyclic</h3>
+        <p class="content-text"><strong>Cyclic:</strong> Contains a loop (path starts and ends at same node).<br><strong>Acyclic:</strong> No loops. Trees are connected acyclic graphs.</p>
+
+        <h3 class="sub-title">DAG (Directed Acyclic Graph)</h3>
+        <p class="content-text">Critical for scheduling tasks where order matters (A before B).</p>
+
+        <h3 class="sub-title">Complete Graph</h3>
+        <p class="content-text">Every pair of distinct vertices is connected by a unique edge. Denoted as K<sub>n</sub>.</p>
+    `,
+
+    representation: `
+        <h2 class="topic-title">Graph Representation in Memory</h2>
+        <p class="content-text">How do we store G=(V,E) in computer memory?</p>
+
+        <h3 class="sub-title">1. Adjacency Matrix</h3>
+        <p class="content-text">A 2D array of size V x V.</p>
+        <div class="diagram-container">
+  0 1 2<br>
+0 [0 1 0]<br>
+1 [1 0 1]<br>
+2 [0 1 0]
+        </div>
+        <p class="content-text"><strong>Storage:</strong> Row-Major order. Contiguous memory block.<br><strong>Space:</strong> O(V²). Good for dense graphs.<br><strong>Access:</strong> O(1) to check edge (i,j).</p>
+
+        <h3 class="sub-title">2. Adjacency List</h3>
+        <p class="content-text">Array of Linked Lists.</p>
+        <div class="diagram-container">
+0 → 1 → 2 → NULL<br>
+1 → 0 → NULL<br>
+2 → 0 → NULL
+        </div>
+        <p class="content-text"><strong>Storage:</strong> Dynamic (Heap). Scattered memory.<br><strong>Space:</strong> O(V + E). Efficient for sparse graphs.<br><strong>Access:</strong> O(degree) to find neighbors.</p>
+    `,
+
+    memory: `
+        <h2 class="topic-title">Graph in Memory (Microprocessor)</h2>
+        <p class="content-text">How hardware handles graph data.</p>
+
+        <h3 class="sub-title">The Hierarchy</h3>
+        <div class="diagram-container" style="background:transparent; border:none; text-align:center;">
+            <div class="mem-hierarchy">
+                <div class="mem-box">CPU (Registers)</div>
+                <div class="mem-arrow">↓</div>
+                <div class="mem-box">L1 / L2 Cache</div>
+                <div class="mem-arrow">↓</div>
+                <div class="mem-box">RAM (Heap)</div>
+                <div class="mem-arrow">↓</div>
+                <div class="mem-box" style="border-color:var(--primary);">Graph Data</div>
+            </div>
+        </div>
+
+        <h3 class="sub-title">Matrix vs List in Hardware</h3>
+        <p class="content-text"><strong>Matrix:</strong> Stored contiguously. Excellent <strong>spatial locality</strong>. When CPU reads matrix[i][j], matrix[i][j+1] is likely already in the Cache Line (High Hit Rate).</p>
+        
+        <p class="content-text"><strong>List:</strong> Nodes scattered in Heap. Pointer chasing leads to <strong>Cache Misses</strong>. CPU waits for RAM (slow).</p>
+
+        <h3 class="sub-title">Traversal Hardware</h3>
+        <p class="content-text"><strong>BFS:</strong> Uses a Queue. Enqueue/Dequeue updates RAM addresses constantly.<br><strong>DFS (Recursive):</strong> Uses Call Stack (RAM/Cache Stack). Stack Push/Pop is fast if it fits in L1, otherwise slow RAM access.</p>
+    `,
+
+    traversal: `
+        <h2 class="topic-title">Graph Traversal</h2>
+
+        <h3 class="sub-title">BFS (Breadth First Search)</h3>
+        <p class="content-text">Uses a <strong>Queue</strong> (FIFO).</p>
+        <ul>
+            <li>Enqueue start node.</li>
+            <li>Dequeue, process neighbors, Enqueue unvisited.</li>
+            <li>Repeat until Queue empty.</li>
+        </ul>
+        <p class="content-text"><strong>Complexity:</strong> O(V + E). <strong>Space:</strong> O(V) for the queue.</p>
+
+        <h3 class="sub-title">DFS (Depth First Search)</h3>
+        <p class="content-text">Uses a <strong>Stack</strong> (explicit or recursion).</p>
+        <ul>
+            <li>Push start node.</li>
+            <li>Pop, process, Push unvisited neighbors.</li>
+            <li>Goes deep before backtracking.</li>
+        </ul>
+        <p class="content-text"><strong>Complexity:</strong> O(V + E). <strong>Space:</strong> O(V) for stack.</p>
+    `,
+
+    algorithms: `
+        <h2 class="topic-title">Graph Algorithms</h2>
+        <div class="concept-block">
+            <strong>Dijkstra:</strong> Shortest path in weighted graphs. Uses Priority Queue (Min-Heap). Greedy approach.<br><br>
+            <strong>Bellman-Ford:</strong> Handles negative weights. Slower O(VE). Uses "Relaxation".<br><br>
+            <strong>Prim / Kruskal:</strong> Minimum Spanning Tree (MST) algorithms. Connects all nodes with min weight.<br><br>
+            <strong>Topological Sort:</strong> Linear ordering of DAG vertices. Used in task scheduling.<br><br>
+            <strong>SCC (Kosaraju/Tarjan):</strong> Finds Strongly Connected Components.
+        </div>
+    `,
+
+    microprocessor: `
+        <h2 class="topic-title">Graph in Microprocessor</h2>
+        <p class="content-text">Graphs aren't just software; they map to hardware behavior.</p>
+        <ul style="margin-left:20px; line-height:2; color:var(--text-muted);">
+            <li><strong>Network Routing (OSPF):</strong> Routers treat the internet as a weighted graph and run Dijkstra on hardware ASICs.</li>
+            <li><strong>Compilers:</strong> Convert code to a <strong>Control Flow Graph (CFG)</strong> to optimize register usage and detect dead code.</li>
+            <li><strong>Hardware Design:</strong> Circuits are graphs (Nodes=Logic Gates, Edges=Wires).</li>
+            <li><strong>Dependency Graphs:</strong> CPU Instruction scheduling (Out-of-order execution) relies on DAG analysis.</li>
+        </ul>
+    `,
+
+    advanced: `
+        <h2 class="topic-title">Advanced Topics</h2>
+        
+        <h3 class="sub-title">Graph Coloring</h3>
+        <p class="content-text">Assign colors to vertices so no adjacent vertices share a color. The <strong>Chromatic Number</strong> is the minimum colors needed. Used in Register Allocation.</p>
+
+        <h3 class="sub-title">Network Flow (Max-Flow)</h3>
+        <p class="content-text">Maximizing flow from Source to Sink. Used in traffic engineering and airline scheduling.</p>
+
+        <h3 class="sub-title">AI Graphs</h3>
+        <p class="content-text">Neural Networks are directed graphs (layers → neurons). Knowledge Graphs (Google) link entities semantically.</p>
+    `
+  };
+
+  // --- 4. Render Logic ---
+  function loadTopic(topic) {
+    // Highlight active menu item
+    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+    // Find the clicked item (simple approximation)
+    const items = document.querySelectorAll('.menu-item');
+    for(let item of items){
+        if(item.getAttribute('onclick').includes(topic)){
+            item.classList.add('active');
+            break;
+        }
+    }
+
+    // Inject Content
+    const container = document.getElementById('dynamic-content');
+    container.innerHTML = contentData[topic] || "<p>Content not found.</p>";
+  }
+
+  // --- 5. Vis.js Network Setup ---
+  let nodes = new vis.DataSet([
+    { id: 1, label: 'A' },
+    { id: 2, label: 'B' },
+    { id: 3, label: 'C' },
+    { id: 4, label: 'D' }
+  ]);
+  
+  let edges = new vis.DataSet([
+    { from: 1, to: 2 },
+    { from: 2, to: 3 },
+    { from: 3, to: 4 },
+    { from: 4, to: 1 }
+  ]);
+
+  const container = document.getElementById('graph');
+  
+  const getNetworkOptions = (isDark) => {
+      const nodeColor = isDark ? '#818cf8' : '#6366f1'; 
+      const nodeBorder = isDark ? '#e2e8f0' : '#ffffff';
+      return {
+        nodes: { 
+            shape: 'dot', size: 25,
+            font: { color: isDark ? '#f8fafc' : '#1e293b', size: 14 },
+            color: { 
+                background: nodeColor, border: nodeBorder,
+                highlight: { background: '#0ea5e9', border: '#fff' },
+                hover: { background: '#0ea5e9', border: '#fff' }
+            },
+            borderWidth: 2, shadow: true
+        },
+        edges: { 
+            arrows: 'to', 
+            color: { color: isDark ? '#64748b' : '#94a3b8', highlight: '#0ea5e9' },
+            width: 2, smooth: { type: 'continuous' }
+        },
+        physics: { stabilization: false, barnesHut: { gravitationalConstant: -3000, springLength: 150 } },
+        interaction: { hover: true, tooltipDelay: 200 }
+    };
+  };
+
+  let network = new vis.Network(container, { nodes, edges }, getNetworkOptions(body.classList.contains('dark')));
+
+  function updateNetworkTheme(isDark) {
+      const options = getNetworkOptions(isDark);
+      network.setOptions(options);
+  }
+
+  // --- 6. App Logic ---
+  let nodeCounter = 4;
+  const nodeListDiv = document.getElementById('nodeList');
+  const searchInput = document.getElementById('searchNode');
+  const explanationDiv = document.getElementById('explanationLog');
+  const sidebarRight = document.getElementById('sidebarRight');
+  const sidebarLeft = document.getElementById('sidebarLeft');
+
+  function log(msg){
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.innerHTML = `<span class="time">${time}</span>${msg}`;
+    explanationDiv.appendChild(div);
+    explanationDiv.scrollTop = explanationDiv.scrollHeight;
+  }
+
+  function renderNodeList(nodeArray, isSearch = false) {
+    nodeListDiv.innerHTML = '';
+    if (nodeArray.length === 0) {
+        nodeListDiv.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:10px;">No nodes found</div>';
+        return;
+    }
+    nodeArray.forEach(node => {
+      const div = document.createElement('div');
+      div.className = 'node-item';
+      div.innerHTML = `<span>${node.label}</span><span class="node-id">#${node.id}</span>`;
+      div.onclick = () => {
+        network.selectNodes([node.id]);
+        network.focus(node.id, { scale: 1.2, animation: { duration: 500, easingFunction: 'easeInOutQuad' } });
+        if(!isSearch) log(`Selected Node <b>${node.label}</b> (ID: ${node.id})`);
+      };
+      nodeListDiv.appendChild(div);
+    });
+  }
+
+  renderNodeList(nodes.get());
+
+  function addNode() {
+    const label = document.getElementById('nodeLabel').value.trim();
+    if (!label) return log('<span style="color:var(--text-muted)">Please enter a label.</span>');
+    nodeCounter++;
+    nodes.add({ id: nodeCounter, label: label });
+    document.getElementById('nodeLabel').value = '';
+    renderNodeList(nodes.get());
+    log(`Added Node <b>${label}</b> (ID: ${nodeCounter}).`);
+  }
+
+  function deleteNode() {
+    const nodeId = parseInt(document.getElementById('deleteNodeId').value);
+    if (!nodes.get(nodeId)) return log('<span style="color:#ef4444">Error: Node ID not found.</span>');
+    const connectedEdges = edges.get().filter(e => e.from === nodeId || e.to === nodeId);
+    connectedEdges.forEach(e => edges.remove(e.id));
+    const nodeLabel = nodes.get(nodeId).label;
+    nodes.remove(nodeId);
+    document.getElementById('deleteNodeId').value = '';
+    renderNodeList(nodes.get());
+    log(`Deleted Node <b>${nodeLabel}</b> and ${connectedEdges.length} edges.`);
+  }
+
+  function addEdge() {
+    const from = parseInt(document.getElementById('fromNode').value);
+    const to = parseInt(document.getElementById('toNode').value);
+    if (!nodes.get(from) || !nodes.get(to)) return log('<span style="color:#ef4444">Error: Invalid Node IDs.</span>');
+    const exists = edges.get().find(e => e.from === from && e.to === to);
+    if(exists) return log('<span style="color:#f59e0b">Edge already exists.</span>');
+    edges.add({ from, to });
+    document.getElementById('fromNode').value = '';
+    document.getElementById('toNode').value = '';
+    log(`Connected Node ${from} to Node ${to}.`);
+  }
+
+  function showDegrees() {
+    const allNodes = nodes.get();
+    let html = '<b>Degree Analysis:</b><br>';
+    allNodes.forEach(node => {
+      const outD = edges.get().filter(e => e.from === node.id).length;
+      const inD = edges.get().filter(e => e.to === node.id).length;
+      html += `• <b>${node.label}</b>: In-Deg ${inD} | Out-Deg ${outD}<br>`;
+    });
+    log(html);
+  }
+
+  searchInput.addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    const allNodes = nodes.get();
+    const filtered = allNodes.filter(n => n.label.toLowerCase().includes(q) || n.id.toString().includes(q));
+    renderNodeList(filtered, true);
+  });
+
+  network.on("click", function (params) {
+    if (params.nodes.length > 0) {
+      const nodeId = params.nodes[0];
+      const node = nodes.get(nodeId);
+      const connected = edges.get().filter(e => e.from === nodeId || e.to === nodeId);
+      log(`Clicked <b>${node.label}</b>. Connections: ${connected.length}.`);
+    } else {
+        network.unselectAll();
+    }
+  });
+
+  function toggleRightSidebar() { sidebarRight.classList.toggle('open'); }
+  function toggleMobileSidebar() { sidebarLeft.classList.toggle('mobile-open'); }
+  function goBack() {
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = 'index.html';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radix Sort Visualizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-card: #161618;
+      --fg: #e8e8e8;
+      --muted: #6b6b6b;
+      --accent-purple: #a855f7;
+      --accent-yellow: #eab308;
+      --accent-blue: #3b82f6;
+      --accent-orange: #f97316;
+      --accent-green: #22c55e;
+      --accent-cyan: #06b6d4;
+      --accent-red: #ef4444;
+      --border: #2a2a2c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-pattern {
+      background-image: 
+        radial-gradient(circle at 15% 25%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+        radial-gradient(circle at 85% 75%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 50px 50px, 50px 50px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .card-header {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent-purple);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #9333ea;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--border);
+    }
+
+    .btn-warning {
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Number Blocks */
+    .number-array {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 16px;
+      justify-content: center;
+      min-height: 100px;
+    }
+
+    .number-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 50px;
+    }
+
+    .number-block.processing {
+      border-color: var(--accent-yellow);
+      box-shadow: 0 0 25px rgba(234, 179, 8, 0.4);
+      transform: scale(1.1);
+    }
+
+    .number-block.moving {
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 25px rgba(249, 115, 22, 0.4);
+      animation: pulse 0.5s ease;
+    }
+
+    .number-block.sorted {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    }
+
+    .number-value {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 2px;
+    }
+
+    .digit-char {
+      display: inline-block;
+      transition: all 0.2s ease;
+    }
+
+    .digit-char.active {
+      color: var(--accent-purple);
+      text-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
+      transform: scale(1.3);
+    }
+
+    .digit-indicator {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .digit-arrow {
+      font-size: 10px;
+      color: var(--accent-purple);
+      margin-top: -2px;
+    }
+
+    /* Buckets */
+    .buckets-container {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      padding: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .buckets-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .bucket {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      transition: all 0.3s ease;
+      min-height: 80px;
+    }
+
+    .bucket.active {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    }
+
+    .bucket-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bucket-number {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .bucket-count {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--accent-cyan);
+    }
+
+    .bucket-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .bucket-item {
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: var(--bg-card);
+      border: 1px solid var(--accent-blue);
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--fg);
+      animation: dropIn 0.3s ease;
+    }
+
+    @keyframes dropIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Pass Indicator */
+    .pass-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .pass-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .pass-dot.active {
+      background: var(--accent-purple);
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+    }
+
+    .pass-dot.complete {
+      background: var(--accent-green);
+    }
+
+    .pass-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .pass-label.active {
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    /* Code */
+    .code-line {
+      padding: 6px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .code-line.active {
+      background: rgba(168, 85, 247, 0.1);
+      border-left-color: var(--accent-purple);
+    }
+
+    .code-keyword { color: var(--accent-purple); }
+    .code-function { color: var(--accent-orange); }
+    .code-variable { color: var(--accent-cyan); }
+    .code-comment { color: var(--muted); font-style: italic; }
+
+    /* Stats */
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-item:last-child { border-bottom: none; }
+
+    .stat-label { color: var(--muted); font-size: 11px; }
+    .stat-value { font-weight: 600; font-size: 12px; }
+
+    /* Progress */
+    .progress-bar {
+      height: 5px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-green));
+      transition: width 0.3s ease;
+    }
+
+    /* Explanation */
+    .explanation-text { font-size: 12px; line-height: 1.7; }
+
+    .highlight {
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    .highlight-purple { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+    .highlight-yellow { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+    .highlight-blue { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+    .highlight-green { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+    .highlight-orange { background: rgba(249, 115, 22, 0.2); color: var(--accent-orange); }
+
+    /* History */
+    .history-item {
+      padding: 5px 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      font-size: 10px;
+      margin-bottom: 3px;
+      border-left: 2px solid var(--border);
+      animation: slideIn 0.2s ease;
+    }
+
+    .history-item.distribute { border-left-color: var(--accent-blue); }
+    .history-item.collect { border-left-color: var(--accent-orange); }
+    .history-item.pass { border-left-color: var(--accent-purple); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-5px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* Input */
+    .input-field {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--fg);
+      font-size: 12px;
+      width: 100%;
+    }
+
+    .input-field:focus { outline: none; border-color: var(--accent-purple); }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--bg-secondary);
+      border-radius: 2px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent-purple);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Phase Badge */
+    .phase-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Digit Position Display */
+    .digit-position-display {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: rgba(168, 85, 247, 0.15);
+      border-radius: 6px;
+      font-size: 11px;
+    }
+
+    .digit-position-display .value {
+      font-weight: 700;
+      color: var(--accent-purple);
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in-up { animation: fadeInUp 0.3s ease forwards; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body class="bg-pattern">
+  <div class="min-h-screen p-3 lg:p-4">
+    <!-- Header -->
+    <header class="mb-4 fade-in-up">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+        <div>
+          <h1 class="text-xl lg:text-2xl font-bold tracking-tight">
+            Radix Sort <span style="color: var(--accent-purple)">Visualizer</span>
+          </h1>
+          <p class="text-xs mt-0.5" style="color: var(--muted)">
+            Non-comparative integer sorting using digit-by-digit bucket distribution
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="phase-badge" id="phaseBadge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple)">
+            <span class="w-1.5 h-1.5 rounded-full" style="background: var(--accent-purple)"></span>
+            Ready
+          </span>
+          <button class="btn btn-secondary text-xs" onclick="showInfoModal()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4M12 8h.01"></path>
+            </svg>
+            About
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-3">
+      <!-- Left: Visualization -->
+      <div class="xl:col-span-8 space-y-3">
+        <!-- Current Pass Indicator -->
+        <div class="card fade-in-up" style="animation-delay: 0.05s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple)">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 6v6l4 2"></path>
+            </svg>
+            <span class="card-title">Sorting Pass</span>
+            <div class="ml-auto digit-position-display">
+              Position: <span class="value" id="digitPositionLabel">-</span>
+            </div>
+          </div>
+          <div class="p-3">
+            <div class="pass-indicator" id="passIndicator">
+              <div class="pass-dot" id="pass0"></div>
+              <span class="pass-label" id="passLabel0">Ones</span>
+              <div class="pass-dot" id="pass1"></div>
+              <span class="pass-label" id="passLabel1">Tens</span>
+              <div class="pass-dot" id="pass2"></div>
+              <span class="pass-label" id="passLabel2">Hundreds</span>
+              <div class="pass-dot" id="pass3"></div>
+              <span class="pass-label" id="passLabel3">Thousands</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Number Array -->
+        <div class="card fade-in-up" style="animation-delay: 0.1s">
+          <div class="card-header">
+            <div class="flex gap-1">
+            </div>
+            <span class="card-title ml-1">Number Array</span>
+            <div class="ml-auto text-xs" style="color: var(--muted)">
+              Elements: <span class="font-mono" style="color: var(--accent-cyan)" id="elementCount">0</span>
+            </div>
+          </div>
+          <div class="number-array" id="numberArray">
+            <div class="text-center text-xs py-6" style="color: var(--muted)">Generate numbers to begin</div>
+          </div>
+        </div>
+
+        <!-- Buckets -->
+        <div class="card fade-in-up" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-blue)">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="card-title">Digit Buckets (0-9)</span>
+          </div>
+          <div class="buckets-container" id="bucketsContainer">
+            <!-- Buckets rendered here -->
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card fade-in-up" style="animation-delay: 0.2s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan)">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+            </svg>
+            <span class="card-title">Controls</span>
+          </div>
+          <div class="p-3 space-y-3">
+            <div class="flex flex-col lg:flex-row gap-2">
+              <input type="text" class="input-field flex-1" id="customArrayInput" placeholder="Custom numbers (e.g., 170, 45, 75, 90, 802, 24, 2, 66)">
+              <div class="flex gap-2">
+                <button class="btn btn-secondary" onclick="generateRandomNumbers()">Random</button>
+                <button class="btn btn-secondary" onclick="applyCustomNumbers()">Apply</button>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <button class="btn btn-primary" id="startBtn" onclick="startSorting()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"></polygon></svg>
+                Start
+              </button>
+              <button class="btn btn-warning" id="pauseBtn" onclick="togglePause()" disabled>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" id="pauseIcon"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                <span id="pauseText">Pause</span>
+              </button>
+              <button class="btn btn-secondary" id="stepBtn" onclick="stepForward()" disabled>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                Step
+              </button>
+              <button class="btn btn-danger" id="resetBtn" onclick="resetVisualization()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                Reset
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs mb-1 block" style="color: var(--muted)">
+                  Speed: <span id="speedValue" class="font-mono" style="color: var(--accent-purple)">400ms</span>
+                </label>
+                <input type="range" min="100" max="1000" value="400" id="speedSlider" oninput="updateSpeed(this.value)">
+              </div>
+              <div>
+                <label class="text-xs mb-1 block" style="color: var(--muted)">
+                  Count: <span id="sizeValue" class="font-mono" style="color: var(--accent-purple)">8</span>
+                </label>
+                <input type="range" min="5" max="15" value="8" id="sizeSlider" oninput="updateSize(this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explanation -->
+        <div class="card fade-in-up" style="animation-delay: 0.25s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-green)">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="card-title">Step Explanation</span>
+          </div>
+          <div class="p-3">
+            <div class="explanation-text" id="explanationText">
+              <p>Welcome to <span class="highlight highlight-purple">Radix Sort</span> Visualizer!</p>
+              <p class="mt-2" style="color: var(--muted)">Radix Sort sorts numbers digit by digit, from the <span class="highlight highlight-purple">least significant digit (LSD)</span> to the most significant digit (MSD).</p>
+              <p class="mt-2" style="color: var(--muted)">Unlike comparison-based sorts, it uses <span class="highlight highlight-blue">bucket distribution</span> for each digit position.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Info Panels -->
+      <div class="xl:col-span-4 space-y-3">
+        <!-- Pseudocode -->
+        <div class="card fade-in-up" style="animation-delay: 0.1s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-yellow)">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            <span class="card-title">Pseudocode</span>
+          </div>
+          <div class="py-1" id="codeContainer">
+            <div class="code-line" data-line="1"><span class="code-function">radixSort</span>(arr):</div>
+            <div class="code-line" data-line="2">  max = findMax(arr)</div>
+            <div class="code-line" data-line="3">  exp = 1</div>
+            <div class="code-line" data-line="4">  <span class="code-keyword">while</span> max / exp > 0:</div>
+            <div class="code-line" data-line="5">    <span class="code-function">countingSort</span>(arr, exp)</div>
+            <div class="code-line" data-line="6">    exp *= 10</div>
+            <div class="code-line" data-line="7"></div>
+            <div class="code-line" data-line="8"><span class="code-function">countingSort</span>(arr, exp):</div>
+            <div class="code-line" data-line="9">  buckets = [[], [], ...] <span class="code-comment">// 10</span></div>
+            <div class="code-line" data-line="10">  <span class="code-keyword">for</span> num <span class="code-keyword">in</span> arr:</div>
+            <div class="code-line" data-line="11">    digit = (num / exp) % 10</div>
+            <div class="code-line" data-line="12">    buckets[digit].append(num)</div>
+            <div class="code-line" data-line="13">  arr = flatten(buckets)</div>
+          </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="card fade-in-up" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-orange)">
+              <path d="M18 20V10M12 20V4M6 20v-6"></path>
+            </svg>
+            <span class="card-title">Statistics</span>
+          </div>
+          <div class="p-3">
+            <div class="stat-item">
+              <span class="stat-label">Array Size</span>
+              <span class="stat-value font-mono" id="statArraySize">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Max Digits</span>
+              <span class="stat-value font-mono" style="color: var(--accent-purple)" id="statMaxDigits">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Current Pass</span>
+              <span class="stat-value font-mono" style="color: var(--accent-cyan)" id="statCurrentPass">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Bucket Insertions</span>
+              <span class="stat-value font-mono" style="color: var(--accent-blue)" id="statInsertions">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Total Passes</span>
+              <span class="stat-value font-mono" style="color: var(--accent-yellow)" id="statTotalPasses">0</span>
+            </div>
+            <div class="mt-3">
+              <div class="flex justify-between text-xs mb-1" style="color: var(--muted)">
+                <span>Progress</span>
+                <span id="progressPercent">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Complexity -->
+        <div class="card fade-in-up" style="animation-delay: 0.2s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-red)">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span class="card-title">Complexity</span>
+          </div>
+          <div class="p-3 space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Best Case</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-green)">O(nk)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Average</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow)">O(nk)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Worst Case</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red)">O(nk)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Space</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan)">O(n + k)</span>
+            </div>
+            <div class="mt-2 p-2 rounded text-xs" style="background: rgba(255,255,255,0.03); color: var(--muted)">
+              n = elements, k = max digits
+            </div>
+          </div>
+        </div>
+
+        <!-- Digit Legend -->
+        <div class="card fade-in-up" style="animation-delay: 0.25s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple)">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <span class="card-title">Digit Positions</span>
+          </div>
+          <div class="p-3 space-y-2 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background: var(--accent-purple)"></span>
+              <span style="color: var(--muted)">Pass 0:</span>
+              <span class="font-mono">10⁰ = 1</span>
+              <span style="color: var(--muted)">(Ones)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background: var(--accent-purple)"></span>
+              <span style="color: var(--muted)">Pass 1:</span>
+              <span class="font-mono">10¹ = 10</span>
+              <span style="color: var(--muted)">(Tens)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background: var(--accent-purple)"></span>
+              <span style="color: var(--muted)">Pass 2:</span>
+              <span class="font-mono">10² = 100</span>
+              <span style="color: var(--muted)">(Hundreds)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="card fade-in-up" style="animation-delay: 0.3s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan)">
+              <path d="M12 8v4l3 3"></path>
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            <span class="card-title">Step History</span>
+          </div>
+          <div class="p-2 max-h-40 overflow-y-auto" id="historyContainer">
+            <div class="text-xs text-center py-4" style="color: var(--muted)">No operations yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Modal -->
+  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" id="infoModal">
+    <div class="card max-w-md w-full">
+      <div class="card-header">
+        <span class="card-title">About Radix Sort</span>
+        <button class="ml-auto" style="color: var(--muted)" onclick="hideInfoModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="p-4 space-y-3 text-sm">
+        <p><span class="highlight highlight-purple">Radix Sort</span> is a non-comparative sorting algorithm that processes numbers digit by digit.</p>
+        <div class="bg-black/20 rounded p-3 text-xs space-y-2">
+          <p style="color: var(--accent-purple)"><strong>LSD First:</strong> Start from least significant digit</p>
+          <p style="color: var(--accent-blue)"><strong>Buckets:</strong> Distribute into 10 buckets (0-9)</p>
+          <p style="color: var(--accent-orange)"><strong>Collect:</strong> Gather back in bucket order</p>
+          <p style="color: var(--accent-cyan)"><strong>Repeat:</strong> Process next digit position</p>
+        </div>
+        <p class="text-xs" style="color: var(--muted)">Radix Sort can be faster than O(n log n) comparison sorts for integers with a fixed number of digits, making it ideal for sorting large datasets of numbers.</p>
+        <button class="btn btn-primary w-full" onclick="hideInfoModal()">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ STATE ============
+    let numbers = [];
+    let originalNumbers = [];
+    let sorting = false;
+    let paused = false;
+    let stepMode = false;
+    let stepResolve = null;
+    let speed = 400;
+    let numCount = 8;
+    
+    let maxDigits = 0;
+    let currentPass = 0;
+    let currentExp = 1;
+    let bucketInsertions = 0;
+    let stepHistory = [];
+    let buckets = [];
+    let processingIndex = -1;
+    let sorted = false;
+
+    // ============ DOM ============
+    const numberArray = document.getElementById('numberArray');
+    const bucketsContainer = document.getElementById('bucketsContainer');
+    const explanationText = document.getElementById('explanationText');
+    const historyContainer = document.getElementById('historyContainer');
+    const codeLines = document.querySelectorAll('.code-line');
+
+    // ============ UTILITIES ============
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function waitForStep() {
+      if (stepMode) {
+        return new Promise(resolve => { stepResolve = resolve; });
+      }
+      if (paused && sorting) {
+        return new Promise(resolve => {
+          const check = () => {
+            if (!paused || !sorting) resolve();
+            else setTimeout(check, 50);
+          };
+          check();
+        });
+      }
+    }
+
+    function getDigit(num, exp) {
+      return Math.floor(num / exp) % 10;
+    }
+
+    function countDigits(num) {
+      if (num === 0) return 1;
+      return Math.floor(Math.log10(Math.abs(num))) + 1;
+    }
+
+    function getMaxDigits(arr) {
+      if (arr.length === 0) return 0;
+      const max = Math.max(...arr.map(n => Math.abs(n)));
+      return countDigits(max);
+    }
+
+    // ============ NUMBER GENERATION ============
+    function generateRandomNumbers() {
+      if (sorting) return;
+      numbers = [];
+      for (let i = 0; i < numCount; i++) {
+        numbers.push(Math.floor(Math.random() * 900) + 10); // 2-3 digit numbers
+      }
+      originalNumbers = [...numbers];
+      resetStats();
+      renderNumbers();
+      renderBuckets();
+      updateExplanation('ready');
+    }
+
+    function applyCustomNumbers() {
+      if (sorting) return;
+      const input = document.getElementById('customArrayInput').value;
+      const values = input.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v >= 0);
+      if (values.length < 2) {
+        updateExplanation('invalid');
+        return;
+      }
+      numbers = values.slice(0, 15);
+      numCount = numbers.length;
+      document.getElementById('sizeSlider').value = numCount;
+      document.getElementById('sizeValue').textContent = numCount;
+      originalNumbers = [...numbers];
+      resetStats();
+      renderNumbers();
+      renderBuckets();
+      updateExplanation('ready');
+    }
+
+    // ============ RENDERING ============
+    function renderNumbers(highlights = {}) {
+      numberArray.innerHTML = '';
+      
+      numbers.forEach((num, index) => {
+        const block = document.createElement('div');
+        block.className = 'number-block';
+        
+        if (sorted) {
+          block.classList.add('sorted');
+        } else if (highlights.processing === index) {
+          block.classList.add('processing');
+        } else if (highlights.moving === index) {
+          block.classList.add('moving');
+        }
+        
+        // Format number with highlighted digit
+        const numStr = num.toString().padStart(maxDigits, '0');
+        const digitIndex = maxDigits - 1 - currentPass;
+        
+        let valueHtml = '';
+        for (let i = 0; i < numStr.length; i++) {
+          const charClass = (i === digitIndex && sorting) ? 'digit-char active' : 'digit-char';
+          valueHtml += `<span class="${charClass}">${numStr[i]}</span>`;
+        }
+        
+        const valueEl = document.createElement('div');
+        valueEl.className = 'number-value';
+        valueEl.innerHTML = valueHtml;
+        block.appendChild(valueEl);
+        
+        // Arrow indicator for active digit
+        if (sorting && digitIndex >= 0 && digitIndex < numStr.length) {
+          const arrow = document.createElement('div');
+          arrow.className = 'digit-arrow';
+          
+          // Create arrow pointing to the active digit
+          let spaces = '';
+          for (let i = 0; i < digitIndex; i++) spaces += '&nbsp;&nbsp;';
+          arrow.innerHTML = spaces + '↑';
+          block.appendChild(arrow);
+          
+          const indicator = document.createElement('div');
+          indicator.className = 'digit-indicator';
+          const positions = ['Ones', 'Tens', 'Hundreds', 'Thousands', 'Ten-Thousands'];
+          indicator.textContent = positions[currentPass] || `10^${currentPass}`;
+          block.appendChild(indicator);
+        }
+        
+        numberArray.appendChild(block);
+      });
+      
+      document.getElementById('elementCount').textContent = numbers.length;
+    }
+
+    function renderBuckets(activeBucket = -1) {
+      bucketsContainer.innerHTML = '';
+      
+      for (let i = 0; i < 10; i++) {
+        const bucket = document.createElement('div');
+        bucket.className = 'bucket';
+        if (activeBucket === i) {
+          bucket.classList.add('active');
+        }
+        
+        const header = document.createElement('div');
+        header.className = 'bucket-header';
+        
+        const bucketNum = document.createElement('span');
+        bucketNum.className = 'bucket-number';
+        bucketNum.textContent = i;
+        header.appendChild(bucketNum);
+        
+        const count = document.createElement('span');
+        count.className = 'bucket-count';
+        const itemCount = buckets[i] ? buckets[i].length : 0;
+        count.textContent = itemCount;
+        header.appendChild(count);
+        
+        bucket.appendChild(header);
+        
+        const items = document.createElement('div');
+        items.className = 'bucket-items';
+        
+        if (buckets[i] && buckets[i].length > 0) {
+          buckets[i].forEach(num => {
+            const item = document.createElement('span');
+            item.className = 'bucket-item';
+            item.textContent = num;
+            items.appendChild(item);
+          });
+        }
+        
+        bucket.appendChild(items);
+        bucketsContainer.appendChild(bucket);
+      }
+    }
+
+    // ============ STATS & UI ============
+    function resetStats() {
+      maxDigits = getMaxDigits(numbers);
+      currentPass = 0;
+      currentExp = 1;
+      bucketInsertions = 0;
+      stepHistory = [];
+      buckets = Array(10).fill(null).map(() => []);
+      processingIndex = -1;
+      sorted = false;
+      updateStats();
+      updatePassIndicator();
+      updatePhase('ready');
+      updateHistory();
+    }
+
+    function updateStats() {
+      document.getElementById('statArraySize').textContent = numbers.length;
+      document.getElementById('statMaxDigits').textContent = maxDigits;
+      document.getElementById('statCurrentPass').textContent = currentPass;
+      document.getElementById('statInsertions').textContent = bucketInsertions;
+      document.getElementById('statTotalPasses').textContent = maxDigits;
+      
+      const progress = maxDigits > 0 ? Math.round((currentPass / maxDigits) * 100) : 0;
+      document.getElementById('progressPercent').textContent = `${progress}%`;
+      document.getElementById('progressBar').style.width = `${progress}%`;
+      
+      const positions = ['Ones', 'Tens', 'Hundreds', 'Thousands', 'Ten-Thousands'];
+      document.getElementById('digitPositionLabel').textContent = positions[currentPass] || `10^${currentPass}`;
+    }
+
+    function updatePassIndicator() {
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById(`pass${i}`);
+        const label = document.getElementById(`passLabel${i}`);
+        
+        dot.classList.remove('active', 'complete');
+        label.classList.remove('active');
+        
+        if (i < currentPass) {
+          dot.classList.add('complete');
+        } else if (i === currentPass && sorting) {
+          dot.classList.add('active');
+          label.classList.add('active');
+        }
+      }
+    }
+
+    function updatePhase(phase) {
+      const badge = document.getElementById('phaseBadge');
+      const phases = {
+        ready: { bg: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)', dot: 'var(--accent-purple)', text: 'Ready' },
+        distributing: { bg: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', dot: 'var(--accent-blue)', text: 'Distributing' },
+        collecting: { bg: 'rgba(249, 115, 22, 0.15)', color: 'var(--accent-orange)', dot: 'var(--accent-orange)', text: 'Collecting' },
+        complete: { bg: 'rgba(34, 197, 94, 0.15)', color: 'var(--accent-green)', dot: 'var(--accent-green)', text: 'Complete' }
+      };
+      const p = phases[phase] || phases.ready;
+      badge.style.background = p.bg;
+      badge.style.color = p.color;
+      badge.querySelector('span').style.background = p.dot;
+      badge.lastChild.textContent = p.text;
+    }
+
+    function highlightCode(lineNum) {
+      codeLines.forEach(line => {
+        line.classList.remove('active');
+        if (parseInt(line.dataset.line) === lineNum) {
+          line.classList.add('active');
+        }
+      });
+    }
+
+    function addHistory(type, text) {
+      stepHistory.push({ type, text });
+      updateHistory();
+    }
+
+    function updateHistory() {
+      if (stepHistory.length === 0) {
+        historyContainer.innerHTML = '<div class="text-xs text-center py-4" style="color: var(--muted)">No operations yet</div>';
+        return;
+      }
+      
+      historyContainer.innerHTML = stepHistory.slice(-20).map(h => 
+        `<div class="history-item ${h.type}">${h.text}</div>`
+      ).join('');
+      
+      historyContainer.scrollTop = historyContainer.scrollHeight;
+    }
+
+    function updateExplanation(type, data = {}) {
+      let html = '';
+      switch (type) {
+        case 'ready':
+          html = `<p>Ready! <span class="highlight highlight-purple">${numbers.length}</span> numbers with ${maxDigits} digit${maxDigits > 1 ? 's' : ''}.</p>
+                  <p class="mt-2" style="color: var(--muted)">Click <span class="highlight highlight-purple">Start</span> to begin sorting from the least significant digit.</p>`;
+          break;
+        case 'invalid':
+          html = `<p class="highlight highlight-orange">Invalid input!</p><p class="mt-2" style="color: var(--muted)">Enter comma-separated non-negative integers.</p>`;
+          break;
+        case 'pass':
+          html = `<p><span class="highlight highlight-purple">Pass ${data.pass + 1}</span> - Sorting by ${data.position} digit</p>
+                  <p class="mt-2" style="color: var(--muted)">Processing digit at position 10^${data.pass} (value: ${data.exp})</p>
+                  <p class="mt-1" style="color: var(--muted)">Each number will be placed into a bucket based on this digit.</p>`;
+          break;
+        case 'distribute':
+          html = `<p><span class="highlight highlight-blue">Distributing</span> number <span class="highlight highlight-yellow">${data.num}</span></p>
+                  <p class="mt-2">${data.position} digit = <span class="highlight highlight-purple">${data.digit}</span></p>
+                  <p class="mt-1">Placing into <span class="highlight highlight-blue">bucket ${data.digit}</span></p>`;
+          break;
+        case 'collect':
+          html = `<p><span class="highlight highlight-orange">Collecting</span> from buckets</p>
+                  <p class="mt-2" style="color: var(--muted)">Gathering numbers from buckets 0-9 back into the array.</p>
+                  <p class="mt-1">Array now sorted by ${data.position} digit.</p>`;
+          break;
+        case 'complete':
+          html = `<p class="highlight highlight-green"><strong>Sorting Complete!</strong></p>
+                  <p class="mt-2">All ${maxDigits} digit positions processed.</p>
+                  <p class="mt-1" style="color: var(--muted)">Total bucket insertions: <span class="highlight highlight-blue">${bucketInsertions}</span></p>`;
+          break;
+        case 'paused':
+          html = `<p><span class="highlight highlight-yellow">Paused</span></p><p class="mt-2" style="color: var(--muted)">Click Resume or Step to continue.</p>`;
+          break;
+      }
+      explanationText.innerHTML = html;
+    }
+
+    // ============ RADIX SORT ALGORITHM ============
+    async function radixSort() {
+      if (numbers.length === 0) return;
+      
+      maxDigits = getMaxDigits(numbers);
+      const max = Math.max(...numbers);
+      
+      highlightCode(2);
+      await sleep(speed / 2);
+      
+      highlightCode(3);
+      currentExp = 1;
+      updateStats();
+      
+      // Process each digit position
+      for (let exp = 1; Math.floor(max / exp) > 0; exp *= 10) {
+        if (!sorting) return;
+        
+        currentExp = exp;
+        highlightCode(4);
+        
+        const positions = ['Ones', 'Tens', 'Hundreds', 'Thousands', 'Ten-Thousands'];
+        updateExplanation('pass', { pass: currentPass, position: positions[currentPass], exp });
+        addHistory('pass', `Pass ${currentPass + 1}: Sorting by ${positions[currentPass]} digit`);
+        
+        updatePassIndicator();
+        renderNumbers();
+        await sleep(speed);
+        await waitForStep();
+        
+        // Distribute into buckets
+        highlightCode(5);
+        highlightCode(9);
+        buckets = Array(10).fill(null).map(() => []);
+        renderBuckets();
+        
+        highlightCode(10);
+        updatePhase('distributing');
+        
+        for (let i = 0; i < numbers.length; i++) {
+          if (!sorting) return;
+          
+          const num = numbers[i];
+          highlightCode(11);
+          const digit = getDigit(num, exp);
+          
+          highlightCode(12);
+          processingIndex = i;
+          renderNumbers({ processing: i });
+          
+          const positions = ['Ones', 'Tens', 'Hundreds', 'Thousands', 'Ten-Thousands'];
+          updateExplanation('distribute', { 
+            num, 
+            digit, 
+            position: positions[currentPass] 
+          });
+          addHistory('distribute', `${num} → bucket ${digit}`);
+          
+          await sleep(speed / 2);
+          await waitForStep();
+          
+          // Add to bucket
+          buckets[digit].push(num);
+          bucketInsertions++;
+          updateStats();
+          
+          renderNumbers({ moving: i });
+          renderBuckets(digit);
+          
+          await sleep(speed / 2);
+        }
+        
+        processingIndex = -1;
+        
+        // Collect from buckets
+        highlightCode(13);
+        updatePhase('collecting');
+        
+        const positions2 = ['Ones', 'Tens', 'Hundreds', 'Thousands', 'Ten-Thousands'];
+        updateExplanation('collect', { position: positions2[currentPass] });
+        addHistory('collect', `Collecting from all buckets`);
+        
+        renderNumbers();
+        renderBuckets();
+        await sleep(speed);
+        await waitForStep();
+        
+        // Flatten buckets back into array
+        numbers = [];
+        for (let b = 0; b < 10; b++) {
+          for (let n of buckets[b]) {
+            numbers.push(n);
+          }
+        }
+        
+        currentPass++;
+        currentExp = exp * 10;
+        updateStats();
+        
+        renderNumbers();
+        renderBuckets();
+        
+        await sleep(speed);
+        await waitForStep();
+      }
+      
+      // Sorting complete
+      sorted = true;
+      highlightCode(0);
+      updatePhase('complete');
+      updateExplanation('complete');
+      renderNumbers();
+      
+      return true;
+    }
+
+    // ============ CONTROLS ============
+    function startSorting() {
+      if (numbers.length === 0) generateRandomNumbers();
+      
+      sorting = true;
+      paused = false;
+      stepMode = false;
+      
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('pauseBtn').disabled = false;
+      document.getElementById('stepBtn').disabled = false;
+
+      radixSort().then(complete => {
+        if (complete) {
+          sorting = false;
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('pauseBtn').disabled = true;
+          document.getElementById('stepBtn').disabled = true;
+        }
+      });
+    }
+
+    function togglePause() {
+      if (!sorting) return;
+      paused = !paused;
+      
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      
+      if (paused) {
+        pauseText.textContent = 'Resume';
+        pauseIcon.innerHTML = '<polygon points="5 3 19 12 5 21"></polygon>';
+        updateExplanation('paused');
+      } else {
+        pauseText.textContent = 'Pause';
+        pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+      }
+    }
+
+    function stepForward() {
+      if (!sorting) {
+        if (numbers.length === 0) generateRandomNumbers();
+        sorting = true;
+        paused = true;
+        stepMode = true;
+        
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('pauseBtn').disabled = false;
+        document.getElementById('stepBtn').disabled = false;
+
+        radixSort().then(complete => {
+          if (complete) {
+            sorting = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stepBtn').disabled = true;
+          }
+        });
+      } else {
+        stepMode = true;
+        if (stepResolve) {
+          stepResolve();
+          stepResolve = null;
+        }
+      }
+    }
+
+    function resetVisualization() {
+      sorting = false;
+      paused = false;
+      stepMode = false;
+      
+      numbers = [...originalNumbers];
+      resetStats();
+      renderNumbers();
+      renderBuckets();
+      highlightCode(0);
+      updateExplanation('ready');
+      
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('pauseBtn').disabled = true;
+      document.getElementById('stepBtn').disabled = true;
+      
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      pauseText.textContent = 'Pause';
+      pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+    }
+
+    function updateSpeed(value) {
+      speed = 1100 - parseInt(value);
+      document.getElementById('speedValue').textContent = `${speed}ms`;
+    }
+
+    function updateSize(value) {
+      numCount = parseInt(value);
+      document.getElementById('sizeValue').textContent = numCount;
+      if (!sorting) generateRandomNumbers();
+    }
+
+    // ============ MODAL ============
+    function showInfoModal() {
+      document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function hideInfoModal() {
+      document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    document.getElementById('infoModal').addEventListener('click', function(e) {
+      if (e.target === this) hideInfoModal();
+    });
+
+    // ============ KEYBOARD ============
+    document.addEventListener('keydown', function(e) {
+      if (e.target.tagName === 'INPUT') return;
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          sorting ? togglePause() : startSorting();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          stepForward();
+          break;
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          resetVisualization();
+          break;
+        case 'Escape':
+          hideInfoModal();
+          break;
+      }
+    });
+
+    // ============ INIT ============
+    document.addEventListener('DOMContentLoaded', function() {
+      buckets = Array(10).fill(null).map(() => []);
+      renderBuckets();
+      generateRandomNumbers();
+    });
+  </script>
+</body>
+</html>

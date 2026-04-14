@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Management Unit</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+        
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+        }
+        
+        /* Process Card Animations */
+        .process-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* CPU Core Glow */
+        .core-active {
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+            border-color: rgba(59, 130, 246, 1) !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        
+        /* Wire connections (simulated) */
+        .wire {
+            position: absolute;
+            background: #334155;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex">
+
+    <!-- ==============================================
+         SIDEBAR
+         ============================================== -->
+    <aside class="w-72 glass-panel border-r border-slate-700 flex flex-col z-20">
+        <div class="p-6 border-b border-slate-700">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                ProcessManager
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Lifecycle & PCB Control</p>
+        </div>
+        
+        <div class="p-6 flex-1 overflow-y-auto space-y-6">
+            
+            <!-- Controls -->
+            <div class="space-y-4">
+                <h3 class="text-xs font-bold uppercase text-slate-400">System Control</h3>
+                
+                <button onclick="createProcess()" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    New Process
+                </button>
+
+                <div class="flex gap-2">
+                    <button id="btn-auto" onclick="toggleAutoSim()" class="flex-1 px-3 py-2 bg-blue-700 hover:bg-blue-600 rounded text-xs font-medium transition-colors">
+                        Auto: OFF
+                    </button>
+                    <button onclick="manualStep()" class="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-xs font-medium transition-colors">
+                        Step Once
+                    </button>
+                </div>
+                
+                <button onclick="resetSystem()" class="w-full px-4 py-2 bg-red-900 hover:bg-red-800 rounded text-xs font-medium text-red-200 transition-colors">
+                    Terminate All
+                </button>
+            </div>
+
+            <!-- Parameters -->
+            <div class="space-y-4">
+                <h3 class="text-xs font-bold uppercase text-slate-400">Simulation Config</h3>
+                <div class="space-y-2">
+                    <label class="text-xs text-slate-400">Scheduling Algorithm</label>
+                    <select id="algo-select" class="w-full bg-slate-800 border-slate-600 rounded px-3 py-2 text-xs outline-none">
+                        <option value="fcfs">FCFS (First Come)</option>
+                        <option value="priority">Priority (High first)</option>
+                        <option value="rr">Round Robin</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs text-slate-400">Simulation Speed</label>
+                    <input type="range" id="speed-slider" min="1" max="10" value="3" class="w-full">
+                </div>
+            </div>
+
+            <!-- Stats -->
+             <div class="glass-panel rounded-lg p-4 space-y-2">
+                <div class="flex justify-between text-xs">
+                    <span class="text-slate-400">Total Processes:</span>
+                    <span id="stat-total" class="font-bold text-white">0</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-slate-400">Context Switches:</span>
+                    <span id="stat-switches" class="font-bold text-amber-400">0</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-slate-400">CPU Utilization:</span>
+                    <span id="stat-util" class="font-bold text-green-400">0%</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ==============================================
+         MAIN CONTENT
+         ============================================== -->
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <!-- Header -->
+        <header class="h-16 glass-panel border-b border-slate-700 flex items-center px-8 z-10">
+            <h2 class="text-lg font-semibold text-white">Process State Diagram</h2>
+        </header>
+
+        <!-- Visualization Area -->
+        <div class="flex-1 grid grid-cols-3 gap-8 p-8 overflow-hidden">
+            
+            <!-- LEFT: Ready Queue -->
+            <div class="flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold uppercase text-blue-400">Ready Queue</h3>
+                    <span class="text-xs text-slate-500">Waiting for CPU</span>
+                </div>
+                <div id="queue-ready" class="flex-1 glass-panel rounded-xl p-4 overflow-y-auto space-y-3 border-l-4 border-blue-500">
+                    <!-- Process Cards Go Here -->
+                </div>
+            </div>
+
+            <!-- CENTER: CPU Core -->
+            <div class="flex flex-col items-center justify-center relative">
+                <div class="text-xs text-slate-500 mb-4">CPU Core 0</div>
+                <div id="cpu-container" class="w-full h-64 glass-panel rounded-xl flex flex-col items-center justify-center relative border-2 border-slate-700 transition-all duration-500">
+                    <div id="cpu-idle" class="text-slate-500 text-sm">IDLE</div>
+                    <div id="cpu-active" class="hidden flex-col items-center animate-pulse">
+                        <div class="text-xs text-green-400 mb-2">EXECUTING</div>
+                        <div id="cpu-pid" class="text-4xl font-bold text-white mb-2">P1</div>
+                        <div class="w-full px-4 space-y-1 text-xs mt-4">
+                            <div class="flex justify-between bg-slate-900/50 p-1 rounded">
+                                <span class="text-slate-400">PC:</span>
+                                <span id="cpu-pc" class="font-mono text-white">0x0000</span>
+                            </div>
+                            <div class="flex justify-between bg-slate-900/50 p-1 rounded">
+                                <span class="text-slate-400">ACC:</span>
+                                <span id="cpu-acc" class="font-mono text-white">0x00FF</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dispatch Buttons -->
+                <div class="mt-4 flex gap-2">
+                    <button onclick="dispatch()" class="px-3 py-1 bg-slate-700 text-xs rounded hover:bg-slate-600">Dispatch Next</button>
+                    <button onclick="preempt()" class="px-3 py-1 bg-slate-700 text-xs rounded hover:bg-slate-600">Preempt</button>
+                    <button onclick="block()" class="px-3 py-1 bg-slate-700 text-xs rounded hover:bg-slate-600">I/O Request</button>
+                </div>
+            </div>
+
+            <!-- RIGHT: Blocked Queue -->
+            <div class="flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold uppercase text-amber-400">Blocked Queue</h3>
+                    <span class="text-xs text-slate-500">Waiting for I/O</span>
+                </div>
+                <div id="queue-blocked" class="flex-1 glass-panel rounded-xl p-4 overflow-y-auto space-y-3 border-l-4 border-amber-500">
+                    <!-- Process Cards Go Here -->
+                </div>
+                
+                <button onclick="ioComplete()" class="mt-4 w-full px-3 py-2 bg-amber-900/50 text-xs rounded text-amber-300 border border-amber-700 hover:bg-amber-900">
+                    Simulate I/O Completion
+                </button>
+            </div>
+        </div>
+
+        <!-- BOTTOM: PCB Table -->
+        <div class="h-72 glass-panel border-t border-slate-700 overflow-y-auto">
+            <table class="w-full text-xs">
+                <thead class="bg-slate-900 sticky top-0 text-slate-400 uppercase">
+                    <tr>
+                        <th class="p-3 text-left">PID</th>
+                        <th class="p-3 text-left">State</th>
+                        <th class="p-3 text-left">Priority</th>
+                        <th class="p-3 text-left">Program Counter</th>
+                        <th class="p-3 text-left">Memory Limits</th>
+                        <th class="p-3 text-left">Burst Time</th>
+                        <th class="p-3 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="pcb-table-body" class="divide-y divide-slate-800">
+                    <!-- Rows generated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- ==============================================
+         JAVASCRIPT ENGINE
+         ============================================== -->
+    <script>
+        // ==========================================
+        // SYSTEM STATE
+        // ==========================================
+        let processes = [];
+        let pidCounter = 1;
+        let readyQueue = [];
+        let blockedQueue = [];
+        let runningProcess = null;
+        let contextSwitches = 0;
+        let autoSimInterval = null;
+
+        // ==========================================
+        // PROCESS CLASS (PCB)
+        // ==========================================
+        class Process {
+            constructor(pid) {
+                this.pid = pid;
+                this.state = 'new'; // new, ready, running, blocked, terminated
+                this.priority = Math.floor(Math.random() * 10);
+                this.burstTime = Math.floor(Math.random() * 10) + 2;
+                this.remainingTime = this.burstTime;
+                this.programCounter = 0x0000;
+                this.memoryBase = Math.floor(Math.random() * 0xFFFF);
+                this.memoryLimit = this.memoryBase + 1024;
+                this.registers = { ACC: 0 };
+            }
+        }
+
+        // ==========================================
+        // CORE LOGIC
+        // ==========================================
+
+        function createProcess() {
+            const p = new Process(pidCounter++);
+            processes.push(p);
+            
+            // Move instantly to Ready
+            p.state = 'ready';
+            readyQueue.push(p);
+            
+            log(`Created Process P${p.pid} (Priority: ${p.priority})`);
+            render();
+        }
+
+        function dispatch() {
+            if (runningProcess) {
+                alert("CPU is busy! Preempt current process first.");
+                return;
+            }
+            if (readyQueue.length === 0) return;
+
+            // Get next process based on algorithm
+            const algo = document.getElementById('algo-select').value;
+            let nextProc;
+            
+            if (algo === 'priority') {
+                readyQueue.sort((a, b) => b.priority - a.priority); // High to low
+                nextProc = readyQueue.shift();
+            } else {
+                nextProc = readyQueue.shift(); // FCFS / RR
+            }
+
+            runningProcess = nextProc;
+            runningProcess.state = 'running';
+            contextSwitches++;
+            
+            log(`Dispatch: P${runningProcess.pid} now RUNNING`);
+            updateCPUIcon(true);
+            render();
+        }
+
+        function preempt() {
+            if (!runningProcess) return;
+            
+            const p = runningProcess;
+            p.state = 'ready';
+            readyQueue.push(p);
+            runningProcess = null;
+            contextSwitches++;
+            
+            log(`Preempt: P${p.pid} moved back to READY`);
+            updateCPUIcon(false);
+            render();
+        }
+
+        function block() {
+            if (!runningProcess) return;
+            
+            const p = runningProcess;
+            p.state = 'blocked';
+            blockedQueue.push(p);
+            runningProcess = null;
+            
+            log(`I/O Request: P${p.pid} moved to BLOCKED`);
+            updateCPUIcon(false);
+            render();
+        }
+
+        function ioComplete() {
+            if (blockedQueue.length === 0) return;
+            
+            const p = blockedQueue.shift();
+            p.state = 'ready';
+            readyQueue.push(p);
+            
+            log(`I/O Complete: P${p.pid} moved to READY`);
+            render();
+        }
+
+        function manualStep() {
+            if (runningProcess) {
+                // Process is running, decrease burst
+                runningProcess.remainingTime--;
+                runningProcess.programCounter += 2; // Simulate execution
+                
+                if (runningProcess.remainingTime <= 0) {
+                    log(`Termination: P${runningProcess.pid} finished.`);
+                    runningProcess.state = 'terminated';
+                    // In a real system, we'd remove from list, but keep for table history
+                    runningProcess = null;
+                    updateCPUIcon(false);
+                } else {
+                    // If Round Robin, preempt after 1 step (for demo)
+                    // Auto-preemption handled in autoSim
+                }
+            } else {
+                // CPU Idle, try to dispatch
+                dispatch();
+            }
+            render();
+        }
+
+        function tick() {
+            if (runningProcess) {
+                runningProcess.remainingTime--;
+                runningProcess.programCounter += 2;
+                
+                if (runningProcess.remainingTime <= 0) {
+                    log(`Termination: P${runningProcess.pid} finished.`);
+                    runningProcess.state = 'terminated';
+                    runningProcess = null;
+                    updateCPUIcon(false);
+                } else {
+                    // Random I/O
+                    if (Math.random() < 0.1) {
+                        block();
+                    } 
+                    // Round Robin Preemption
+                    else if (document.getElementById('algo-select').value === 'rr') {
+                        preempt();
+                    }
+                }
+            } 
+            
+            // Always try to fill CPU
+            if (!runningProcess && readyQueue.length > 0) {
+                dispatch();
+            }
+            
+            render();
+        }
+
+        function toggleAutoSim() {
+            const btn = document.getElementById('btn-auto');
+            if (autoSimInterval) {
+                clearInterval(autoSimInterval);
+                autoSimInterval = null;
+                btn.innerText = "Auto: OFF";
+                btn.className = btn.className.replace("bg-red-700 hover:bg-red-600", "bg-blue-700 hover:bg-blue-600");
+            } else {
+                const speed = 11 - document.getElementById('speed-slider').value; // Invert slider
+                autoSimInterval = setInterval(tick, speed * 100);
+                btn.innerText = "Auto: ON";
+                btn.className = btn.className.replace("bg-blue-700 hover:bg-blue-600", "bg-red-700 hover:bg-red-600");
+            }
+        }
+
+        function resetSystem() {
+            processes = [];
+            readyQueue = [];
+            blockedQueue = [];
+            runningProcess = null;
+            pidCounter = 1;
+            contextSwitches = 0;
+            if(autoSimInterval) toggleAutoSim();
+            log("System Reset");
+            render();
+        }
+
+        // ==========================================
+        // UI RENDERING
+        // ==========================================
+
+        function render() {
+            renderQueues();
+            renderTable();
+            renderStats();
+        }
+
+        function renderQueues() {
+            const readyDiv = document.getElementById('queue-ready');
+            readyDiv.innerHTML = '';
+            readyQueue.forEach(p => {
+                readyDiv.innerHTML += createProcessCard(p, 'blue');
+            });
+            if(readyQueue.length === 0) readyDiv.innerHTML = `<div class="text-slate-600 text-center text-xs py-8">Queue Empty</div>`;
+
+            const blockedDiv = document.getElementById('queue-blocked');
+            blockedDiv.innerHTML = '';
+            blockedQueue.forEach(p => {
+                blockedDiv.innerHTML += createProcessCard(p, 'amber');
+            });
+            if(blockedQueue.length === 0) blockedDiv.innerHTML = `<div class="text-slate-600 text-center text-xs py-8">Queue Empty</div>`;
+        }
+
+        function createProcessCard(p, color) {
+            return `
+                <div class="process-card bg-slate-800 rounded p-3 border-l-4 border-${color}-500 cursor-pointer hover:bg-slate-700" onclick="inspect(${p.pid})">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-white">P${p.pid}</span>
+                        <span class="text-xs text-slate-400">Pri: ${p.priority}</span>
+                    </div>
+                    <div class="w-full bg-slate-900 rounded-full h-1.5 mt-2">
+                        <div class="bg-${color}-500 h-1.5 rounded-full" style="width: ${((p.burstTime - p.remainingTime)/p.burstTime)*100}%"></div>
+                    </div>
+                    <div class="text-right text-xs text-slate-500 mt-1">Rem: ${p.remainingTime}</div>
+                </div>
+            `;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('pcb-table-body');
+            tbody.innerHTML = '';
+            
+            processes.forEach(p => {
+                const stateColor = {
+                    'ready': 'text-blue-400 bg-blue-900/30',
+                    'running': 'text-green-400 bg-green-900/30',
+                    'blocked': 'text-amber-400 bg-amber-900/30',
+                    'terminated': 'text-red-400 bg-red-900/30 line-through'
+                }[p.state];
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/50">
+                        <td class="p-3 font-mono text-white font-bold">P${p.pid}</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${stateColor}">${p.state.toUpperCase()}</span></td>
+                        <td class="p-3">${p.priority}</td>
+                        <td class="p-3 font-mono text-slate-400">0x${p.programCounter.toString(16).toUpperCase()}</td>
+                        <td class="p-3 font-mono text-slate-400 text-[10px]">${p.memoryBase} - ${p.memoryLimit}</td>
+                        <td class="p-3">${p.remainingTime}/${p.burstTime}</td>
+                        <td class="p-3">
+                            ${p.state !== 'terminated' ? `<button onclick="killProcess(${p.pid})" class="text-red-400 hover:text-red-300">Kill</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderStats() {
+            const active = processes.filter(p => p.state !== 'terminated').length;
+            document.getElementById('stat-total').innerText = active;
+            document.getElementById('stat-switches').innerText = contextSwitches;
+            
+            // Simple util calculation
+            const totalTime = processes.length;
+            const usedTime = processes.reduce((acc, p) => acc + (p.burstTime - p.remainingTime), 0);
+            const util = active > 0 ? ((usedTime / (totalTime * 5 || 1)) * 100).toFixed(0) : 0;
+            document.getElementById('stat-util').innerText = Math.min(100, util) + "%";
+        }
+
+        function updateCPUIcon(isActive) {
+            const container = document.getElementById('cpu-container');
+            const idle = document.getElementById('cpu-idle');
+            const activeDiv = document.getElementById('cpu-active');
+            const pidSpan = document.getElementById('cpu-pid');
+            const pcSpan = document.getElementById('cpu-pc');
+            const accSpan = document.getElementById('cpu-acc');
+
+            if (isActive && runningProcess) {
+                container.classList.add('core-active');
+                idle.classList.add('hidden');
+                activeDiv.classList.remove('hidden');
+                activeDiv.classList.add('flex');
+                
+                pidSpan.innerText = `P${runningProcess.pid}`;
+                pcSpan.innerText = `0x${runningProcess.programCounter.toString(16).toUpperCase()}`;
+                accSpan.innerText = Math.floor(Math.random() * 255).toString(16);
+            } else {
+                container.classList.remove('core-active');
+                idle.classList.remove('hidden');
+                activeDiv.classList.add('hidden');
+            }
+        }
+
+        function killProcess(pid) {
+            const p = processes.find(x => x.pid === pid);
+            if (p) {
+                p.state = 'terminated';
+                readyQueue = readyQueue.filter(x => x.pid !== pid);
+                blockedQueue = blockedQueue.filter(x => x.pid !== pid);
+                if (runningProcess && runningProcess.pid === pid) {
+                    runningProcess = null;
+                    updateCPUIcon(false);
+                }
+                log(`Killed Process P${pid}`);
+                render();
+            }
+        }
+
+        function inspect(pid) {
+            const p = processes.find(x => x.pid === pid);
+            alert(`Process Control Block Detail:\n\nPID: ${p.pid}\nState: ${p.state}\nPriority: ${p.priority}\nPC: 0x${p.programCounter.toString(16)}\nBurst: ${p.remainingTime}/${p.burstTime}`);
+        }
+
+        function log(msg) {
+            console.log(msg);
+        }
+
+    </script>
+</body>
+</html>

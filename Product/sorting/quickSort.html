@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Sort Visualizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-card: #161618;
+      --fg: #e8e8e8;
+      --muted: #6b6b6b;
+      --accent-purple: #a855f7;
+      --accent-yellow: #eab308;
+      --accent-orange: #f97316;
+      --accent-blue: #3b82f6;
+      --accent-green: #22c55e;
+      --accent-cyan: #06b6d4;
+      --accent-red: #ef4444;
+      --border: #2a2a2c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-pattern {
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 90% 80%, rgba(234, 179, 8, 0.04) 0%, transparent 50%),
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 50px 50px, 50px 50px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .card-header {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent-purple);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #9333ea;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--border);
+    }
+
+    .btn-warning {
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Main Array Bars */
+    .bar-container {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 3px;
+      height: 180px;
+      padding: 16px;
+      position: relative;
+    }
+
+    .bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 36px;
+      border-radius: 4px 4px 0 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .bar-value {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px;
+      color: var(--fg);
+    }
+
+    .bar-index {
+      position: absolute;
+      bottom: -20px;
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .bar-pivot-label {
+      position: absolute;
+      top: -24px;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--accent-purple);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .bar-default { background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%); }
+    
+    .bar-pivot {
+      background: linear-gradient(180deg, var(--accent-purple) 0%, #7c3aed 100%);
+      box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+      transform: scaleY(1.02);
+    }
+    
+    .bar-comparing {
+      background: linear-gradient(180deg, var(--accent-yellow) 0%, #ca8a04 100%);
+      box-shadow: 0 0 25px rgba(234, 179, 8, 0.5);
+    }
+    
+    .bar-swapping {
+      background: linear-gradient(180deg, var(--accent-orange) 0%, #c2410c 100%);
+      box-shadow: 0 0 25px rgba(249, 115, 22, 0.5);
+      transform: translateY(-5px);
+    }
+    
+    .bar-sorted {
+      background: linear-gradient(180deg, var(--accent-green) 0%, #16a34a 100%);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    }
+
+    .bar-partition-left {
+      background: linear-gradient(180deg, var(--accent-blue) 0%, #1d4ed8 100%);
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+    }
+
+    .bar-partition-right {
+      background: linear-gradient(180deg, var(--accent-cyan) 0%, #0891b2 100%);
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+    }
+
+    .bar-active-partition {
+      border: 2px solid var(--accent-blue);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    }
+
+    /* Partition Boundary */
+    .partition-boundary {
+      position: absolute;
+      bottom: 10px;
+      height: calc(100% - 20px);
+      width: 2px;
+      background: var(--accent-blue);
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .partition-boundary.visible {
+      opacity: 1;
+    }
+
+    .partition-boundary::before {
+      content: attr(data-label);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      white-space: nowrap;
+      color: var(--accent-blue);
+      background: var(--bg-card);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    /* Partition Viz */
+    .partition-viz {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px;
+      min-height: 120px;
+      align-items: flex-start;
+    }
+
+    .partition-group {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      transition: all 0.3s ease;
+    }
+
+    .partition-group.active {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+    }
+
+    .partition-group.left-partition {
+      border-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .partition-group.right-partition {
+      border-color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.1);
+    }
+
+    .partition-group.pivot-group {
+      border-color: var(--accent-purple);
+      background: rgba(168, 85, 247, 0.1);
+    }
+
+    .partition-group.sorted-partition {
+      border-color: var(--accent-green);
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    .mini-bar {
+      width: 22px;
+      border-radius: 3px 3px 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .mini-bar-value {
+      font-size: 8px;
+      font-weight: 600;
+      padding: 1px;
+    }
+
+    .partition-label {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    /* Tree */
+    .tree-container {
+      position: relative;
+      min-height: 220px;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .tree-node {
+      position: absolute;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      transition: all 0.3s ease;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      opacity: 0;
+    }
+
+    .tree-node.visible { opacity: 1; }
+
+    .tree-node.active {
+      border-color: var(--accent-purple);
+      background: rgba(168, 85, 247, 0.15);
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+      transform: scale(1.05);
+    }
+
+    .tree-node.partitioning {
+      border-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    .tree-node.complete {
+      border-color: var(--accent-green);
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .tree-edge {
+      position: absolute;
+      background: var(--border);
+      height: 1px;
+      transform-origin: left center;
+      z-index: 0;
+      transition: background 0.2s ease;
+    }
+
+    .tree-edge.active { background: var(--accent-purple); height: 2px; }
+
+    .level-marker {
+      position: absolute;
+      left: 0;
+      font-size: 8px;
+      color: var(--muted);
+      width: 16px;
+      text-align: right;
+    }
+
+    /* Code */
+    .code-line {
+      padding: 6px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .code-line.active {
+      background: rgba(168, 85, 247, 0.1);
+      border-left-color: var(--accent-purple);
+    }
+
+    .code-keyword { color: var(--accent-purple); }
+    .code-function { color: var(--accent-orange); }
+    .code-variable { color: var(--accent-cyan); }
+    .code-comment { color: var(--muted); font-style: italic; }
+
+    /* Stats */
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-item:last-child { border-bottom: none; }
+
+    .stat-label { color: var(--muted); font-size: 11px; }
+    .stat-value { font-weight: 600; font-size: 12px; }
+
+    /* Progress */
+    .progress-bar {
+      height: 5px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-green));
+      transition: width 0.3s ease;
+    }
+
+    /* Explanation */
+    .explanation-text { font-size: 12px; line-height: 1.7; }
+
+    .highlight {
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    .highlight-purple { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+    .highlight-yellow { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+    .highlight-green { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+    .highlight-orange { background: rgba(249, 115, 22, 0.2); color: var(--accent-orange); }
+    .highlight-blue { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+
+    /* History */
+    .history-item {
+      padding: 5px 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      font-size: 10px;
+      margin-bottom: 3px;
+      border-left: 2px solid var(--border);
+      animation: slideIn 0.2s ease;
+    }
+
+    .history-item.pivot { border-left-color: var(--accent-purple); }
+    .history-item.compare { border-left-color: var(--accent-yellow); }
+    .history-item.swap { border-left-color: var(--accent-orange); }
+    .history-item.partition { border-left-color: var(--accent-blue); }
+    .history-item.recursive { border-left-color: var(--accent-cyan); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-5px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Input */
+    .input-field {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--fg);
+      font-size: 12px;
+      width: 100%;
+    }
+
+    .input-field:focus { outline: none; border-color: var(--accent-purple); }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--bg-secondary);
+      border-radius: 2px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent-purple);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Phase Badge */
+    .phase-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in-up { animation: fadeInUp 0.3s ease forwards; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    @media (max-width: 1024px) {
+      .bar-container { height: 140px; }
+      .bar { min-width: 28px; }
+      .tree-container { min-height: 180px; }
+    }
+  </style>
+</head>
+<body class="bg-pattern">
+  <div class="min-h-screen p-3 lg:p-4">
+    <!-- Header -->
+    <header class="mb-4 fade-in-up">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+        <div>
+          <h1 class="text-xl lg:text-2xl font-bold tracking-tight">
+            Quick Sort <span style="color: var(--accent-purple)">Visualizer</span>
+          </h1>
+          <p class="text-xs mt-0.5" style="color: var(--muted)">
+            Divide and Conquer with Pivot Partitioning
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="phase-badge" id="phaseBadge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple)">
+            <span class="w-1.5 h-1.5 rounded-full" style="background: var(--accent-purple)"></span>
+            Ready
+          </span>
+          <button class="btn btn-secondary text-xs" onclick="showInfoModal()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4M12 8h.01"></path>
+            </svg>
+            About
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-3">
+      <!-- Left: Visualization -->
+      <div class="xl:col-span-8 space-y-3">
+        <!-- Main Array -->
+        <div class="card fade-in-up" style="animation-delay: 0.05s">
+          <div class="card-header">
+            <div class="flex gap-1">
+            </div>
+            <span class="card-title ml-1">Array Visualization</span>
+            <div class="ml-auto flex items-center gap-3 text-xs">
+              <span style="color: var(--muted)">Low: <span class="font-mono" style="color: var(--accent-blue)" id="lowDisplay">0</span></span>
+              <span style="color: var(--muted)">High: <span class="font-mono" style="color: var(--accent-cyan)" id="highDisplay">0</span></span>
+              <span style="color: var(--muted)">Pivot: <span class="font-mono" style="color: var(--accent-purple)" id="pivotDisplay">-</span></span>
+            </div>
+          </div>
+          <div class="bar-container" id="barContainer">
+            <!-- Bars here -->
+          </div>
+          <div class="px-3 pb-2">
+            <div class="flex items-center gap-3 text-xs" style="color: var(--muted)">
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: #4a4a4a"></div>Default</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-purple)"></div>Pivot</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-yellow)"></div>Comparing</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-orange)"></div>Swapping</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-blue)"></div>Left</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-green)"></div>Sorted</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Partition Visualization -->
+        <div class="card fade-in-up" style="animation-delay: 0.1s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-blue)">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <path d="M12 11v2M12 15v2"></path>
+            </svg>
+            <span class="card-title">Partition Visualization</span>
+          </div>
+          <div class="partition-viz" id="partitionViz">
+            <div class="text-center text-xs w-full py-6" style="color: var(--muted)">Start sorting to see partitions</div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card fade-in-up" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan)">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+            </svg>
+            <span class="card-title">Controls</span>
+          </div>
+          <div class="p-3 space-y-3">
+            <div class="flex flex-col lg:flex-row gap-2">
+              <input type="text" class="input-field flex-1" id="customArrayInput" placeholder="Custom array (e.g., 8, 3, 5, 2, 9, 1)">
+              <div class="flex gap-2">
+                <button class="btn btn-secondary" onclick="generateRandomArray()">Random</button>
+                <button class="btn btn-secondary" onclick="applyCustomArray()">Apply</button>
+              </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-2">
+              <button class="btn btn-secondary text-xs" onclick="generateSortedArray()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+                Sorted (Worst)
+              </button>
+              <button class="btn btn-secondary text-xs" onclick="generateReverseArray()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"></path></svg>
+                Reverse (Worst)
+              </button>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <button class="btn btn-primary" id="startBtn" onclick="startSorting()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"></polygon></svg>
+                Start
+              </button>
+              <button class="btn btn-warning" id="pauseBtn" onclick="togglePause()" disabled>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" id="pauseIcon"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                <span id="pauseText">Pause</span>
+              </button>
+              <button class="btn btn-secondary" id="stepBtn" onclick="stepForward()" disabled>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                Step
+              </button>
+              <button class="btn btn-danger" id="resetBtn" onclick="resetVisualization()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                Reset
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs mb-1 block" style="color: var(--muted)">
+                  Speed: <span id="speedValue" class="font-mono" style="color: var(--accent-purple)">350ms</span>
+                </label>
+                <input type="range" min="50" max="800" value="350" id="speedSlider" oninput="updateSpeed(this.value)">
+              </div>
+              <div>
+                <label class="text-xs mb-1 block" style="color: var(--muted)">
+                  Size: <span id="sizeValue" class="font-mono" style="color: var(--accent-purple)">10</span>
+                </label>
+                <input type="range" min="5" max="15" value="10" id="sizeSlider" oninput="updateSize(this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explanation -->
+        <div class="card fade-in-up" style="animation-delay: 0.2s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-green)">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="card-title">Step Explanation</span>
+          </div>
+          <div class="p-3">
+            <div class="explanation-text" id="explanationText">
+              <p>Welcome to <span class="highlight highlight-purple">Quick Sort</span> Visualizer!</p>
+              <p class="mt-2" style="color: var(--muted)">Quick Sort uses a <span class="highlight highlight-purple">pivot</span> element to partition the array:</p>
+              <ol class="mt-1 ml-3 text-xs" style="color: var(--muted)">
+                <li>1. <span class="highlight highlight-purple">Select pivot</span> (last element)</li>
+                <li>2. <span class="highlight highlight-blue">Partition</span> around pivot</li>
+                <li>3. <span class="highlight highlight-orange">Recursively sort</span> subarrays</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Info Panels -->
+      <div class="xl:col-span-4 space-y-3">
+        <!-- Recursion Tree -->
+        <div class="card fade-in-up" style="animation-delay: 0.1s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple)">
+              <circle cx="12" cy="5" r="3"></circle>
+              <path d="M12 8v4M5 16l7-4 7 4"></path>
+            </svg>
+            <span class="card-title">Recursion Tree</span>
+          </div>
+          <div class="tree-container" id="treeContainer">
+            <div class="text-center text-xs py-8" style="color: var(--muted)">Tree will appear during sorting</div>
+          </div>
+        </div>
+
+        <!-- Pseudocode -->
+        <div class="card fade-in-up" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-yellow)">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            <span class="card-title">Pseudocode</span>
+          </div>
+          <div class="py-1" id="codeContainer">
+            <div class="code-line" data-line="1"><span class="code-function">quickSort</span>(arr, low, high):</div>
+            <div class="code-line" data-line="2">  <span class="code-keyword">if</span> low < high:</div>
+            <div class="code-line" data-line="3">    pi = <span class="code-function">partition</span>(arr, low, high)</div>
+            <div class="code-line" data-line="4">    <span class="code-function">quickSort</span>(arr, low, pi - 1)</div>
+            <div class="code-line" data-line="5">    <span class="code-function">quickSort</span>(arr, pi + 1, high)</div>
+            <div class="code-line" data-line="6"></div>
+            <div class="code-line" data-line="7"><span class="code-function">partition</span>(arr, low, high):</div>
+            <div class="code-line" data-line="8">  pivot = arr[high]</div>
+            <div class="code-line" data-line="9">  i = low - 1</div>
+            <div class="code-line" data-line="10">  <span class="code-keyword">for</span> j = low <span class="code-keyword">to</span> high - 1:</div>
+            <div class="code-line" data-line="11">    <span class="code-keyword">if</span> arr[j] < pivot:</div>
+            <div class="code-line" data-line="12">      i++; swap(arr[i], arr[j])</div>
+            <div class="code-line" data-line="13">  swap(arr[i+1], arr[high])</div>
+            <div class="code-line" data-line="14">  <span class="code-keyword">return</span> i + 1</div>
+          </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="card fade-in-up" style="animation-delay: 0.2s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-orange)">
+              <path d="M18 20V10M12 20V4M6 20v-6"></path>
+            </svg>
+            <span class="card-title">Statistics</span>
+          </div>
+          <div class="p-3">
+            <div class="stat-item">
+              <span class="stat-label">Array Size</span>
+              <span class="stat-value font-mono" id="statArraySize">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Comparisons</span>
+              <span class="stat-value font-mono" style="color: var(--accent-yellow)" id="statComparisons">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Swaps</span>
+              <span class="stat-value font-mono" style="color: var(--accent-orange)" id="statSwaps">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Partitions</span>
+              <span class="stat-value font-mono" style="color: var(--accent-blue)" id="statPartitions">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Recursion Depth</span>
+              <span class="stat-value font-mono" style="color: var(--accent-purple)" id="statDepth">0</span>
+            </div>
+            <div class="mt-3">
+              <div class="flex justify-between text-xs mb-1" style="color: var(--muted)">
+                <span>Progress</span>
+                <span id="progressPercent">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Complexity -->
+        <div class="card fade-in-up" style="animation-delay: 0.25s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-red)">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span class="card-title">Complexity</span>
+          </div>
+          <div class="p-3 space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Best Case</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-green)">O(n log n)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Average</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow)">O(n log n)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Worst Case</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red)">O(n²)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Space</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan)">O(log n)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="card fade-in-up" style="animation-delay: 0.3s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan)">
+              <path d="M12 8v4l3 3"></path>
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            <span class="card-title">Step History</span>
+          </div>
+          <div class="p-2 max-h-36 overflow-y-auto" id="historyContainer">
+            <div class="text-xs text-center py-4" style="color: var(--muted)">No operations yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Modal -->
+  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" id="infoModal">
+    <div class="card max-w-md w-full">
+      <div class="card-header">
+        <span class="card-title">About Quick Sort</span>
+        <button class="ml-auto" style="color: var(--muted)" onclick="hideInfoModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="p-4 space-y-3 text-sm">
+        <p><span class="highlight highlight-purple">Quick Sort</span> is a highly efficient, in-place sorting algorithm using <span class="highlight highlight-blue">divide and conquer</span>.</p>
+        <div class="bg-black/20 rounded p-3 text-xs space-y-2">
+          <p style="color: var(--accent-purple)"><strong>Pivot:</strong> Element used to partition the array</p>
+          <p style="color: var(--accent-blue)"><strong>Partition:</strong> Rearrange elements around pivot</p>
+          <p style="color: var(--accent-cyan)"><strong>Recurse:</strong> Sort left and right subarrays</p>
+        </div>
+        <p class="text-xs" style="color: var(--muted)">Quick Sort is often fastest in practice due to cache efficiency and low constant factors. However, it can degrade to O(n²) with poor pivot choices.</p>
+        <button class="btn btn-primary w-full" onclick="hideInfoModal()">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ STATE ============
+    let array = [];
+    let originalArray = [];
+    let sorting = false;
+    let paused = false;
+    let stepMode = false;
+    let stepResolve = null;
+    let speed = 350;
+    let arraySize = 10;
+    
+    let comparisons = 0;
+    let swaps = 0;
+    let partitions = 0;
+    let maxDepth = 0;
+    let sortedIndices = [];
+    let stepHistory = [];
+    let currentDepth = 0;
+    let currentPivot = -1;
+    let currentLow = 0;
+    let currentHigh = 0;
+
+    // Tree
+    let treeNodes = [];
+    let nodeIdCounter = 0;
+
+    // ============ DOM ============
+    const barContainer = document.getElementById('barContainer');
+    const partitionViz = document.getElementById('partitionViz');
+    const treeContainer = document.getElementById('treeContainer');
+    const explanationText = document.getElementById('explanationText');
+    const historyContainer = document.getElementById('historyContainer');
+    const codeLines = document.querySelectorAll('.code-line');
+
+    // ============ UTILITIES ============
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function waitForStep() {
+      if (stepMode) {
+        return new Promise(resolve => { stepResolve = resolve; });
+      }
+      if (paused && sorting) {
+        return new Promise(resolve => {
+          const check = () => {
+            if (!paused || !sorting) resolve();
+            else setTimeout(check, 50);
+          };
+          check();
+        });
+      }
+    }
+
+    // ============ ARRAY GENERATION ============
+    function generateRandomArray() {
+      if (sorting) return;
+      array = [];
+      for (let i = 0; i < arraySize; i++) {
+        array.push(Math.floor(Math.random() * 60) + 10);
+      }
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      clearPartitions();
+      clearTree();
+      updateExplanation('ready');
+    }
+
+    function generateSortedArray() {
+      if (sorting) return;
+      array = [];
+      for (let i = 0; i < arraySize; i++) {
+        array.push(10 + i * 5);
+      }
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      clearPartitions();
+      clearTree();
+      updateExplanation('worstCase', { type: 'sorted' });
+    }
+
+    function generateReverseArray() {
+      if (sorting) return;
+      array = [];
+      for (let i = arraySize - 1; i >= 0; i--) {
+        array.push(10 + i * 5);
+      }
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      clearPartitions();
+      clearTree();
+      updateExplanation('worstCase', { type: 'reverse' });
+    }
+
+    function applyCustomArray() {
+      if (sorting) return;
+      const input = document.getElementById('customArrayInput').value;
+      const values = input.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
+      if (values.length < 2) {
+        updateExplanation('invalid');
+        return;
+      }
+      array = values.slice(0, 15);
+      arraySize = array.length;
+      document.getElementById('sizeSlider').value = arraySize;
+      document.getElementById('sizeValue').textContent = arraySize;
+      originalArray = [...array];
+      resetStats();
+      renderBars();
+      clearPartitions();
+      clearTree();
+      updateExplanation('ready');
+    }
+
+    // ============ RENDERING ============
+    function renderBars(highlights = {}) {
+      barContainer.innerHTML = '';
+      const maxVal = Math.max(...array);
+      const containerHeight = 140;
+
+      array.forEach((value, index) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        const height = Math.max(25, (value / maxVal) * containerHeight);
+        bar.style.height = `${height}px`;
+
+        // Color logic
+        if (sortedIndices.includes(index)) {
+          bar.classList.add('bar-sorted');
+        } else if (index === highlights.pivot) {
+          bar.classList.add('bar-pivot');
+          const pivotLabel = document.createElement('span');
+          pivotLabel.className = 'bar-pivot-label';
+          pivotLabel.textContent = 'pivot';
+          bar.appendChild(pivotLabel);
+        } else if (highlights.swapping && highlights.swapping.includes(index)) {
+          bar.classList.add('bar-swapping');
+        } else if (highlights.comparing && highlights.comparing.includes(index)) {
+          bar.classList.add('bar-comparing');
+        } else if (highlights.leftPartition && highlights.leftPartition.includes(index)) {
+          bar.classList.add('bar-partition-left');
+        } else if (highlights.rightPartition && highlights.rightPartition.includes(index)) {
+          bar.classList.add('bar-partition-right');
+        } else if (highlights.activePartition && index >= highlights.low && index <= highlights.high) {
+          bar.classList.add('bar-active-partition');
+          bar.classList.add('bar-default');
+        } else {
+          bar.classList.add('bar-default');
+        }
+
+        const valueLabel = document.createElement('span');
+        valueLabel.className = 'bar-value';
+        valueLabel.textContent = value;
+        bar.appendChild(valueLabel);
+
+        const indexLabel = document.createElement('span');
+        indexLabel.className = 'bar-index';
+        indexLabel.textContent = index;
+        bar.appendChild(indexLabel);
+
+        barContainer.appendChild(bar);
+      });
+
+      // Update displays
+      document.getElementById('lowDisplay').textContent = highlights.low !== undefined ? highlights.low : '-';
+      document.getElementById('highDisplay').textContent = highlights.high !== undefined ? highlights.high : '-';
+      document.getElementById('pivotDisplay').textContent = highlights.pivot !== undefined ? array[highlights.pivot] : '-';
+    }
+
+    function clearPartitions() {
+      partitionViz.innerHTML = '<div class="text-center text-xs w-full py-6" style="color: var(--muted)">Start sorting to see partitions</div>';
+    }
+
+    function updatePartitionViz(low, high, pivotIdx, pivotVal, leftArr, rightArr) {
+      if (partitionViz.querySelector('.text-center')) {
+        partitionViz.innerHTML = '';
+      }
+
+      const row = document.createElement('div');
+      row.className = 'flex flex-wrap items-end gap-2 w-full justify-center';
+
+      // Left partition
+      if (leftArr.length > 0) {
+        const leftGroup = createMiniGroup(leftArr, 'left-partition');
+        const leftLabel = document.createElement('div');
+        leftLabel.className = 'partition-label';
+        leftLabel.textContent = `< pivot (${leftArr.length})`;
+        leftGroup.appendChild(leftLabel);
+        row.appendChild(leftGroup);
+      }
+
+      // Pivot
+      const pivotGroup = createMiniGroup([pivotVal], 'pivot-group');
+      const pivotLabel = document.createElement('div');
+      pivotLabel.className = 'partition-label';
+      pivotLabel.textContent = 'pivot';
+      pivotGroup.appendChild(pivotLabel);
+      row.appendChild(pivotGroup);
+
+      // Right partition
+      if (rightArr.length > 0) {
+        const rightGroup = createMiniGroup(rightArr, 'right-partition');
+        const rightLabel = document.createElement('div');
+        rightLabel.className = 'partition-label';
+        rightLabel.textContent = `> pivot (${rightArr.length})`;
+        rightGroup.appendChild(rightLabel);
+        row.appendChild(rightGroup);
+      }
+
+      partitionViz.appendChild(row);
+    }
+
+    function createMiniGroup(arr, className) {
+      const group = document.createElement('div');
+      group.className = `partition-group ${className}`;
+      
+      const maxVal = Math.max(...arr);
+      arr.forEach(val => {
+        const miniBar = document.createElement('div');
+        miniBar.className = 'mini-bar';
+        miniBar.style.height = `${Math.max(12, (val / maxVal) * 30)}px`;
+        
+        if (className.includes('left')) {
+          miniBar.style.background = 'linear-gradient(180deg, var(--accent-blue), #1d4ed8)';
+        } else if (className.includes('right')) {
+          miniBar.style.background = 'linear-gradient(180deg, var(--accent-cyan), #0891b2)';
+        } else if (className.includes('pivot')) {
+          miniBar.style.background = 'linear-gradient(180deg, var(--accent-purple), #7c3aed)';
+        }
+        
+        const valLabel = document.createElement('span');
+        valLabel.className = 'mini-bar-value';
+        valLabel.textContent = val;
+        miniBar.appendChild(valLabel);
+        
+        group.appendChild(miniBar);
+      });
+      
+      return group;
+    }
+
+    // Tree
+    function clearTree() {
+      treeContainer.innerHTML = '<div class="text-center text-xs py-8" style="color: var(--muted)">Tree will appear during sorting</div>';
+      treeNodes = [];
+      nodeIdCounter = 0;
+    }
+
+    function addTreeNode(arr, low, high, depth, type, parentId = null) {
+      if (treeContainer.querySelector('.text-center')) {
+        treeContainer.innerHTML = '';
+      }
+
+      const nodeId = nodeIdCounter++;
+      const node = {
+        id: nodeId,
+        arr: [...arr],
+        low,
+        high,
+        depth,
+        type,
+        parentId
+      };
+      treeNodes.push(node);
+
+      renderTree();
+      return nodeId;
+    }
+
+    function updateTreeNodeActive(nodeId) {
+      treeNodes.forEach(n => n.active = n.id === nodeId);
+      renderTree();
+    }
+
+    function renderTree() {
+      treeContainer.innerHTML = '';
+      if (treeNodes.length === 0) return;
+
+      const containerWidth = treeContainer.offsetWidth;
+      const levelGap = 45;
+
+      const maxDepth = Math.max(...treeNodes.map(n => n.depth));
+      const levelCounts = {};
+      
+      treeNodes.forEach(node => {
+        if (!levelCounts[node.depth]) levelCounts[node.depth] = 0;
+        levelCounts[node.depth]++;
+      });
+
+      const levelCounters = {};
+      
+      treeNodes.forEach(node => {
+        if (!levelCounters[node.depth]) levelCounters[node.depth] = 0;
+        if (!levelCounters[node.depth]) levelCounters[node.depth] = 0;
+        
+        const nodesInLevel = levelCounts[node.depth] || 1;
+        const levelWidth = containerWidth - 30;
+        const nodeWidth = 70;
+        const gap = Math.max(8, (levelWidth - nodesInLevel * nodeWidth) / (nodesInLevel + 1));
+        
+        if (!levelCounters[node.depth]) levelCounters[node.depth] = 0;
+        const x = 15 + gap + (levelCounters[node.depth] || 0) * (nodeWidth + gap);
+        const y = 8 + node.depth * levelGap;
+        
+        node.x = x;
+        node.y = y;
+        
+        levelCounters[node.depth] = (levelCounters[node.depth] || 0) + 1;
+      });
+
+      // Edges
+      treeNodes.forEach(node => {
+        if (node.parentId !== null) {
+          const parent = treeNodes.find(n => n.id === node.parentId);
+          if (parent) {
+            const edge = document.createElement('div');
+            edge.className = 'tree-edge';
+            if (node.active || parent.active) edge.classList.add('active');
+            
+            const dx = node.x + 28 - (parent.x + 28);
+            const dy = node.y - (parent.y + 20);
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            edge.style.width = `${length}px`;
+            edge.style.left = `${parent.x + 28}px`;
+            edge.style.top = `${parent.y + 20}px`;
+            edge.style.transform = `rotate(${angle}deg)`;
+            
+            treeContainer.appendChild(edge);
+          }
+        }
+      });
+
+      // Nodes
+      treeNodes.forEach(node => {
+        const nodeEl = document.createElement('div');
+        nodeEl.className = 'tree-node visible';
+        if (node.active) nodeEl.classList.add('active');
+        if (node.type) nodeEl.classList.add(node.type);
+        
+        nodeEl.style.left = `${node.x}px`;
+        nodeEl.style.top = `${node.y}px`;
+        nodeEl.textContent = `[${node.arr.join(',')}]`;
+        
+        treeContainer.appendChild(nodeEl);
+      });
+
+      // Level markers
+      for (let l = 0; l <= maxDepth; l++) {
+        const marker = document.createElement('div');
+        marker.className = 'level-marker';
+        marker.style.top = `${8 + l * levelGap + 5}px`;
+        marker.textContent = `L${l}`;
+        treeContainer.appendChild(marker);
+      }
+    }
+
+    // ============ STATS & UI ============
+    function resetStats() {
+      comparisons = 0;
+      swaps = 0;
+      partitions = 0;
+      maxDepth = 0;
+      sortedIndices = [];
+      stepHistory = [];
+      currentDepth = 0;
+      currentPivot = -1;
+      treeNodes = [];
+      nodeIdCounter = 0;
+      updateStats();
+      updatePhase('ready');
+      updateHistory();
+    }
+
+    function updateStats() {
+      document.getElementById('statArraySize').textContent = array.length;
+      document.getElementById('statComparisons').textContent = comparisons;
+      document.getElementById('statSwaps').textContent = swaps;
+      document.getElementById('statPartitions').textContent = partitions;
+      document.getElementById('statDepth').textContent = maxDepth;
+
+      const progress = array.length > 0 ? Math.round((sortedIndices.length / array.length) * 100) : 0;
+      document.getElementById('progressPercent').textContent = `${progress}%`;
+      document.getElementById('progressBar').style.width = `${progress}%`;
+    }
+
+    function updatePhase(phase) {
+      const badge = document.getElementById('phaseBadge');
+      const phases = {
+        ready: { bg: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)', dot: 'var(--accent-purple)', text: 'Ready' },
+        partitioning: { bg: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', dot: 'var(--accent-blue)', text: 'Partitioning' },
+        recursing: { bg: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-cyan)', dot: 'var(--accent-cyan)', text: 'Recursing' },
+        complete: { bg: 'rgba(34, 197, 94, 0.15)', color: 'var(--accent-green)', dot: 'var(--accent-green)', text: 'Complete' }
+      };
+      const p = phases[phase] || phases.ready;
+      badge.style.background = p.bg;
+      badge.style.color = p.color;
+      badge.querySelector('span').style.background = p.dot;
+      badge.lastChild.textContent = p.text;
+    }
+
+    function highlightCode(lineNum) {
+      codeLines.forEach(line => {
+        line.classList.remove('active');
+        if (parseInt(line.dataset.line) === lineNum) {
+          line.classList.add('active');
+        }
+      });
+    }
+
+    function addHistory(type, text) {
+      stepHistory.push({ type, text });
+      updateHistory();
+    }
+
+    function updateHistory() {
+      if (stepHistory.length === 0) {
+        historyContainer.innerHTML = '<div class="text-xs text-center py-4" style="color: var(--muted)">No operations yet</div>';
+        return;
+      }
+      
+      historyContainer.innerHTML = stepHistory.slice(-15).map(h => 
+        `<div class="history-item ${h.type}">${h.text}</div>`
+      ).join('');
+      
+      historyContainer.scrollTop = historyContainer.scrollHeight;
+    }
+
+    function updateExplanation(type, data = {}) {
+      let html = '';
+      switch (type) {
+        case 'ready':
+          html = `<p>Ready! Array has <span class="highlight highlight-purple">${array.length}</span> elements.</p>
+                  <p class="mt-2" style="color: var(--muted)">Click <span class="highlight highlight-purple">Start</span> to begin partitioning.</p>`;
+          break;
+        case 'invalid':
+          html = `<p class="highlight highlight-orange">Invalid input!</p><p class="mt-2" style="color: var(--muted)">Enter comma-separated positive numbers.</p>`;
+          break;
+        case 'worstCase':
+          html = `<p><span class="highlight highlight-orange">Worst Case Input</span></p>
+                  <p class="mt-2" style="color: var(--muted)">This ${data.type} array will cause O(n²) behavior because the pivot creates highly unbalanced partitions.</p>`;
+          break;
+        case 'pivot':
+          html = `<p><span class="highlight highlight-purple">Pivot Selected</span></p>
+                  <p class="mt-2">Pivot = <span class="highlight highlight-purple">${data.pivotVal}</span> at index ${data.pivotIdx}</p>
+                  <p class="mt-2" style="color: var(--muted)">Elements smaller than pivot go left, larger go right.</p>`;
+          break;
+        case 'compare':
+          html = `<p><span class="highlight highlight-yellow">Comparing</span></p>
+                  <p class="mt-2">arr[${data.j}] = <span class="highlight highlight-yellow">${data.jVal}</span> vs pivot <span class="highlight highlight-purple">${data.pivotVal}</span></p>
+                  <p class="mt-1">${data.jVal < data.pivotVal ? 
+                    `<span class="highlight highlight-blue">${data.jVal} < ${data.pivotVal}</span> → move to left partition` : 
+                    `<span class="highlight highlight-orange">${data.jVal} >= ${data.pivotVal}</span> → stay in right partition`}</p>`;
+          break;
+        case 'swap':
+          html = `<p><span class="highlight highlight-orange">Swapping</span></p>
+                  <p class="mt-2">swap arr[${data.i}] = <span class="highlight highlight-orange">${data.iVal}</span> with arr[${data.j}] = <span class="highlight highlight-orange">${data.jVal}</span></p>
+                  <p class="mt-1" style="color: var(--muted)">Moving smaller element to left partition.</p>`;
+          break;
+        case 'partitionComplete':
+          html = `<p><span class="highlight highlight-blue">Partition Complete</span></p>
+                  <p class="mt-2">Pivot <span class="highlight highlight-purple">${data.pivotVal}</span> placed at index ${data.pivotIdx}</p>
+                  <p class="mt-1">Left: [${data.left.join(', ') || 'empty'}] (${data.left.length} elements)</p>
+                  <p class="mt-1">Right: [${data.right.join(', ') || 'empty'}] (${data.right.length} elements)</p>`;
+          break;
+        case 'recursive':
+          html = `<p><span class="highlight highlight-cyan">Recursive Call</span></p>
+                  <p class="mt-2">Sorting ${data.side} partition: [${data.arr.join(', ')}]</p>
+                  <p class="mt-1" style="color: var(--muted)">Recursion depth: ${data.depth}</p>`;
+          break;
+        case 'complete':
+          html = `<p class="highlight highlight-green"><strong>Sorting Complete!</strong></p>
+                  <p class="mt-2">Comparisons: <span class="highlight highlight-yellow">${comparisons}</span> | Swaps: <span class="highlight highlight-orange">${swaps}</span></p>
+                  <p class="mt-2" style="color: var(--muted)">Array is sorted in ascending order.</p>`;
+          break;
+        case 'paused':
+          html = `<p><span class="highlight highlight-yellow">Paused</span></p><p class="mt-2" style="color: var(--muted)">Click Resume or Step to continue.</p>`;
+          break;
+      }
+      explanationText.innerHTML = html;
+    }
+
+    // ============ QUICK SORT ALGORITHM ============
+    async function partition(low, high, depth, parentId) {
+      if (!sorting) return -1;
+
+      highlightCode(8);
+      const pivotIdx = high;
+      const pivotVal = array[pivotIdx];
+      currentPivot = pivotIdx;
+      
+      updateExplanation('pivot', { pivotVal, pivotIdx });
+      addHistory('pivot', `Pivot selected: ${pivotVal} at [${pivotIdx}]`);
+      
+      renderBars({ pivot: pivotIdx, low, high, activePartition: true });
+      await sleep(speed);
+      await waitForStep();
+
+      highlightCode(9);
+      let i = low - 1;
+
+      highlightCode(10);
+      for (let j = low; j < high; j++) {
+        if (!sorting) return -1;
+
+        comparisons++;
+        updateStats();
+
+        highlightCode(11);
+        renderBars({ pivot: pivotIdx, comparing: [j], low, high, activePartition: true });
+        
+        updateExplanation('compare', { j, jVal: array[j], pivotVal });
+        addHistory('compare', `Compare ${array[j]} vs pivot ${pivotVal}`);
+        
+        await sleep(speed);
+        await waitForStep();
+
+        if (array[j] < pivotVal) {
+          i++;
+          if (i !== j) {
+            highlightCode(12);
+            
+            // Swap
+            const iVal = array[i];
+            const jVal = array[j];
+            
+            renderBars({ pivot: pivotIdx, swapping: [i, j], low, high, activePartition: true });
+            updateExplanation('swap', { i, j, iVal, jVal });
+            addHistory('swap', `Swap ${iVal} and ${jVal}`);
+            
+            await sleep(speed / 2);
+            
+            [array[i], array[j]] = [array[j], array[i]];
+            swaps++;
+            updateStats();
+            
+            renderBars({ pivot: pivotIdx, swapping: [i, j], low, high, activePartition: true });
+            await sleep(speed / 2);
+          }
+        }
+      }
+
+      // Final swap - place pivot in correct position
+      highlightCode(13);
+      if (i + 1 !== pivotIdx) {
+        const iVal = array[i + 1];
+        const pivotVal = array[pivotIdx];
+        
+        renderBars({ swapping: [i + 1, pivotIdx], low, high, activePartition: true });
+        updateExplanation('swap', { i: i + 1, j: pivotIdx, iVal, jVal: pivotVal });
+        addHistory('swap', `Swap ${iVal} with pivot ${pivotVal}`);
+        
+        await sleep(speed / 2);
+        
+        [array[i + 1], array[pivotIdx]] = [array[pivotIdx], array[i + 1]];
+        swaps++;
+        updateStats();
+        
+        renderBars({ swapping: [i + 1, pivotIdx], low, high, activePartition: true });
+        await sleep(speed / 2);
+      }
+
+      const finalPivotIdx = i + 1;
+      sortedIndices.push(finalPivotIdx);
+      
+      // Update partition visualization
+      const leftArr = array.slice(low, finalPivotIdx);
+      const rightArr = array.slice(finalPivotIdx + 1, high + 1);
+      
+      updatePartitionViz(low, high, finalPivotIdx, array[finalPivotIdx], leftArr, rightArr);
+      updateExplanation('partitionComplete', { pivotVal: array[finalPivotIdx], pivotIdx: finalPivotIdx, left: leftArr, right: rightArr });
+      addHistory('partition', `Partition: [${leftArr}] ${array[finalPivotIdx]} [${rightArr}]`);
+      
+      partitions++;
+      updateStats();
+      
+      renderBars({ pivot: finalPivotIdx, low, high, leftPartition: Array.from({length: finalPivotIdx - low}, (_, k) => low + k), rightPartition: Array.from({length: high - finalPivotIdx}, (_, k) => finalPivotIdx + 1 + k) });
+      
+      await sleep(speed);
+      await waitForStep();
+
+      highlightCode(14);
+      return finalPivotIdx;
+    }
+
+    async function quickSort(low, high, depth = 0, parentId = null) {
+      if (!sorting) return;
+      if (low >= high) {
+        if (low === high && !sortedIndices.includes(low)) {
+          sortedIndices.push(low);
+          updateStats();
+        }
+        return;
+      }
+
+      currentDepth = depth;
+      maxDepth = Math.max(maxDepth, depth);
+      updateStats();
+
+      highlightCode(2);
+      const subArr = array.slice(low, high + 1);
+      const nodeId = addTreeNode(subArr, low, high, depth, 'partitioning', parentId);
+      updateTreeNodeActive(nodeId);
+      
+      await sleep(speed / 2);
+
+      highlightCode(3);
+      updatePhase('partitioning');
+      const pi = await partition(low, high, depth, nodeId);
+      
+      if (pi === -1) return; // Sorting stopped
+
+      // Update tree node
+      treeNodes.find(n => n.id === nodeId).type = 'complete';
+      renderTree();
+
+      // Left recursion
+      highlightCode(4);
+      updatePhase('recursing');
+      if (low < pi - 1) {
+        const leftArr = array.slice(low, pi);
+        updateExplanation('recursive', { side: 'left', arr: leftArr, depth: depth + 1 });
+        addHistory('recursive', `Recurse left: [${leftArr}]`);
+        
+        await sleep(speed / 2);
+        
+        const leftId = addTreeNode(leftArr, low, pi - 1, depth + 1, 'partitioning', nodeId);
+        await quickSort(low, pi - 1, depth + 1, leftId);
+      }
+
+      // Right recursion
+      highlightCode(5);
+      if (pi + 1 < high) {
+        const rightArr = array.slice(pi + 1, high + 1);
+        updateExplanation('recursive', { side: 'right', arr: rightArr, depth: depth + 1 });
+        addHistory('recursive', `Recurse right: [${rightArr}]`);
+        
+        await sleep(speed / 2);
+        
+        const rightId = addTreeNode(rightArr, pi + 1, high, depth + 1, 'partitioning', nodeId);
+        await quickSort(pi + 1, high, depth + 1, rightId);
+      }
+
+      // Mark this node complete
+      if (treeNodes.find(n => n.id === nodeId)) {
+        treeNodes.find(n => n.id === nodeId).type = 'complete';
+        renderTree();
+      }
+    }
+
+    async function runQuickSort() {
+      await quickSort(0, array.length - 1, 0);
+      
+      if (sorting) {
+        // Mark all as sorted
+        sortedIndices = Array.from({length: array.length}, (_, i) => i);
+        renderBars();
+        updatePhase('complete');
+        highlightCode(0);
+        updateExplanation('complete');
+        
+        // Mark root as complete
+        if (treeNodes.length > 0) {
+          treeNodes[0].type = 'complete';
+          renderTree();
+        }
+      }
+      
+      return true;
+    }
+
+    // ============ CONTROLS ============
+    function startSorting() {
+      if (array.length === 0) generateRandomArray();
+      
+      sorting = true;
+      paused = false;
+      stepMode = false;
+      
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('pauseBtn').disabled = false;
+      document.getElementById('stepBtn').disabled = false;
+
+      runQuickSort().then(complete => {
+        if (complete) {
+          sorting = false;
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('pauseBtn').disabled = true;
+          document.getElementById('stepBtn').disabled = true;
+        }
+      });
+    }
+
+    function togglePause() {
+      if (!sorting) return;
+      paused = !paused;
+      
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      
+      if (paused) {
+        pauseText.textContent = 'Resume';
+        pauseIcon.innerHTML = '<polygon points="5 3 19 12 5 21"></polygon>';
+        updateExplanation('paused');
+      } else {
+        pauseText.textContent = 'Pause';
+        pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+      }
+    }
+
+    function stepForward() {
+      if (!sorting) {
+        if (array.length === 0) generateRandomArray();
+        sorting = true;
+        paused = true;
+        stepMode = true;
+        
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('pauseBtn').disabled = false;
+        document.getElementById('stepBtn').disabled = false;
+
+        runQuickSort().then(complete => {
+          if (complete) {
+            sorting = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stepBtn').disabled = true;
+          }
+        });
+      } else {
+        stepMode = true;
+        if (stepResolve) {
+          stepResolve();
+          stepResolve = null;
+        }
+      }
+    }
+
+    function resetVisualization() {
+      sorting = false;
+      paused = false;
+      stepMode = false;
+      
+      array = [...originalArray];
+      resetStats();
+      renderBars();
+      clearPartitions();
+      clearTree();
+      highlightCode(0);
+      updateExplanation('ready');
+      
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('pauseBtn').disabled = true;
+      document.getElementById('stepBtn').disabled = true;
+      
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      pauseText.textContent = 'Pause';
+      pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+    }
+
+    function updateSpeed(value) {
+      speed = 850 - parseInt(value);
+      document.getElementById('speedValue').textContent = `${speed}ms`;
+    }
+
+    function updateSize(value) {
+      arraySize = parseInt(value);
+      document.getElementById('sizeValue').textContent = arraySize;
+      if (!sorting) generateRandomArray();
+    }
+
+    // ============ MODAL ============
+    function showInfoModal() {
+      document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function hideInfoModal() {
+      document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    document.getElementById('infoModal').addEventListener('click', function(e) {
+      if (e.target === this) hideInfoModal();
+    });
+
+    // ============ KEYBOARD ============
+    document.addEventListener('keydown', function(e) {
+      if (e.target.tagName === 'INPUT') return;
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          sorting ? togglePause() : startSorting();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          stepForward();
+          break;
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          resetVisualization();
+          break;
+        case 'Escape':
+          hideInfoModal();
+          break;
+      }
+    });
+
+    // ============ INIT ============
+    document.addEventListener('DOMContentLoaded', function() {
+      generateRandomArray();
+    });
+  </script>
+</body>
+</html>

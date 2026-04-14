@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4-to-1 Multiplexer Visual</title>
+<style>
+    /* --- CSS VARIABLES & RESET --- */
+    :root {
+        --bg-dark: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.7);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --text-main: #f1f5f9;
+        --text-muted: #94a3b8;
+        
+        /* Signal Colors */
+        --color-data: #06b6d4;      /* Cyan for Data */
+        --color-select: #a855f7;    /* Purple for Selectors */
+        --color-off: #334155;       /* Grey for Low */
+        
+        --glow-data: 0 0 12px rgba(6, 182, 212, 0.6);
+        --glow-select: 0 0 12px rgba(168, 85, 247, 0.6);
+        
+        --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+        font-family: var(--font-family);
+        background-color: var(--bg-dark);
+        background-image: 
+            radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.15), transparent 50%),
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 100% 100%, 40px 40px, 40px 40px;
+        color: var(--text-main);
+        margin: 0; 
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    h1 {
+        text-align: center; 
+        margin-bottom: 40px;
+        font-size: 2.5rem;
+        font-weight: 300;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        background: linear-gradient(to right, #fff, #a855f7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .simulator {
+        display: flex; 
+        gap: 40px; 
+        flex-wrap: wrap; 
+        justify-content: center;
+        align-items: stretch;
+        max-width: 1400px;
+        width: 100%;
+    }
+
+    /* --- CARDS --- */
+    .diagram, .panel {
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        padding: 30px; 
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .diagram {
+        flex: 2;
+        min-width: 500px; 
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .panel {
+        flex: 1;
+        min-width: 320px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .panel h2 { 
+        text-align: center; 
+        margin-bottom: 25px; 
+        font-weight: 500;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-size: 0.9rem;
+        border-bottom: 1px solid var(--card-border);
+        padding-bottom: 15px;
+    }
+
+    /* --- SVG STYLES --- */
+    svg {
+        width: 100%; 
+        height: auto;
+        max-width: 800px;
+        overflow: visible;
+    }
+
+    /* Wires */
+    .wire, .wire-data, .wire-select {
+        stroke: var(--color-off);
+        stroke-width: 3; 
+        stroke-linecap: round; 
+        fill: none;
+        transition: stroke 0.3s ease, filter 0.3s ease;
+    }
+    
+    /* Specific Wire Colors */
+    .wire-data.signal { stroke: var(--color-data); filter: drop-shadow(0 0 4px var(--color-data)); }
+    .wire-select.signal { stroke: var(--color-select); filter: drop-shadow(0 0 4px var(--color-select)); }
+
+    /* Generic signal animation */
+    .signal { stroke-dasharray: 8, 4; animation: flow 1s linear infinite; }
+    @keyframes flow { to { stroke-dashoffset: -20; } }
+
+    /* Terminals (Buttons) - REFINED */
+    .terminal {
+        fill: #1e293b; 
+        stroke: #475569; 
+        stroke-width: 3; 
+        cursor: pointer; 
+        /* Smooth transition for color/glow, no transform scaling */
+        transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+    }
+
+    /* Hover Effect: Just highlight, no movement */
+    .terminal:hover {
+        stroke: #fff;
+        fill: #334155;
+    }
+    
+    /* Active/On States */
+    .terminal.data.on { fill: var(--color-data); stroke: #fff; filter: var(--glow-data); }
+    .terminal.select.on { fill: var(--color-select); stroke: #fff; filter: var(--glow-select); }
+    
+    .indicator {
+        fill: #1e293b; 
+        stroke: #475569; 
+        stroke-width: 3; 
+        transition: all 0.3s ease;
+    }
+    .indicator.on { fill: var(--color-data); stroke: #fff; filter: var(--glow-data); }
+
+    /* Gate Styles */
+    .gate-body {
+        fill: rgba(15, 23, 42, 0.8);
+        stroke: #475569;
+        stroke-width: 2;
+    }
+    .gate-label {
+        fill: var(--text-muted);
+        font-size: 10px;
+        text-anchor: middle;
+        dominant-baseline: middle;
+        pointer-events: none;
+    }
+
+    /* --- CONTROLS --- */
+    .toggle-container {
+        position: absolute; 
+        top: 20px; 
+        right: 20px;
+        display: flex; 
+        align-items: center; 
+        gap: 10px; 
+        color: var(--text-muted);
+        font-weight: 600; 
+        font-size: 0.85rem; 
+        z-index: 10;
+        background: rgba(0,0,0,0.4);
+        padding: 8px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--card-border);
+    }
+    .toggle-container input[type="checkbox"] {
+        width: 40px; height: 20px;
+        -webkit-appearance: none; background: #334155;
+        border-radius: 20px; position: relative; cursor: pointer;
+        transition: background 0.3s;
+    }
+    .toggle-container input[type="checkbox"]:checked { background: var(--color-select); }
+    .toggle-container input[type="checkbox"]::before {
+        content:''; position: absolute; width: 16px; height: 16px; 
+        border-radius: 50%; background: #fff; top: 2px; left: 2px; 
+        transition: left 0.3s ease;
+    }
+    .toggle-container input[type="checkbox"]:checked::before { left: 22px; }
+
+    /* --- TRUTH TABLE --- */
+    table {
+        width: 100%; 
+        border-collapse: separate; 
+        border-spacing: 0; 
+        text-align: center; 
+        font-size: 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--card-border);
+        overflow: hidden;
+    }
+    th, td { padding: 12px; font-weight: 600; }
+    th {
+        background: rgba(255,255,255,0.05);
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--card-border);
+    }
+    tr.active {
+        background: rgba(168, 85, 247, 0.2); 
+        color: #fff;
+    }
+    
+    /* Responsive */
+    @media (max-width: 900px) {
+        .simulator { flex-direction: column; }
+        .diagram { min-width: unset; }
+    }
+</style>
+</head>
+<body>
+
+<h1>4-to-1 Multiplexer</h1>
+
+<div class="simulator">
+    <div class="diagram">
+        <div class="toggle-container">
+            Show Gates
+            <input type="checkbox" id="toggleGates"/>
+        </div>
+
+        <svg viewBox="0 0 800 550" id="svgCanvas">
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- CHIP VIEW (Abstract) -->
+            <g id="chipView">
+                <!-- Inputs I0-I3 -->
+                <text x="30" y="85" class="gate-label" style="font-size:14px; fill:var(--text-muted)">I0</text>
+                <circle id="chipI0" cx="60" cy="80" r="15" class="terminal data"/>
+                <line id="wChipI0" x1="75" y1="80" x2="180" y2="80" class="wire-data"/>
+
+                <text x="30" y="185" class="gate-label" style="font-size:14px; fill:var(--text-muted)">I1</text>
+                <circle id="chipI1" cx="60" cy="180" r="15" class="terminal data"/>
+                <line id="wChipI1" x1="75" y1="180" x2="180" y2="180" class="wire-data"/>
+
+                <text x="30" y="285" class="gate-label" style="font-size:14px; fill:var(--text-muted)">I2</text>
+                <circle id="chipI2" cx="60" cy="280" r="15" class="terminal data"/>
+                <line id="wChipI2" x1="75" y1="280" x2="180" y2="280" class="wire-data"/>
+
+                <text x="30" y="385" class="gate-label" style="font-size:14px; fill:var(--text-muted)">I3</text>
+                <circle id="chipI3" cx="60" cy="380" r="15" class="terminal data"/>
+                <line id="wChipI3" x1="75" y1="380" x2="180" y2="380" class="wire-data"/>
+
+                <!-- Select Lines -->
+                <text x="230" y="490" class="gate-label" style="font-size:14px; fill:var(--text-muted)">S1</text>
+                <circle id="chipS1" cx="280" cy="500" r="15" class="terminal select"/>
+                <line id="wChipS1" x1="280" y1="485" x2="280" y2="420" class="wire-select"/>
+
+                <text x="330" y="490" class="gate-label" style="font-size:14px; fill:var(--text-muted)">S0</text>
+                <circle id="chipS0" cx="380" cy="500" r="15" class="terminal select"/>
+                <line id="wChipS0" x1="380" y1="485" x2="380" y2="420" class="wire-select"/>
+
+                <!-- MUX Shape -->
+                <path d="M180 40 L180 420 L520 420 L620 220 L520 40 Z" fill="#1e293b" stroke="#475569" stroke-width="3"/>
+                <text x="350" y="230" text-anchor="middle" fill="#fff" font-size="24px" font-weight="bold" pointer-events="none">MUX</text>
+                <text x="350" y="260" text-anchor="middle" fill="#94a3b8" font-size="14px">4:1</text>
+
+                <!-- Internal Selection Visualization -->
+                <line id="pathActive" x1="180" y1="80" x2="620" y2="220" class="wire-data" style="visibility:hidden" />
+
+                <!-- Output -->
+                <line id="wChipOut" x1="620" y1="220" x2="740" y2="220" class="wire-data"/>
+                <circle id="chipOut" cx="740" cy="220" r="15" class="indicator"/>
+                <text x="770" y="225" style="font-size:14px; fill:var(--text-muted)">Y</text>
+            </g>
+
+            <!-- GATE VIEW (Advanced) -->
+            <g id="gateView" visibility="hidden">
+                <!-- NOT Gates for Selectors -->
+                <!-- S0 Inv -->
+                <circle id="gS0" cx="60" cy="500" r="12" class="terminal select"/>
+                <line id="wgS0_in" x1="72" y1="500" x2="100" y2="500" class="wire-select"/>
+                <path d="M100 480 L100 520 L140 500 Z" class="gate-body"/> 
+                <circle cx="145" cy="500" r="5" fill="#1e293b" stroke="#475569"/>
+                <line id="wgS0_out" x1="150" y1="500" x2="170" y2="500" class="wire-select"/>
+                
+                <!-- S1 Inv -->
+                <circle id="gS1" cx="60" cy="400" r="12" class="terminal select"/>
+                <line id="wgS1_in" x1="72" y1="400" x2="100" y2="400" class="wire-select"/>
+                <path d="M100 380 L100 420 L140 400 Z" class="gate-body"/>
+                <circle cx="145" cy="400" r="5" fill="#1e293b" stroke="#475569"/>
+                <line id="wgS1_out" x1="150" y1="400" x2="170" y2="400" class="wire-select"/>
+
+                <!-- AND Gates Array -->
+                <!-- AND0 -->
+                <circle id="gI0" cx="60" cy="80" r="12" class="terminal data"/>
+                <line id="wgI0" x1="72" y1="80" x2="500" y2="80" class="wire-data"/>
+                <path d="M500 60 L500 100 L540 100 A20 20 0 0 0 540 60 Z" class="gate-body"/>
+                
+                <!-- AND1 -->
+                <circle id="gI1" cx="60" cy="180" r="12" class="terminal data"/>
+                <line id="wgI1" x1="72" y1="180" x2="500" y2="180" class="wire-data"/>
+                <path d="M500 160 L500 200 L540 200 A20 20 0 0 0 540 160 Z" class="gate-body"/>
+
+                <!-- AND2 -->
+                <circle id="gI2" cx="60" cy="280" r="12" class="terminal data"/>
+                <line id="wgI2" x1="72" y1="280" x2="500" y2="280" class="wire-data"/>
+                <path d="M500 260 L500 300 L540 300 A20 20 0 0 0 540 260 Z" class="gate-body"/>
+
+                <!-- AND3 -->
+                <circle id="gI3" cx="60" cy="380" r="12" class="terminal data"/>
+                <line id="wgI3" x1="72" y1="380" x2="500" y2="380" class="wire-data"/>
+                <path d="M500 360 L500 400 L540 400 A20 20 0 0 0 540 360 Z" class="gate-body"/>
+
+                <!-- OR Gate -->
+                <path d="M620 60 Q680 220, 620 380 Q720 380, 750 220 Q720 60, 620 60 Z" class="gate-body" fill="rgba(15, 23, 42, 0.6)" stroke="#475569"/>
+                
+                <!-- Output -->
+                <line id="wgOut" x1="750" y1="220" x2="780" y2="220" class="wire-data"/>
+                <circle id="gOut" cx="780" cy="220" r="12" class="indicator"/>
+
+                <!-- Logic Lines (Simplified Visual Connections) -->
+                <!-- S0 Lines -->
+                <line x1="170" y1="500" x2="480" y2="500" class="wire-select"/>
+                <line x1="380" y1="500" x2="380" y2="160" class="wire-select"/>
+                <line x1="380" y1="160" x2="500" y2="160" class="wire-select"/> <!-- to AND1 -->
+                <line x1="380" y1="160" x2="400" y2="360" class="wire-select"/> <!-- to AND3 -->
+                
+                <line x1="130" y1="500" x2="200" y2="500" class="wire-select"/>
+                <line x1="200" y1="500" x2="200" y2="90" class="wire-select"/> <!-- to AND0/AND2 -->
+                
+                <!-- S1 Lines -->
+                <line x1="170" y1="400" x2="350" y2="400" class="wire-select"/>
+                <line x1="350" y1="400" x2="350" y2="270" class="wire-select"/> <!-- to AND2/3 -->
+                
+                <line x1="130" y1="400" x2="250" y2="400" class="wire-select"/>
+                <line x1="250" y1="400" x2="250" y2="100" class="wire-select"/> <!-- to AND0/1 -->
+                
+                <!-- AND to OR connections -->
+                <line x1="540" y1="80" x2="620" y2="120" class="wire-data"/>
+                <line x1="540" y1="180" x2="620" y2="200" class="wire-data"/>
+                <line x1="540" y1="280" x2="620" y2="240" class="wire-data"/>
+                <line x1="540" y1="380" x2="620" y2="320" class="wire-data"/>
+            </g>
+        </svg>
+    </div>
+
+    <div class="panel">
+        <h2>Function Table</h2>
+        <table>
+            <tr><th>S1</th><th>S0</th><th>Output Y</th></tr>
+            <tr id="row00"><td>0</td><td>0</td><td>I0</td></tr>
+            <tr id="row01"><td>0</td><td>1</td><td>I1</td></tr>
+            <tr id="row10"><td>1</td><td>0</td><td>I2</td></tr>
+            <tr id="row11"><td>1</td><td>1</td><td>I3</td></tr>
+        </table>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--card-border);">
+            <h2>Current Values</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: center;">
+                <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px;">
+                    <div style="color: var(--color-data); font-size: 0.8rem; margin-bottom: 5px;">INPUTS (I)</div>
+                    <div id="dispInputs" style="font-size: 1.2rem; font-family: monospace">[0, 0, 0, 0]</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px;">
+                    <div style="color: var(--color-select); font-size: 0.8rem; margin-bottom: 5px;">SELECT (S)</div>
+                    <div id="dispSelect" style="font-size: 1.2rem; font-family: monospace">S1:0 S0:0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // State
+    let I = [0, 0, 0, 0]; // Inputs
+    let S = [0, 0];       // Selectors S0, S1 (S0 is LSB in array for simplicity)
+    
+    const toggle = document.getElementById("toggleGates");
+    const chipView = document.getElementById("chipView");
+    const gateView = document.getElementById("gateView");
+
+    // Toggle View
+    toggle.addEventListener("change", () => {
+        chipView.setAttribute("visibility", toggle.checked ? "hidden" : "visible");
+        gateView.setAttribute("visibility", toggle.checked ? "visible" : "hidden");
+        updateVisuals();
+    });
+
+    // Logic
+    function calculateLogic() {
+        const sVal = S[0] + S[1]*2; // S0 is LSB, S1 is 2s bit
+        return I[sVal];
+    }
+
+    // Update UI
+    function updateVisuals() {
+        const out = calculateLogic();
+        const sIndex = S[0] + S[1]*2; // 0 to 3
+
+        // Update Panel Text
+        document.getElementById('dispInputs').innerText = `[${I.join(', ')}]`;
+        document.getElementById('dispSelect').innerText = `S1:${S[1]} S0:${S[0]}`;
+
+        // Highlight Table Row
+        document.querySelectorAll("tr").forEach(r => r.classList.remove("active"));
+        const rowId = `row${S[1]}${S[0]}`;
+        const activeRow = document.getElementById(rowId);
+        if(activeRow) activeRow.classList.add("active");
+
+        // Update Chip View
+        for(let i=0; i<4; i++) {
+            const term = document.getElementById(`chipI${i}`);
+            const wire = document.getElementById(`wChipI${i}`);
+            term.classList.toggle("on", I[i] === 1);
+            wire.classList.toggle("signal", I[i] === 1);
+        }
+        
+        // Update Select Wires
+        document.getElementById("chipS0").classList.toggle("on", S[0] === 1);
+        document.getElementById("chipS1").classList.toggle("on", S[1] === 1);
+        document.getElementById("wChipS0").classList.toggle("signal", S[0] === 1);
+        document.getElementById("wChipS1").classList.toggle("signal", S[1] === 1);
+
+        // Update Output Wire
+        document.getElementById("chipOut").classList.toggle("on", out === 1);
+        document.getElementById("wChipOut").classList.toggle("signal", out === 1);
+
+        // Visualize Data Path inside Chip
+        const pathWire = document.getElementById("pathActive");
+        if(I[sIndex] === 1) {
+            const yPos = 80 + sIndex * 100; 
+            pathWire.setAttribute('y1', yPos);
+            pathWire.classList.add('signal');
+            pathWire.style.visibility = 'visible';
+        } else {
+            pathWire.style.visibility = 'hidden';
+            pathWire.classList.remove('signal');
+        }
+
+        // Update Gate View
+        if(toggle.checked) {
+            updateGateView(out);
+        }
+    }
+
+    function updateGateView(out) {
+        // Inputs
+        for(let i=0; i<4; i++) {
+            document.getElementById(`gI${i}`).classList.toggle("on", I[i] === 1);
+            document.getElementById(`wgI${i}`).classList.toggle("signal", I[i] === 1);
+        }
+        
+        // Selectors
+        document.getElementById("gS0").classList.toggle("on", S[0] === 1);
+        document.getElementById("gS1").classList.toggle("on", S[1] === 1);
+        
+        // Output
+        document.getElementById("gOut").classList.toggle("on", out === 1);
+        document.getElementById("wgOut").classList.toggle("signal", out === 1);
+    }
+
+    // Input Handlers
+    function addListeners() {
+        // Chip Inputs
+        for(let i=0; i<4; i++) {
+            document.getElementById(`chipI${i}`).onclick = () => {
+                I[i] = I[i] ? 0 : 1;
+                updateVisuals();
+            };
+            // Gate Inputs
+            document.getElementById(`gI${i}`).onclick = () => {
+                I[i] = I[i] ? 0 : 1;
+                updateVisuals();
+            };
+        }
+
+        // Chip Selects
+        document.getElementById("chipS0").onclick = () => { S[0] = S[0] ? 0 : 1; updateVisuals(); };
+        document.getElementById("chipS1").onclick = () => { S[1] = S[1] ? 0 : 1; updateVisuals(); };
+        
+        // Gate Selects
+        document.getElementById("gS0").onclick = () => { S[0] = S[0] ? 0 : 1; updateVisuals(); };
+        document.getElementById("gS1").onclick = () => { S[1] = S[1] ? 0 : 1; updateVisuals(); };
+    }
+
+    // Init
+    addListeners();
+    updateVisuals();
+
+</script>
+</body>
+</html>

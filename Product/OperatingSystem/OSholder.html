@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kernel Nexus | OS Monitor</title>
+    <!-- Remix Icon -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    
+    <style>
+        /* --- Kernel Nexus Theme (Upgraded) --- */
+        :root {
+            /* Deep Background Gradient */
+            --bg-deep: #0B1020;      
+            --bg-dark: #05070F;       
+            
+            /* Monitor Hardware */
+            --frame-plastic: #1e293b; 
+            --frame-border: #334155;   
+            --screw-color: #0f172a;
+            
+            /* Screen States */
+            --screen-off: #0f172a;     
+            --screen-active: #172554;   
+            --screen-text: #64748b;     /* Dim text when off */
+            
+            /* Neon Accents */
+            --neon-blue: #3b82f6;      /* Brighter Blue */
+            --neon-teal: #2dd4bf;      /* Brighter Teal */
+            --neon-alert: #ef4444;     /* Red for errors/glitches */
+            
+            /* Typography */
+            --text-main: #F1F5F9;     
+            --text-dim: #94A3B8;    
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            background: radial-gradient(circle at center, var(--bg-deep) 0%, var(--bg-dark) 100%);
+        }
+
+        /* --- Background Effects --- */
+        .system-lines {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.3;
+            background-image: 
+                linear-gradient(90deg, transparent 49.5%, rgba(59, 130, 246, 0.15) 50%, transparent 50.5%),
+                linear-gradient(transparent 49.5%, rgba(45, 212, 191, 0.15) 50%, transparent 50.5%);
+            background-size: 60px 60px;
+            animation: scanlines 10s linear infinite;
+        }
+        
+        .matrix-grid {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            background-image: 
+                radial-gradient(rgba(59, 130, 246, 0.15) 1px, transparent 1px),
+                radial-gradient(rgba(45, 212, 191, 0.15) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            opacity: 0.2;
+        }
+
+        @keyframes scanlines {
+            0% { background-position: 0 0, 20px 20px; }
+            100% { background-position: 0 60px, 80px 80px; }
+        }
+
+        /* --- Header & Controls --- */
+        .os-header {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 1400px;
+            margin: 30px auto 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .os-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: white;
+            text-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+
+        .system-pulse {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Courier New', monospace;
+            color: var(--neon-teal);
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        .pulse-dot {
+            width: 8px; height: 8px;
+            background-color: var(--neon-teal);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-teal);
+            animation: pulse 1.5s infinite;
+        }
+
+        /* --- Search Bar --- */
+        .search-container {
+            position: relative;
+            width: 300px;
+        }
+        .search-input {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--frame-border);
+            color: var(--text-main);
+            padding: 10px 15px 10px 40px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            outline: none;
+            transition: 0.3s;
+        }
+        .search-input:focus {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+        .search-icon {
+            position: absolute;
+            left: 12px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-dim);
+        }
+
+        .back-btn {
+            background: transparent;
+            border: 1px solid var(--frame-border);
+            color: var(--text-dim);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .back-btn:hover {
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* --- Monitor Grid --- */
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+            gap: 40px; 
+            width: 90%;
+            max-width: 1400px;
+            position: relative;
+            z-index: 10;
+            padding-bottom: 60px;
+        }
+
+        /* --- The Monitor Widget --- */
+        .monitor-card {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.3s ease;
+            opacity: 0;
+            animation: bootSequence 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .monitor-card.hidden {
+            display: none;
+        }
+
+        /* 1. The Bezel (Frame) with Screws */
+        .monitor-bezel {
+            background: var(--frame-plastic);
+            border: 2px solid var(--frame-border);
+            border-radius: 12px;
+            padding: 10px;
+            width: 100%;
+            aspect-ratio: 16/10; /* Slightly taller than 16:9 */
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        /* Screws */
+        .screw {
+            position: absolute;
+            width: 8px; height: 8px;
+            background: var(--screw-color);
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px rgba(255,255,255,0.1);
+            z-index: 5;
+        }
+        .screw.tl { top: 8px; left: 8px; }
+        .screw.tr { top: 8px; right: 8px; }
+        .screw.bl { bottom: 8px; left: 8px; }
+        .screw.br { bottom: 8px; right: 8px; }
+
+        /* 2. The Screen */
+        .monitor-screen {
+            background-color: var(--screen-off);
+            border-radius: 6px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.8);
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+            transition: background-color 0.4s ease;
+        }
+
+        /* CRT Scanline & Vignette */
+        .monitor-screen::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            z-index: 5;
+            pointer-events: none;
+        }
+        .monitor-screen::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%);
+            z-index: 6;
+            pointer-events: none;
+        }
+
+        /* Screen Content */
+        .screen-content {
+            text-align: center;
+            z-index: 10;
+            transition: transform 0.3s ease;
+        }
+
+        .icon-screen {
+            font-size: 2.5rem;
+            color: var(--screen-text);
+            margin-bottom: 12px;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+
+        .text-screen {
+            font-family: 'Courier New', monospace;
+            color: var(--screen-text);
+            font-weight: 700;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: color 0.3s ease;
+        }
+
+        .hardware-stats {
+            margin-top: 10px;
+            display: flex;
+            gap: 15px;
+            font-size: 0.7rem;
+            font-family: 'Courier New', monospace;
+            color: var(--screen-text);
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        
+        .stat-item span { color: var(--neon-blue); }
+
+        /* 3. The Stand */
+        .monitor-stand-neck {
+            width: 40px; height: 20px;
+            background: linear-gradient(90deg, #0f172a, #334155, #0f172a);
+            margin-top: -2px;
+            z-index: 1;
+            border-bottom: 2px solid #1e293b;
+        }
+        .monitor-stand-base {
+            width: 100px; height: 10px;
+            background: #1e293b;
+            border-radius: 50%;
+            margin-top: -5px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+            position: relative;
+        }
+        .monitor-stand-base::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%; transform: translateX(-50%);
+            width: 120%; height: 2px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+
+        /* 4. Power LED */
+        .power-led {
+            position: absolute;
+            bottom: 18px;
+            right: 18px;
+            width: 6px; height: 6px;
+            background-color: #1a1a1a;
+            border-radius: 50%;
+            border: 1px solid #000;
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.1);
+            z-index: 11;
+            transition: all 0.3s ease;
+        }
+
+        /* --- Active/Hover States --- */
+        .monitor-card:hover {
+            transform: translateY(-8px);
+        }
+
+        .monitor-card:hover .monitor-bezel {
+            border-color: var(--neon-blue);
+            box-shadow: 0 20px 50px rgba(59, 130, 246, 0.2);
+        }
+
+        .monitor-card:hover .monitor-screen {
+            background-color: var(--screen-active);
+        }
+
+        .monitor-card:hover .icon-screen,
+        .monitor-card:hover .text-screen,
+        .monitor-card:hover .hardware-stats {
+            color: var(--neon-blue);
+            text-shadow: 0 0 8px var(--neon-blue);
+            opacity: 1;
+        }
+        
+        .monitor-card:hover .stat-item span {
+            color: var(--neon-teal);
+            text-shadow: 0 0 5px var(--neon-teal);
+        }
+
+        .monitor-card:hover .power-led {
+            background-color: var(--neon-teal);
+            box-shadow: 0 0 8px var(--neon-teal);
+        }
+
+        /* Glitch Effect (Random Activity) */
+        .monitor-card.glitch .monitor-screen {
+            animation: glitch-anim 0.2s cubic-bezier(.25, .46, .45, .94) both infinite;
+            background-color: #1e1b4b;
+        }
+        
+        @keyframes glitch-anim {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        @keyframes bootSequence {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 900px) {
+            .monitor-grid { grid-template-columns: repeat(2, 1fr); }
+            .search-container { width: 200px; }
+            .os-title { font-size: 1.4rem; }
+        }
+
+        @media (max-width: 600px) {
+            .monitor-grid { grid-template-columns: 1fr; }
+            .os-header { flex-direction: column; gap: 15px; text-align: center; }
+            .search-container { width: 100%; }
+            .back-btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Layers -->
+    <div class="system-lines"></div>
+    <div class="matrix-grid"></div>
+
+    <div class="os-header">
+        <div class="header-left">
+            <button class="back-btn" onclick="window.history.back()">
+                <i class="ri-arrow-left-line"></i> Dashboard
+            </button>
+            <h1 class="os-title">Kernel Nexus</h1>
+            <div class="system-pulse">
+                <div class="pulse-dot"></div> SYSTEM ONLINE
+            </div>
+        </div>
+        
+        <div class="search-container">
+            <i class="ri-search-line search-icon"></i>
+            <input type="text" class="search-input" placeholder="> SEARCH MODULES..." id="osSearch">
+        </div>
+    </div>
+
+    <!-- Monitor Grid -->
+    <main class="monitor-grid" id="monitorGrid">
+        
+        <!-- 1. Processes -->
+        <div class="monitor-card" data-name="Processes ProcCtl" onclick="openPage('process.html')">
+            <div class="monitor-bezel">
+                <div class="screw tl"></div><div class="screw tr"></div>
+                <div class="screw bl"></div><div class="screw br"></div>
+                <div class="monitor-screen">
+                    <div class="screen-content">
+                        <i class="ri-apps-line icon-screen"></i>
+                        <div class="text-screen">Processes</div>
+                        <div class="hardware-stats">
+                            <div class="stat-item">PID: <span>RUN</span></div>
+                            <div class="stat-item">THR: <span>24</span></div>
+                        </div>
+                    </div>
+                    <div class="power-led"></div>
+                </div>
+            </div>
+            <div class="monitor-stand-neck"></div>
+            <div class="monitor-stand-base"></div>
+        </div>
+
+        <!-- 2. Memory -->
+        <div class="monitor-card" data-name="Memory RamAlloc Heap" onclick="openPage('memory-management.html')">
+            <div class="monitor-bezel">
+                <div class="screw tl"></div><div class="screw tr"></div>
+                <div class="screw bl"></div><div class="screw br"></div>
+                <div class="monitor-screen">
+                    <div class="screen-content">
+                        <i class="ri-microscope-line icon-screen"></i>
+                        <div class="text-screen">Memory</div>
+                        <div class="hardware-stats">
+                            <div class="stat-item">HEAP: <span>OK</span></div>
+                            <div class="stat-item">FRE: <span>12GB</span></div>
+                        </div>
+                    </div>
+                    <div class="power-led"></div>
+                </div>
+            </div>
+            <div class="monitor-stand-neck"></div>
+            <div class="monitor-stand-base"></div>
+        </div>
+
+        <!-- 3. CPU -->
+        <div class="monitor-card" data-name="CPU Core Processor" onclick="openPage('CPU.html')">
+            <div class="monitor-bezel">
+                <div class="screw tl"></div><div class="screw tr"></div>
+                <div class="screw bl"></div><div class="screw br"></div>
+                <div class="monitor-screen">
+                    <div class="screen-content">
+                        <i class="ri-cpu-line icon-screen"></i>
+                        <div class="text-screen">CPU</div>
+                        <div class="hardware-stats">
+                            <div class="stat-item">LOAD: <span>12%</span></div>
+                            <div class="stat-item">TEMP: <span>45°C</span></div>
+                        </div>
+                    </div>
+                    <div class="power-led"></div>
+                </div>
+            </div>
+            <div class="monitor-stand-neck"></div>
+            <div class="monitor-stand-base"></div>
+        </div>
+
+        <!-- 4. Files -->
+        <div class="monitor-card" data-name="Files VFS Drive" onclick="openPage('file.html')">
+            <div class="monitor-bezel">
+                <div class="screw tl"></div><div class="screw tr"></div>
+                <div class="screw bl"></div><div class="screw br"></div>
+                <div class="monitor-screen">
+                    <div class="screen-content">
+                        <i class="ri-hard-drive-2-line icon-screen"></i>
+                        <div class="text-screen">Files</div>
+                        <div class="hardware-stats">
+                            <div class="stat-item">I/O: <span>ACTV</span></div>
+                            <div class="stat-item">R/W: <span>0ms</span></div>
+                        </div>
+                    </div>
+                    <div class="power-led"></div>
+                </div>
+            </div>
+            <div class="monitor-stand-neck"></div>
+            <div class="monitor-stand-base"></div>
+        </div>
+
+        <!-- 5. Deadlock -->
+        <div class="monitor-card" data-name="Deadlock Resource Lock" onclick="openPage('deadlock.html')">
+            <div class="monitor-bezel">
+                <div class="screw tl"></div><div class="screw tr"></div>
+                <div class="screw bl"></div><div class="screw br"></div>
+                <div class="monitor-screen">
+                    <div class="screen-content">
+                        <i class="ri-git-merge-line icon-screen"></i>
+                        <div class="text-screen">Deadlock</div>
+                        <div class="hardware-stats">
+                            <div class="stat-item">RES: <span>WT</span></div>
+                            <div class="stat-item">AVD: <span>2</span></div>
+                        </div>
+                    </div>
+                    <div class="power-led"></div>
+                </div>
+            </div>
+            <div class="monitor-stand-neck"></div>
+            <div class="monitor-stand-base"></div>
+        </div>
+
+        <!-- 6. IPC -->
+        <div class="monitor-card" data-name="IPC Message Bus" onclick="openPage('ipc.html')">
+            <div class="monitor-bezel">
+                <div class="screw tl"></div><div class="screw tr"></div>
+                <div class="screw bl"></div><div class="screw br"></div>
+                <div class="monitor-screen">
+                    <div class="screen-content">
+                        <i class="ri-share-forward-line icon-screen"></i>
+                        <div class="text-screen">IPC</div>
+                        <div class="hardware-stats">
+                            <div class="stat-item">MSG: <span>OK</span></div>
+                            <div class="stat-item">Q: <span>0</span></div>
+                        </div>
+                    </div>
+                    <div class="power-led"></div>
+                </div>
+            </div>
+            <div class="monitor-stand-neck"></div>
+            <div class="monitor-stand-base"></div>
+        </div>
+
+        <!-- 7. Virtual Memory -->
+        <div class="monitor-card" data-name="Virtual Memory Paging PageTable" onclick="openPage('virtualmem.html')">
+            <div class="monitor-bezel">
+                <div class="screw tl"></div><div class="screw tr"></div>
+                <div class="screw bl"></div><div class="screw br"></div>
+                <div class="monitor-screen">
+                    <div class="screen-content">
+                        <i class="ri-database-2-line icon-screen"></i>
+                        <div class="text-screen">Virtual Mem</div>
+                        <div class="hardware-stats">
+                            <div class="stat-item">SWP: <span>0%</span></div>
+                            <div class="stat-item">PG: <span>4096</span></div>
+                        </div>
+                    </div>
+                    <div class="power-led"></div>
+                </div>
+            </div>
+            <div class="monitor-stand-neck"></div>
+            <div class="monitor-stand-base"></div>
+        </div>
+
+        <!-- 8. Kernel -->
+        <div class="monitor-card" data-name="Kernel Core System Ring0" onclick="openPage('kernal.html')">
+            <div class="monitor-bezel">
+                <div class="screw tl"></div><div class="screw tr"></div>
+                <div class="screw bl"></div><div class="screw br"></div>
+                <div class="monitor-screen">
+                    <div class="screen-content">
+                        <i class="ri-cpu-fill icon-screen"></i>
+                        <div class="text-screen">Kernel</div>
+                        <div class="hardware-stats">
+                            <div class="stat-item">R0: <span>ACC</span></div>
+                            <div class="stat-item">UP: <span>99%</span></div>
+                        </div>
+                    </div>
+                    <div class="power-led"></div>
+                </div>
+            </div>
+            <div class="monitor-stand-neck"></div>
+            <div class="monitor-stand-base"></div>
+        </div>
+
+    </main>
+
+    <script>
+        function openPage(url) {
+            // Add a small delay to let the user see the click effect
+            const main = document.querySelector('main');
+            main.style.opacity = '0';
+            main.style.transform = 'scale(0.95)';
+            main.style.transition = 'all 0.3s ease';
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 300);
+        }
+
+        // --- Search Functionality ---
+        const searchInput = document.getElementById('osSearch');
+        const cards = document.querySelectorAll('.monitor-card');
+
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            
+            cards.forEach(card => {
+                const keywords = card.getAttribute('data-name').toLowerCase();
+                if (keywords.includes(term)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        });
+
+        // --- Staggered Boot Animation ---
+        document.addEventListener("DOMContentLoaded", () => {
+            const monitors = document.querySelectorAll('.monitor-card');
+            monitors.forEach((mon, index) => {
+                mon.style.animationDelay = `${index * 0.08}s`;
+            });
+        });
+
+        // --- Random System Activity Simulation (Glitches) ---
+        // This randomly makes a monitor "glitch" to simulate processing
+        function simulateActivity() {
+            const visibleCards = Array.from(document.querySelectorAll('.monitor-card:not(.hidden)'));
+            if (visibleCards.length === 0) return;
+
+            const randomCard = visibleCards[Math.floor(Math.random() * visibleCards.length)];
+            
+            // Add glitch class
+            randomCard.classList.add('glitch');
+            
+            // Remove it after a short duration
+            setTimeout(() => {
+                randomCard.classList.remove('glitch');
+            }, 200);
+
+            // Schedule next glitch randomly between 1s and 4s
+            const nextGlitch = Math.random() * 3000 + 1000;
+            setTimeout(simulateActivity, nextGlitch);
+        }
+
+        // Start the simulation after initial boot
+        setTimeout(simulateActivity, 2000);
+
+    </script>
+</body>
+</html>

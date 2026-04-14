@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Non-Linear Structures | PROTO A</title>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      
+      /* Structure Accents */
+      --c-tree: #38bdf8;     /* Sky Blue */
+      --c-graph: #818cf8;    /* Indigo */
+      
+      --bg-body: #0a0a0f;
+      --bg-card: #16161f;
+      --bg-elevated: #1c1c28;
+      --text-main: #f1f5f9;
+      --text-muted: #64748b;
+      --text-dim: #475569;
+      --border: #1e1e2e;
+      --border-light: #2a2a3e;
+      
+      --radius-lg: 20px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Tech Grid Background */
+    body::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: 
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 50px 50px;
+      opacity: 0.1;
+      pointer-events: none;
+      mask-image: radial-gradient(circle at center, black 20%, transparent 80%);
+    }
+
+    /* --- Navigation --- */
+    .topbar {
+      height: 64px; width: 100%;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 24px; position: sticky; top: 0;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+    
+    .nav-btn {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      padding: 8px 16px; border-radius: 8px;
+      color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.9rem; font-weight: 500;
+      transition: var(--transition);
+    }
+    .nav-btn:hover { color: var(--text-main); border-color: var(--border-light); }
+    
+    .icon-btn {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; transition: var(--transition);
+    }
+    .icon-btn:hover { background: var(--bg-elevated); color: var(--text-main); }
+
+    /* --- Main Layout --- */
+    .container {
+      max-width: 1100px; margin: 0 auto;
+      padding: 60px 24px;
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; z-index: 1;
+    }
+
+    .hero-text {
+      text-align: center; margin-bottom: 50px;
+    }
+    
+    .breadcrumb {
+      font-size: 0.8rem; color: var(--text-dim); margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .breadcrumb span { color: var(--primary); }
+
+    .hero-title {
+      font-size: 3rem; font-weight: 800; letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+    
+    .hero-sub {
+      font-size: 1rem; color: var(--text-muted); max-width: 600px; margin: 0 auto;
+    }
+
+    /* --- Cards Grid --- */
+    .cards-grid {
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 30px; width: 100%;
+      max-width: 900px;
+    }
+
+    /* --- Module Card --- */
+    .module-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+      display: flex; flex-direction: column;
+      cursor: pointer; transition: var(--transition);
+      position: relative;
+    }
+
+    .module-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--card-accent);
+      box-shadow: 0 10px 30px -10px var(--card-accent-shadow);
+    }
+
+    /* Dynamic Card Colors */
+    .m-tree { --card-accent: var(--c-tree); --card-accent-shadow: rgba(56, 189, 248, 0.25); }
+    .m-graph { --card-accent: var(--c-graph); --card-accent-shadow: rgba(129, 140, 248, 0.25); }
+
+    /* Preview Area */
+    .card-preview {
+      height: 220px; background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    
+    /* Minimal Label */
+    .preview-label {
+      position: absolute; bottom: 12px; left: 12px;
+      font-size: 0.65rem; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-dim);
+      background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px;
+    }
+
+    /* =========================================
+       ANIMATION: TREE (Hierarchical Growth)
+       ========================================= */
+    .tree-viz {
+      position: relative;
+      width: 100px;
+      height: 100px;
+    }
+
+    /* Nodes */
+    .t-node {
+      position: absolute;
+      width: 16px; height: 16px;
+      background: var(--c-tree);
+      border-radius: 50%;
+      box-shadow: 0 0 0 rgba(56, 189, 248, 0);
+      opacity: 0; /* Start hidden */
+      transform: scale(0);
+    }
+
+    /* Root Node */
+    .t-node.root {
+      top: 0; left: 50%;
+      transform: translateX(-50%) scale(0);
+      animation: nodePop 0.6s ease-out 0s infinite;
+    }
+    /* Level 1 Nodes */
+    .t-node.l { 
+      bottom: 10px; left: 10px; 
+      animation: nodePop 0.6s ease-out 0.4s infinite;
+    }
+    .t-node.r { 
+      bottom: 10px; right: 10px; 
+      animation: nodePop 0.6s ease-out 0.4s infinite;
+    }
+
+    /* Lines (Edges) */
+    .t-line {
+      position: absolute;
+      background: var(--c-tree);
+      width: 2px;
+      height: 0; /* Start with no height */
+      opacity: 0.3;
+      transform-origin: top center;
+    }
+
+    /* Left Branch */
+    .t-line.left {
+      top: 14px; left: 50%;
+      transform: rotate(35deg);
+      animation: lineGrow 0.5s ease-out 0.2s infinite;
+    }
+    /* Right Branch */
+    .t-line.right {
+      top: 14px; left: 50%;
+      transform: rotate(-35deg);
+      animation: lineGrow 0.5s ease-out 0.2s infinite;
+    }
+
+    /* Keyframes */
+    @keyframes nodePop {
+      0% { opacity: 0; transform: translateX(-50%) scale(0); }
+      20% { opacity: 1; transform: translateX(-50%) scale(1.2); box-shadow: 0 0 10px var(--c-tree); }
+      40% { transform: translateX(-50%) scale(1); box-shadow: 0 0 0 rgba(56, 189, 248, 0); }
+      100% { opacity: 1; transform: translateX(-50%) scale(1); }
+    }
+    
+    @keyframes lineGrow {
+      0% { height: 0; }
+      100% { height: 50px; }
+    }
+
+    /* Fix transform for left/right nodes */
+    .t-node.l { animation-name: nodePopLeft; }
+    .t-node.r { animation-name: nodePopRight; }
+
+    @keyframes nodePopLeft {
+      0% { opacity: 0; transform: scale(0); }
+      20% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 10px var(--c-tree); }
+      40% { transform: scale(1); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes nodePopRight {
+      0% { opacity: 0; transform: scale(0); }
+      20% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 10px var(--c-tree); }
+      40% { transform: scale(1); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+
+    /* =========================================
+       ANIMATION: GRAPH (Network Pulse)
+       ========================================= */
+    .graph-viz {
+      position: relative;
+      width: 100px;
+      height: 100px;
+    }
+
+    .g-node {
+      position: absolute;
+      width: 14px; height: 14px;
+      background: var(--c-graph);
+      border-radius: 50%;
+      z-index: 2;
+    }
+    
+    /* Node Positions (Diamond Shape) */
+    .g-node.n1 { top: 0; left: 50%; transform: translateX(-50%); animation: gPulse 2.4s ease-in-out infinite; }
+    .g-node.n2 { top: 50%; left: 0; transform: translateY(-50%); animation: gPulse 2.4s ease-in-out 0.6s infinite; }
+    .g-node.n3 { top: 50%; right: 0; transform: translateY(-50%); animation: gPulse 2.4s ease-in-out 1.2s infinite; }
+    .g-node.n4 { bottom: 0; left: 50%; transform: translateX(-50%); animation: gPulse 2.4s ease-in-out 1.8s infinite; }
+
+    /* Lines */
+    .g-line {
+      position: absolute;
+      background: var(--c-graph);
+      opacity: 0.2; /* Base opacity */
+      z-index: 1;
+    }
+
+    /* Line Positioning (Connecting diamond) */
+    .g-line.h { height: 2px; width: 100px; top: 50%; left: 0; transform: translateY(-50%); }
+    .g-line.v { width: 2px; height: 100px; left: 50%; top: 0; transform: translateX(-50%); }
+    
+    /* Traversal Effect (Overlay Lines) */
+    .g-line.traverse {
+      position: absolute;
+      background: var(--c-graph);
+      opacity: 0;
+      box-shadow: 0 0 5px var(--c-graph);
+      animation: traversePulse 2.4s linear infinite;
+    }
+    
+    /* Horizontal Traversal */
+    .g-line.t-h {
+      height: 2px; width: 0; top: 50%; left: 0;
+      animation: traverseHoriz 2.4s linear infinite;
+    }
+    
+    /* Vertical Traversal */
+    .g-line.t-v {
+      width: 2px; height: 0; left: 50%; top: 0;
+      animation: traverseVert 2.4s linear infinite 1.2s; /* Delayed start */
+    }
+
+    @keyframes gPulse {
+      0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(1); }
+      10% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); box-shadow: 0 0 10px var(--c-graph); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      30% { opacity: 0.4; }
+    }
+    /* Adjust for non-centered nodes */
+    .g-node.n2 { animation-name: gPulseLeft; }
+    .g-node.n3 { animation-name: gPulseRight; }
+    .g-node.n4 { animation-name: gPulseBottom; }
+
+    @keyframes gPulseLeft { 0%, 100% { opacity: 0.4; transform: translateY(-50%) scale(1); } 10% { opacity: 1; transform: translateY(-50%) scale(1.2); box-shadow: 0 0 10px var(--c-graph); } 20% { opacity: 1; transform: translateY(-50%) scale(1); } }
+    @keyframes gPulseRight { 0%, 100% { opacity: 0.4; transform: translateY(-50%) scale(1); } 10% { opacity: 1; transform: translateY(-50%) scale(1.2); box-shadow: 0 0 10px var(--c-graph); } 20% { opacity: 1; transform: translateY(-50%) scale(1); } }
+    @keyframes gPulseBottom { 0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); } 10% { opacity: 1; transform: translateX(-50%) scale(1.2); box-shadow: 0 0 10px var(--c-graph); } 20% { opacity: 1; transform: translateX(-50%) scale(1); } }
+
+    @keyframes traverseHoriz {
+      0% { width: 0; opacity: 0; left: 0; }
+      10% { opacity: 1; }
+      50% { width: 100%; opacity: 1; left: 0; }
+      60% { opacity: 0; width: 100%; left: 0; }
+      100% { opacity: 0; width: 0; left: 0; }
+    }
+
+    @keyframes traverseVert {
+      0% { height: 0; opacity: 0; top: 0; }
+      10% { opacity: 1; }
+      50% { height: 100%; opacity: 1; top: 0; }
+      60% { opacity: 0; height: 100%; top: 0; }
+      100% { opacity: 0; height: 0; top: 0; }
+    }
+
+    /* Content Area */
+    .card-content { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+    
+    .card-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; color: var(--text-main); }
+    .card-desc {
+      font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;
+      margin-bottom: 16px; flex: 1;
+    }
+
+    .card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 12px; border-top: 1px solid var(--border);
+    }
+    
+    .btn-open {
+      background: transparent; border: none; padding: 6px 12px;
+      border-radius: 6px; color: var(--text-muted); font-weight: 600;
+      display: flex; align-items: center; gap: 6px; font-size: 0.8rem;
+      cursor: pointer; transition: var(--transition);
+    }
+    .btn-open i { transition: transform 0.2s; }
+    .module-card:hover .btn-open { color: var(--card-accent); }
+    .module-card:hover .btn-open i { transform: translateX(3px); }
+
+    .meta-tag {
+      font-size: 0.7rem; padding: 4px 8px; border-radius: 4px;
+      background: rgba(255,255,255,0.05); color: var(--text-dim);
+    }
+
+    @media(max-width: 768px) {
+      .hero-title { font-size: 2.2rem; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="topbar">
+    <button class="nav-btn" onclick="window.location.href='dsa.html'">
+      <i class="ri-arrow-left-line"></i> Back to Structures
+    </button>
+    
+    <button class="icon-btn" onclick="toggleTheme()" aria-label="Theme">
+      <i class="ri-palette-line"></i>
+    </button>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+    <div class="hero-text">
+      <div class="breadcrumb">
+        Data Structures <i class="ri-arrow-right-s-line"></i> <span>Non-Linear</span>
+      </div>
+      <h1 class="hero-title">Non-Linear Structures</h1>
+      <p class="hero-sub">Complex relationships where elements are connected hierarchically or in networks. Select a structure to begin.</p>
+    </div>
+
+    <div class="cards-grid">
+      
+      <!-- Tree Card -->
+      <div class="module-card m-tree" onclick="openPage('Tree.html')">
+        <div class="card-preview">
+          <div class="tree-viz">
+            <!-- Lines -->
+            <div class="t-line left"></div>
+            <div class="t-line right"></div>
+            <!-- Nodes -->
+            <div class="t-node root"></div>
+            <div class="t-node l"></div>
+            <div class="t-node r"></div>
+          </div>
+          <div class="preview-label">Hierarchical</div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">Tree</h2>
+          <p class="card-desc">A hierarchical structure with a root node and branches. Explore BST, AVL, and traversal algorithms.</p>
+          <div class="card-footer">
+            <span class="meta-tag">Logarithmic</span>
+            <button class="btn-open">
+              Open <i class="ri-arrow-right-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Graph Card -->
+      <div class="module-card m-graph" onclick="openPage('Graph.html')">
+        <div class="card-preview">
+          <div class="graph-viz">
+            <!-- Background Lines -->
+            <div class="g-line h"></div>
+            <div class="g-line v"></div>
+            <!-- Traversal Effect Lines -->
+            <div class="g-line traverse t-h"></div>
+            <div class="g-line traverse t-v"></div>
+            <!-- Nodes -->
+            <div class="g-node n1"></div>
+            <div class="g-node n2"></div>
+            <div class="g-node n3"></div>
+            <div class="g-node n4"></div>
+          </div>
+          <div class="preview-label">Network</div>
+        </div>
+        <div class="card-content">
+          <h2 class="card-title">Graph</h2>
+          <p class="card-desc">A network of vertices connected by edges. Visualize BFS, DFS, Dijkstra, and Shortest Paths.</p>
+          <div class="card-footer">
+            <span class="meta-tag">Complex</span>
+            <button class="btn-open">
+              Open <i class="ri-arrow-right-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function openPage(url) {
+      window.location.href = url;
+    }
+    
+    function toggleTheme() {
+       const colors = ['#6366f1', '#38bdf8', '#10b981', '#f59e0b'];
+       const randomColor = colors[Math.floor(Math.random() * colors.length)];
+       document.documentElement.style.setProperty('--primary', randomColor);
+    }
+  </script>
+</body>
+</html>

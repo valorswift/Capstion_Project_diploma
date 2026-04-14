@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphical Memory Management OS</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+        
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+        }
+        
+        /* Canvas Container */
+        #memory-canvas-container {
+            position: relative;
+            background: #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        /* Tooltip for Canvas */
+        #canvas-tooltip {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid #475569;
+            padding: 8px 12px;
+            border-radius: 6px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+            font-size: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex">
+
+    <!-- SIDEBAR -->
+    <aside class="w-72 glass-panel border-r border-slate-700 flex flex-col">
+        <div class="p-6 border-b border-slate-700">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                MemVizOS
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Graphical Memory Simulator</p>
+        </div>
+        
+        <!-- Control Panel -->
+        <div class="p-6 space-y-6 flex-1 overflow-y-auto">
+            
+            <!-- Configuration -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold uppercase text-slate-400">Algorithm</h3>
+                <select id="algo-select" class="w-full bg-slate-800 border-slate-600 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="first">First Fit</option>
+                    <option value="best">Best Fit</option>
+                    <option value="worst">Worst Fit</option>
+                </select>
+            </div>
+
+            <!-- Allocation Input -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold uppercase text-slate-400">Allocate Process</h3>
+                <div class="space-y-2">
+                    <input type="number" id="input-size" placeholder="Size (MB)" class="w-full bg-slate-800 border-slate-600 rounded px-3 py-2 text-sm outline-none">
+                    <button onclick="allocate()" class="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm font-semibold transition-colors shadow-lg shadow-cyan-500/20">
+                        Allocate Memory
+                    </button>
+                </div>
+            </div>
+
+            <!-- Deallocation -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold uppercase text-slate-400">Deallocate Process</h3>
+                <div class="space-y-2">
+                    <select id="deallocate-select" class="w-full bg-slate-800 border-slate-600 rounded px-3 py-2 text-sm outline-none">
+                        <option value="">Select Process</option>
+                    </select>
+                    <button onclick="deallocate()" class="w-full px-4 py-2 bg-red-900 hover:bg-red-800 rounded text-sm font-semibold transition-colors text-red-200">
+                        Free Memory
+                    </button>
+                </div>
+            </div>
+
+            <!-- System Controls -->
+            <div class="space-y-2 pt-4 border-t border-slate-700">
+                <button onclick="coalesce()" class="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-xs font-medium transition-colors">
+                    Merge Adjacent Holes
+                </button>
+                <button onclick="compact()" class="w-full px-4 py-2 bg-indigo-900 hover:bg-indigo-800 rounded text-xs font-medium transition-colors text-indigo-200">
+                    Compact (Defrag)
+                </button>
+                <button onclick="reset()" class="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded text-xs font-medium transition-colors text-slate-400">
+                    Reset Simulation
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        
+        <!-- Header Stats -->
+        <header class="h-24 glass-panel border-b border-slate-700 flex items-center px-8 justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-white">RAM Visualization</h2>
+                <p class="text-xs text-slate-400">Total Physical Memory: 256 MB</p>
+            </div>
+            
+            <div class="flex gap-6 items-center">
+                <!-- Donut Chart -->
+                <div class="w-16 h-16">
+                    <canvas id="util-chart"></canvas>
+                </div>
+                <div class="w-48">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-400">Used</span>
+                        <span id="stat-used-pct" class="text-white font-bold">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2">
+                        <div id="util-bar" class="bg-cyan-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs mt-2 text-slate-500">
+                        <span>Fragmentation:</span>
+                        <span id="stat-frag" class="text-amber-400 font-bold">0%</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Visualization Area -->
+        <div class="flex-1 p-8 overflow-hidden flex gap-6">
+            
+            <!-- Left: Memory Map -->
+            <div class="flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-sm font-bold uppercase text-slate-300">Address Space Map</h3>
+                    <div class="flex gap-4 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500"></span> OS</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-cyan-500"></span> Process</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-700 border border-slate-600"></span> Free</span>
+                    </div>
+                </div>
+                
+                <div id="memory-canvas-container" class="flex-1 relative border border-slate-700">
+                    <!-- Ruler -->
+                    <div class="absolute left-0 top-0 bottom-0 w-12 bg-slate-900/80 border-r border-slate-700 flex flex-col justify-between text-slate-500 text-xs py-2 z-10 pointer-events-none">
+                        <div class="text-center">256MB<br><span class="text-[8px]">0xFF</span></div>
+                        <div class="text-center">128MB</div>
+                        <div class="text-center">0MB<br><span class="text-[8px]">0x00</span></div>
+                    </div>
+                    
+                    <!-- Canvas -->
+                    <canvas id="ram-canvas" class="absolute left-12 top-0 right-0 bottom-0"></canvas>
+                    
+                    <!-- Tooltip -->
+                    <div id="canvas-tooltip">
+                        <div class="font-bold text-white" id="tip-pid">PID</div>
+                        <div class="text-slate-400 text-[10px]" id="tip-range">0x0000 - 0xFFFF</div>
+                        <div class="text-cyan-400" id="tip-size">Size: 0MB</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Process List & Log -->
+            <aside class="w-80 flex flex-col gap-6">
+                
+                <!-- Process List -->
+                <div class="glass-panel rounded-xl p-4 flex-1 overflow-hidden flex flex-col">
+                    <h3 class="text-xs font-bold uppercase text-slate-400 mb-3">Active Processes</h3>
+                    <div id="process-list" class="flex-1 overflow-y-auto space-y-2 pr-2">
+                        <!-- JS Populated -->
+                    </div>
+                </div>
+
+                <!-- Event Log -->
+                <div class="glass-panel rounded-xl p-4 h-48 overflow-hidden flex flex-col">
+                    <h3 class="text-xs font-bold uppercase text-slate-400 mb-3">System Log</h3>
+                    <div id="log" class="flex-1 overflow-y-auto font-mono text-[10px] text-green-400 space-y-1 bg-black/20 p-2 rounded border border-slate-800">
+                        <!-- JS Populated -->
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- JAVASCRIPT ENGINE -->
+    <script>
+        // ==========================================
+        // CONFIGURATION & STATE
+        // ==========================================
+        const TOTAL_MEM = 256;
+        const OS_SIZE = 16;
+        const OS_COLOR = '#ef4444'; // Red
+        const HOLE_COLOR = '#334155'; // Slate
+        const COLORS = ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']; // Cyan, Blue, Purple, Pink, Amber, Emerald
+
+        let memory = []; // { start, size, type, pid, color }
+        let pidCounter = 1;
+        let colorIndex = 0;
+        let logEl = document.getElementById('log');
+        let canvas = document.getElementById('ram-canvas');
+        let ctx = canvas.getContext('2d');
+        let utilChart = null;
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        function init() {
+            reset();
+            initChart();
+            window.addEventListener('resize', resizeCanvas);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseleave', hideTooltip);
+        }
+
+        function initChart() {
+            const chartCtx = document.getElementById('util-chart').getContext('2d');
+            utilChart = new Chart(chartCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Used', 'Free'],
+                    datasets: [{
+                        data: [0, 256],
+                        backgroundColor: ['#06b6d4', '#1e293b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    cutout: '70%',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 48; // Subtract ruler width
+            canvas.height = container.clientHeight;
+            renderVisuals();
+        }
+
+        // ==========================================
+        // CORE LOGIC
+        // ==========================================
+
+        function allocate() {
+            const sizeInput = document.getElementById('input-size');
+            const size = parseInt(sizeInput.value);
+            if (!size || size <= 0) return alert("Invalid size");
+
+            const algo = document.getElementById('algo-select').value;
+            const pid = `P${pidCounter++}`;
+            const color = COLORS[colorIndex++ % COLORS.length];
+
+            // Find Hole
+            let holeIndex = -1;
+            let holes = memory.map((m, i) => ({...m, i})).filter(m => m.type === 'hole' && m.size >= size);
+            
+            if (holes.length === 0) {
+                addLog(`Error: Not enough contiguous memory for ${size}MB`, 'red');
+                return;
+            }
+
+            if (algo === 'first') {
+                holeIndex = holes[0].i;
+            } else if (algo === 'best') {
+                holes.sort((a,b) => a.size - b.size);
+                holeIndex = holes[0].i;
+            } else if (algo === 'worst') {
+                holes.sort((a,b) => b.size - a.size);
+                holeIndex = holes[0].i;
+            }
+
+            // Perform Allocation
+            const hole = memory[holeIndex];
+            const remaining = hole.size - size;
+
+            memory[holeIndex] = { start: hole.start, size: size, type: 'process', pid, color };
+            
+            if (remaining > 0) {
+                memory.splice(holeIndex + 1, 0, { 
+                    start: hole.start + size, 
+                    size: remaining, 
+                    type: 'hole', 
+                    color: HOLE_COLOR 
+                });
+            }
+
+            addLog(`Allocated ${size}MB for ${pid} (Algo: ${algo})`, 'green');
+            sizeInput.value = '';
+            update();
+        }
+
+        function deallocate() {
+            const select = document.getElementById('deallocate-select');
+            const pid = select.value;
+            if (!pid) return;
+
+            const block = memory.find(m => m.pid === pid);
+            if (block) {
+                block.type = 'hole';
+                block.pid = null;
+                block.color = HOLE_COLOR;
+                addLog(`Freed memory for ${pid}`, 'orange');
+                coalesce(); // Auto-merge
+                update();
+            }
+        }
+
+        function coalesce() {
+            let changed = true;
+            while(changed) {
+                changed = false;
+                for (let i = 0; i < memory.length - 1; i++) {
+                    if (memory[i].type === 'hole' && memory[i+1].type === 'hole') {
+                        memory[i].size += memory[i+1].size;
+                        memory.splice(i+1, 1);
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+            renderVisuals(); // Just visual update, no stats recalc needed necessarily
+        }
+
+        function compact() {
+            addLog("Running Compaction...", 'blue');
+            
+            let processes = memory.filter(m => m.type !== 'hole');
+            let totalFree = memory.filter(m => m.type === 'hole').reduce((acc, h) => acc + h.size, 0);
+
+            let newMem = [];
+            let currentAddr = 0;
+
+            // Sort processes by start address to maintain order visually (optional, but good for realism)
+            // In real OS, it just packs them.
+            processes.forEach(p => {
+                newMem.push({ ...p, start: currentAddr });
+                currentAddr += p.size;
+            });
+
+            if (totalFree > 0) {
+                newMem.push({ start: currentAddr, size: totalFree, type: 'hole', color: HOLE_COLOR });
+            }
+
+            memory = newMem;
+            addLog("Compaction Complete", 'green');
+            update();
+        }
+
+        function reset() {
+            memory = [
+                { start: 0, size: OS_SIZE, type: 'os', pid: 'OS', color: OS_COLOR },
+                { start: OS_SIZE, size: TOTAL_MEM - OS_SIZE, type: 'hole', color: HOLE_COLOR }
+            ];
+            pidCounter = 1;
+            colorIndex = 0;
+            addLog("System Reset", 'white');
+            update();
+        }
+
+        // ==========================================
+        // VISUALIZATION ENGINE
+        // ==========================================
+
+        function update() {
+            updateStats();
+            updateProcessList();
+            resizeCanvas(); // Triggers canvas redraw
+        }
+
+        function renderVisuals() {
+            if (!ctx) return;
+
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            ctx.clearRect(0, 0, w, h);
+
+            // Scaling: 256MB maps to height 'h'
+            const scale = h / TOTAL_MEM;
+
+            // Draw blocks
+            memory.forEach(block => {
+                const y = block.start * scale;
+                const blockHeight = Math.max(1, block.size * scale); // Min 1px
+
+                // Draw Block
+                ctx.fillStyle = block.color || HOLE_COLOR;
+                ctx.fillRect(0, y, w, blockHeight);
+
+                // Draw Borders
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(0, y, w, blockHeight);
+
+                // Draw Label if big enough
+                if (blockHeight > 20) {
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 10px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(block.pid || '', w/2, y + blockHeight/2 + 4);
+                }
+            });
+
+            // Draw Grid Lines every 16MB
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+            for(let i=0; i<=TOTAL_MEM; i+=16) {
+                const y = i * scale;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+        }
+
+        function updateStats() {
+            const used = memory.filter(m => m.type !== 'hole').reduce((acc, m) => acc + m.size, 0);
+            const free = TOTAL_MEM - used;
+            const pct = ((used / TOTAL_MEM) * 100).toFixed(1);
+            
+            // Fragmentation: 1 - (LargestBlock / TotalFree)
+            const holes = memory.filter(m => m.type === 'hole');
+            const maxHole = holes.length > 0 ? Math.max(...holes.map(h => h.size)) : 0;
+            const frag = free > 0 ? (1 - (maxHole / free)) * 100 : 0;
+
+            document.getElementById('stat-used-pct').innerText = `${pct}%`;
+            document.getElementById('util-bar').style.width = `${pct}%`;
+            document.getElementById('stat-frag').innerText = `${frag.toFixed(1)}%`;
+            
+            // Update Chart
+            utilChart.data.datasets[0].data = [used, free];
+            utilChart.update();
+        }
+
+        function updateProcessList() {
+            const list = document.getElementById('process-list');
+            const select = document.getElementById('deallocate-select');
+            
+            // Update Select
+            select.innerHTML = '<option value="">Select Process</option>';
+            memory.filter(m => m.type === 'process').forEach(p => {
+                select.innerHTML += `<option value="${p.pid}">${p.pid} (${p.size}MB)</option>`;
+            });
+
+            // Update List Visual
+            list.innerHTML = '';
+            memory.filter(m => m.type !== 'hole').forEach(p => {
+                const el = document.createElement('div');
+                el.className = "flex items-center justify-between bg-slate-800 rounded p-2 text-xs group";
+                el.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full" style="background:${p.color}"></div>
+                        <span class="font-bold">${p.pid}</span>
+                    </div>
+                    <span class="text-slate-400">${p.size}MB</span>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        // ==========================================
+        // TOOLTIP & MOUSE INTERACTION
+        // ==========================================
+
+        function handleMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            const scale = TOTAL_MEM / canvas.height;
+            const address = Math.floor(y * scale);
+
+            // Find block at this address
+            const block = memory.find(m => m.start <= address && (m.start + m.size) > address);
+
+            if (block) {
+                const tip = document.getElementById('canvas-tooltip');
+                tip.style.opacity = '1';
+                tip.style.left = (e.clientX - rect.left + 20) + 'px';
+                tip.style.top = (y) + 'px';
+                
+                document.getElementById('tip-pid').innerText = block.pid || (block.type === 'hole' ? 'Free Block' : 'OS');
+                document.getElementById('tip-pid').style.color = block.color;
+                document.getElementById('tip-size').innerText = `Size: ${block.size}MB`;
+                document.getElementById('tip-range').innerText = `0x${block.start.toString(16).toUpperCase()} - 0x${(block.start+block.size).toString(16).toUpperCase()}`;
+            }
+        }
+
+        function hideTooltip() {
+            document.getElementById('canvas-tooltip').style.opacity = '0';
+        }
+
+        // ==========================================
+        // UTILITIES
+        // ==========================================
+        function addLog(msg, color='default') {
+            const colorClass = {
+                'red': 'text-red-400',
+                'green': 'text-green-400',
+                'blue': 'text-blue-400',
+                'orange': 'text-amber-400',
+                'white': 'text-white'
+            }[color];
+
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML += `<div class="${colorClass || 'text-slate-300'}">[${time}] ${msg}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Table Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #111113;
+            --bg-tertiary: #1a1a1d;
+            --bg-card: #151518;
+            --border: #2a2a2f;
+            --border-light: #3a3a42;
+            --text-primary: #e8e8ed;
+            --text-secondary: #8a8a95;
+            --text-muted: #5a5a65;
+            --accent-cyan: #00d4ff;
+            --accent-purple: #a855f7;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --accent-yellow: #facc15;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .bg-pattern {
+            background-image: 
+                radial-gradient(circle at 10% 90%, rgba(0, 212, 255, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 90% 10%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        }
+
+        .grid-bg {
+            background-size: 45px 45px;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.012) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.012) 1px, transparent 1px);
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-light);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+
+        /* Hash Table Visualization */
+        .hash-table-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 16px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .hash-table-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .hash-table-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .bucket-row {
+            display: flex;
+            align-items: stretch;
+            gap: 12px;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            min-height: 52px;
+        }
+
+        .bucket-row.highlight {
+            background: rgba(250, 204, 21, 0.1);
+            border-color: var(--accent-yellow);
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.2);
+        }
+
+        .bucket-row.collision {
+            background: rgba(249, 115, 22, 0.1);
+            border-color: var(--accent-orange);
+        }
+
+        .bucket-row.found {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: var(--accent-green);
+        }
+
+        .bucket-row.not-found {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--accent-red);
+        }
+
+        .bucket-index {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--accent-cyan);
+            background: var(--bg-secondary);
+            border-radius: 6px;
+        }
+
+        .bucket-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            min-height: 36px;
+        }
+
+        .bucket-empty {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .bucket-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            height: 36px;
+            padding: 0 10px;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid var(--accent-blue);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--accent-blue);
+            transition: all 0.3s ease;
+            animation: itemAppear 0.4s ease;
+        }
+
+        .bucket-item.collision-item {
+            background: rgba(249, 115, 22, 0.15);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .bucket-item.found-item {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+        }
+
+        .bucket-item.probing-item {
+            background: rgba(168, 85, 247, 0.15);
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
+        .bucket-item.deleted {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+
+        @keyframes itemAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.8) translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .chain-arrow {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 0 2px;
+        }
+
+        /* Hash calculation display */
+        .hash-calc-display {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .hash-calc-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .hash-key {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 36px;
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 6px;
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .hash-arrow {
+            color: var(--text-muted);
+        }
+
+        .hash-formula {
+            color: var(--text-secondary);
+        }
+
+        .hash-result {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 12px;
+            background: rgba(250, 204, 21, 0.15);
+            border: 1px solid var(--accent-yellow);
+            border-radius: 6px;
+            color: var(--accent-yellow);
+            font-weight: 600;
+        }
+
+        /* Probing visualization */
+        .probing-steps {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .probe-step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+
+        .probe-step.occupied {
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .probe-step.success {
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .probe-step.current {
+            border: 1px solid var(--accent-purple);
+            color: var(--accent-purple);
+            animation: pulse 1s ease infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.3); }
+            50% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.5); }
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            outline: none;
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--accent-cyan);
+            outline-offset: 2px;
+        }
+
+        .btn-primary {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: #00bde6;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-success {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .btn-success:hover {
+            background: rgba(34, 197, 94, 0.25);
+        }
+
+        .btn-warning {
+            background: rgba(249, 115, 22, 0.15);
+            color: var(--accent-orange);
+            border-color: var(--accent-orange);
+        }
+
+        .btn-warning:hover {
+            background: rgba(249, 115, 22, 0.25);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-purple {
+            background: rgba(168, 85, 247, 0.15);
+            color: var(--accent-purple);
+            border-color: var(--accent-purple);
+        }
+
+        .btn-purple:hover {
+            background: rgba(168, 85, 247, 0.25);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Input styles */
+        .input {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            outline: none;
+            width: 100%;
+        }
+
+        .input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Select styles */
+        .select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            outline: none;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .select:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        /* Code display */
+        .code-container {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            line-height: 1.85;
+        }
+
+        .code-line {
+            display: flex;
+            padding: 2px 10px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .code-line.active {
+            background: rgba(0, 212, 255, 0.1);
+            border-left-color: var(--accent-cyan);
+        }
+
+        .code-line.executed {
+            background: rgba(34, 197, 94, 0.05);
+        }
+
+        .line-number {
+            width: 22px;
+            color: var(--text-muted);
+            user-select: none;
+        }
+
+        .line-content {
+            flex: 1;
+        }
+
+        .keyword { color: var(--accent-purple); }
+        .variable { color: var(--accent-cyan); }
+        .operator { color: var(--accent-orange); }
+        .comment { color: var(--text-muted); font-style: italic; }
+        .number { color: var(--accent-yellow); }
+        .function { color: var(--accent-green); }
+
+        /* Stats */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Load factor bar */
+        .load-factor-bar {
+            height: 10px;
+            background: var(--bg-tertiary);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .load-factor-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.4s ease, background 0.3s ease;
+        }
+
+        .load-factor-low { background: var(--accent-green); }
+        .load-factor-medium { background: var(--accent-yellow); }
+        .load-factor-high { background: var(--accent-orange); }
+        .load-factor-critical { background: var(--accent-red); }
+
+        /* Timeline */
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .timeline::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .timeline::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 11px;
+            border-left: 3px solid var(--border);
+        }
+
+        .timeline-item.insert {
+            border-left-color: var(--accent-blue);
+        }
+
+        .timeline-item.search {
+            border-left-color: var(--accent-cyan);
+        }
+
+        .timeline-item.delete {
+            border-left-color: var(--accent-red);
+        }
+
+        .timeline-item.collision {
+            border-left-color: var(--accent-orange);
+        }
+
+        .timeline-item.resize {
+            border-left-color: var(--accent-purple);
+        }
+
+        .timeline-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            flex-shrink: 0;
+        }
+
+        .timeline-content {
+            flex: 1;
+            color: var(--text-secondary);
+        }
+
+        /* Complexity badges */
+        .complexity-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .complexity-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .complexity-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .complexity-best { color: var(--accent-green); }
+        .complexity-avg { color: var(--accent-yellow); }
+        .complexity-worst { color: var(--accent-red); }
+
+        /* Explanation panel */
+        .explanation-text {
+            font-size: 13px;
+            line-height: 1.75;
+            color: var(--text-secondary);
+        }
+
+        .explanation-highlight {
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        .explanation-value {
+            color: var(--accent-yellow);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        .explanation-calc {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: fixed;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            max-width: 280px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-indicator.idle {
+            background: rgba(138, 138, 149, 0.15);
+            color: var(--text-secondary);
+        }
+
+        .status-indicator.running {
+            background: rgba(0, 212, 255, 0.15);
+            color: var(--accent-cyan);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes hashFlow {
+            0% { transform: translateX(0); opacity: 1; }
+            50% { transform: translateX(50px); opacity: 0.5; }
+            100% { transform: translateX(100px); opacity: 0; }
+        }
+
+        /* Resizing overlay */
+        .resize-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 11, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .resize-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .resize-content {
+            text-align: center;
+            padding: 32px;
+        }
+
+        .resize-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1280px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="bg-pattern grid-bg">
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Resizing Overlay -->
+    <div id="resizeOverlay" class="resize-overlay">
+        <div class="resize-content">
+            <div class="resize-spinner"></div>
+            <p class="text-lg font-semibold text-[var(--accent-purple)]">Resizing Hash Table</p>
+            <p class="text-sm text-[var(--text-muted)] mt-2">Rehashing all elements...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="border-b border-[var(--border)] bg-[var(--bg-secondary)]/80 backdrop-blur-sm sticky top-0 z-50">
+        <div class="max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-purple)] flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--bg-primary)]">
+                        <line x1="3" x2="21" y1="12" y2="12"></line>
+                        <line x1="3" x2="21" y1="6" y2="6"></line>
+                        <line x1="3" x2="21" y1="18" y2="18"></line>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">Hash Table Visualizer</h1>
+                    <p class="text-xs text-[var(--text-muted)]">Interactive Hashing & Collision Resolution</p>
+                </div>
+            </div>
+            <div id="statusIndicator" class="status-indicator idle">
+                <span class="status-dot"></span>
+                <span id="statusText">Ready</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="max-w-[1600px] mx-auto p-4">
+        <div class="dashboard-grid grid grid-cols-[280px_1fr_320px] gap-4">
+            <!-- Left Panel - Controls -->
+            <div class="space-y-4">
+                <!-- Hash Function Settings -->
+                <div class="card animate-in" style="animation-delay: 0.1s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        Configuration
+                    </div>
+                    <div class="card-body space-y-4">
+                        <div>
+                            <label class="block text-xs text-[var(--text-muted)] mb-2 uppercase tracking-wider">Table Size</label>
+                            <select id="tableSizeSelect" class="select" onchange="resizeTable()">
+                                <option value="7">7 (Default)</option>
+                                <option value="11">11 (Prime)</option>
+                                <option value="13">13 (Prime)</option>
+                                <option value="17">17 (Prime)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-[var(--text-muted)] mb-2 uppercase tracking-wider">Collision Resolution</label>
+                            <select id="collisionMethod" class="select" onchange="changeCollisionMethod()">
+                                <option value="chaining">Separate Chaining</option>
+                                <option value="linear">Open Addressing - Linear</option>
+                                <option value="quadratic">Open Addressing - Quadratic</option>
+                                <option value="double">Open Addressing - Double Hash</option>
+                            </select>
+                        </div>
+                        <div id="probeSettings" style="display: none;">
+                            <label class="block text-xs text-[var(--text-muted)] mb-2 uppercase tracking-wider">Probe Limit</label>
+                            <input type="number" id="probeLimit" class="input" value="10" min="1" max="50">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Operations -->
+                <div class="card animate-in" style="animation-delay: 0.15s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                        </svg>
+                        Operations
+                    </div>
+                    <div class="card-body space-y-4">
+                        <div>
+                            <label class="block text-xs text-[var(--text-muted)] mb-2 uppercase tracking-wider">Key Value</label>
+                            <input type="number" id="keyInput" class="input" placeholder="Enter key (e.g., 42)" data-tooltip="Enter a numeric key to insert, search, or delete from the hash table.">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="btn btn-success w-full" onclick="insertKey()" data-tooltip="Insert the key into the hash table.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" x2="12" y1="5" y2="19"></line>
+                                    <line x1="5" x2="19" y1="12" y2="12"></line>
+                                </svg>
+                                Insert
+                            </button>
+                            <button class="btn btn-primary w-full" onclick="searchKey()" data-tooltip="Search for the key in the hash table.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <path d="m21 21-4.3-4.3"></path>
+                                </svg>
+                                Search
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="btn btn-danger w-full" onclick="deleteKey()" data-tooltip="Delete the key from the hash table.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                </svg>
+                                Delete
+                            </button>
+                            <button class="btn btn-secondary w-full" onclick="resetTable()" data-tooltip="Clear all elements from the hash table.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                    <path d="M3 3v5h5"></path>
+                                </svg>
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card animate-in" style="animation-delay: 0.2s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                        Quick Actions
+                    </div>
+                    <div class="card-body space-y-2">
+                        <button class="btn btn-secondary w-full justify-start" onclick="generateRandomData()" data-tooltip="Insert 5-8 random keys into the hash table.">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            </svg>
+                            Generate Random Data
+                        </button>
+                        <button class="btn btn-warning w-full justify-start" onclick="generateCollisionDemo()" data-tooltip="Insert keys that will cause collisions for demonstration.">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" x2="12" y1="8" y2="12"></line>
+                                <line x1="12" x2="12.01" y1="16" y2="16"></line>
+                            </svg>
+                            Collision Demo
+                        </button>
+                        <button class="btn btn-purple w-full justify-start" onclick="triggerResize()" data-tooltip="Resize the hash table and rehash all elements.">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <polyline points="9 21 3 21 3 15"></polyline>
+                                <line x1="21" x2="14" y1="3" y2="10"></line>
+                                <line x1="3" x2="10" y1="21" y2="14"></line>
+                            </svg>
+                            Resize & Rehash
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Complexity Info -->
+                <div class="card animate-in" style="animation-delay: 0.25s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3v18h18"></path>
+                            <path d="m19 9-5 5-4-4-3 3"></path>
+                        </svg>
+                        Time Complexity
+                    </div>
+                    <div class="card-body">
+                        <div class="complexity-badge">
+                            <span class="complexity-label">Best Case</span>
+                            <span class="complexity-value complexity-best">O(1)</span>
+                        </div>
+                        <div class="complexity-badge">
+                            <span class="complexity-label">Average Case</span>
+                            <span class="complexity-value complexity-avg">O(1)</span>
+                        </div>
+                        <div class="complexity-badge">
+                            <span class="complexity-label">Worst Case</span>
+                            <span class="complexity-value complexity-worst">O(n)</span>
+                        </div>
+                        <p class="text-xs text-[var(--text-muted)] mt-3">Hash tables provide O(1) average lookup with a good hash function and low load factor.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel - Hash Table Visualization -->
+            <div class="space-y-4">
+                <!-- Hash Calculation Display -->
+                <div class="card animate-in" style="animation-delay: 0.1s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+                        </svg>
+                        Hash Function Calculation
+                        <span class="ml-auto text-xs text-[var(--text-muted)] font-mono">h(key) = key % table_size</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="hashCalcDisplay" class="hash-calc-display">
+                            <div class="text-center text-[var(--text-muted)] text-sm">
+                                Enter a key and perform an operation to see the hash calculation
+                            </div>
+                        </div>
+                        <div id="probingDisplay" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Hash Table -->
+                <div class="card animate-in" style="animation-delay: 0.15s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                            <line x1="3" x2="21" y1="9" y2="9"></line>
+                            <line x1="9" x2="9" y1="21" y2="9"></line>
+                        </svg>
+                        Hash Table
+                        <span id="tableInfo" class="ml-auto text-xs text-[var(--text-muted)]"></span>
+                    </div>
+                    <div id="hashTableContainer" class="hash-table-container">
+                        <!-- Hash table buckets will be rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Stats, Code, Explanation -->
+            <div class="space-y-4">
+                <!-- Statistics -->
+                <div class="card animate-in" style="animation-delay: 0.1s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3v18h18"></path>
+                            <path d="M18 17V9"></path>
+                            <path d="M13 17V5"></path>
+                            <path d="M8 17v-3"></path>
+                        </svg>
+                        Statistics
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Table Size</span>
+                                <span id="statTableSize" class="stat-value text-[var(--accent-cyan)]">7</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Elements</span>
+                                <span id="statElements" class="stat-value text-[var(--accent-blue)]">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Collisions</span>
+                                <span id="statCollisions" class="stat-value text-[var(--accent-orange)]">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Comparisons</span>
+                                <span id="statComparisons" class="stat-value text-[var(--accent-purple)]">0</span>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-[var(--text-muted)]">Load Factor</span>
+                                <span id="loadFactorValue" class="text-sm font-mono font-semibold text-[var(--accent-green)]">0.00</span>
+                            </div>
+                            <div class="load-factor-bar">
+                                <div id="loadFactorBar" class="load-factor-fill load-factor-low" style="width: 0%"></div>
+                            </div>
+                            <p class="text-xs text-[var(--text-muted)] mt-2">Resize threshold: 0.75</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Code Visualization -->
+                <div class="card animate-in" style="animation-delay: 0.15s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 18 22 12 16 6"></polyline>
+                            <polyline points="8 6 2 12 8 18"></polyline>
+                        </svg>
+                        Algorithm Code
+                    </div>
+                    <div class="card-body">
+                        <div id="codeContainer" class="code-container">
+                            <div class="code-line" data-line="1">
+                                <span class="line-number">1</span>
+                                <span class="line-content"><span class="variable">index</span> = <span class="function">hash</span>(key)</span>
+                            </div>
+                            <div class="code-line" data-line="2">
+                                <span class="line-number">2</span>
+                                <span class="line-content"><span class="keyword">if</span> table[index] is empty</span>
+                            </div>
+                            <div class="code-line" data-line="3">
+                                <span class="line-number">3</span>
+                                <span class="line-content">    insert at index</span>
+                            </div>
+                            <div class="code-line" data-line="4">
+                                <span class="line-number">4</span>
+                                <span class="line-content"><span class="keyword">else</span> handle collision</span>
+                            </div>
+                            <div class="code-line" data-line="5">
+                                <span class="line-number">5</span>
+                                <span class="line-content"><span class="keyword">return</span> index</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Explanation Panel -->
+                <div class="card animate-in" style="animation-delay: 0.2s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        Explanation
+                    </div>
+                    <div class="card-body">
+                        <div id="explanationPanel" class="explanation-text">
+                            <p>Welcome to the Hash Table Visualizer!</p>
+                            <p class="mt-3">A <span class="explanation-highlight">hash table</span> maps keys to array indices using a hash function, enabling O(1) average lookup time.</p>
+                            <div class="explanation-calc mt-4">
+                                <p class="text-[var(--text-muted)]">Hash Function:</p>
+                                <p>h(key) = key % table_size</p>
+                            </div>
+                            <p class="mt-3">Use the controls to insert, search, or delete keys. Try the collision demo to see how collisions are handled!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="card animate-in" style="animation-delay: 0.25s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        Operation History
+                    </div>
+                    <div class="card-body">
+                        <div id="timeline" class="timeline">
+                            <div class="text-center text-[var(--text-muted)] text-sm py-4">
+                                No operations yet
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ==========================================
+        // State Management
+        // ==========================================
+        const state = {
+            tableSize: 7,
+            table: [],
+            collisionMethod: 'chaining',
+            elements: 0,
+            collisions: 0,
+            comparisons: 0,
+            history: [],
+            deletedMarkers: new Set() // For open addressing tombstones
+        };
+
+        // Audio Context for sound feedback
+        let audioContext = null;
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioContext) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            switch(type) {
+                case 'insert':
+                    oscillator.frequency.value = 520;
+                    gainNode.gain.value = 0.1;
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                    break;
+                case 'collision':
+                    oscillator.frequency.value = 300;
+                    gainNode.gain.value = 0.12;
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.15);
+                    break;
+                case 'found':
+                    oscillator.frequency.value = 660;
+                    gainNode.gain.value = 0.12;
+                    oscillator.start();
+                    setTimeout(() => oscillator.frequency.value = 880, 80);
+                    oscillator.stop(audioContext.currentTime + 0.2);
+                    break;
+                case 'notfound':
+                    oscillator.frequency.value = 220;
+                    gainNode.gain.value = 0.1;
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.2);
+                    break;
+                case 'delete':
+                    oscillator.frequency.value = 400;
+                    gainNode.gain.value = 0.08;
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                    break;
+            }
+        }
+
+        // ==========================================
+        // Initialization
+        // ==========================================
+        function initialize() {
+            initTable();
+            setupEventListeners();
+            setupTooltips();
+        }
+
+        function initTable() {
+            state.table = [];
+            state.deletedMarkers = new Set();
+            for (let i = 0; i < state.tableSize; i++) {
+                state.table.push([]);
+            }
+            renderTable();
+            updateStatistics();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('keyInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    insertKey();
+                }
+            });
+        }
+
+        // ==========================================
+        // Tooltip System
+        // ==========================================
+        function setupTooltips() {
+            const tooltip = document.getElementById('tooltip');
+            const elements = document.querySelectorAll('[data-tooltip]');
+            
+            elements.forEach(element => {
+                element.addEventListener('mouseenter', (e) => {
+                    const text = e.target.closest('[data-tooltip]').dataset.tooltip;
+                    tooltip.textContent = text;
+                    tooltip.classList.add('visible');
+                    
+                    const rect = e.target.getBoundingClientRect();
+                    tooltip.style.left = `${Math.min(rect.left, window.innerWidth - 300)}px`;
+                    tooltip.style.top = `${rect.bottom + 10}px`;
+                });
+                
+                element.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                });
+            });
+        }
+
+        // ==========================================
+        // Hash Function
+        // ==========================================
+        function hash(key, size = state.tableSize) {
+            return Math.abs(key) % size;
+        }
+
+        function hash2(key) {
+            // Second hash function for double hashing
+            const prime = 5;
+            return prime - (Math.abs(key) % prime);
+        }
+
+        // ==========================================
+        // Rendering
+        // ==========================================
+        function renderTable(highlightIndex = -1, highlightType = '', foundIndex = -1, probingIndex = -1) {
+            const container = document.getElementById('hashTableContainer');
+            container.innerHTML = '';
+            
+            state.table.forEach((bucket, index) => {
+                const row = document.createElement('div');
+                row.className = 'bucket-row';
+                
+                if (index === highlightIndex) {
+                    row.classList.add(highlightType);
+                }
+                
+                // Index
+                const indexEl = document.createElement('div');
+                indexEl.className = 'bucket-index';
+                indexEl.textContent = index;
+                
+                // Content
+                const content = document.createElement('div');
+                content.className = 'bucket-content';
+                
+                if (bucket.length === 0 && !hasDeletedMarker(index)) {
+                    const empty = document.createElement('span');
+                    empty.className = 'bucket-empty';
+                    empty.textContent = '[ empty ]';
+                    content.appendChild(empty);
+                } else {
+                    if (state.collisionMethod === 'chaining') {
+                        bucket.forEach((item, i) => {
+                            const itemEl = document.createElement('span');
+                            itemEl.className = 'bucket-item';
+                            
+                            if (highlightType === 'collision' && index === highlightIndex && i > 0) {
+                                itemEl.classList.add('collision-item');
+                            }
+                            if (highlightType === 'found' && index === foundIndex && item === state.lastSearchedKey) {
+                                itemEl.classList.add('found-item');
+                            }
+                            
+                            itemEl.textContent = item;
+                            content.appendChild(itemEl);
+                            
+                            if (i < bucket.length - 1) {
+                                const arrow = document.createElement('span');
+                                arrow.className = 'chain-arrow';
+                                arrow.textContent = '→';
+                                content.appendChild(arrow);
+                            }
+                        });
+                    } else {
+                        // Open addressing
+                        if (hasDeletedMarker(index)) {
+                            const tombstone = document.createElement('span');
+                            tombstone.className = 'bucket-item deleted';
+                            tombstone.textContent = 'DEL';
+                            content.appendChild(tombstone);
+                        }
+                        
+                        if (bucket.length > 0) {
+                            const itemEl = document.createElement('span');
+                            itemEl.className = 'bucket-item';
+                            
+                            if (index === probingIndex) {
+                                itemEl.classList.add('probing-item');
+                            }
+                            if (highlightType === 'found' && index === foundIndex) {
+                                itemEl.classList.add('found-item');
+                            }
+                            
+                            itemEl.textContent = bucket[0];
+                            content.appendChild(itemEl);
+                        }
+                    }
+                }
+                
+                row.appendChild(indexEl);
+                row.appendChild(content);
+                container.appendChild(row);
+            });
+            
+            document.getElementById('tableInfo').textContent = `Size: ${state.tableSize} | Method: ${getCollisionMethodName()}`;
+        }
+
+        function hasDeletedMarker(index) {
+            return state.deletedMarkers.has(index);
+        }
+
+        function getCollisionMethodName() {
+            const methods = {
+                'chaining': 'Separate Chaining',
+                'linear': 'Linear Probing',
+                'quadratic': 'Quadratic Probing',
+                'double': 'Double Hashing'
+            };
+            return methods[state.collisionMethod] || 'Unknown';
+        }
+
+        function updateHashCalcDisplay(key, hashIndex, probes = []) {
+            const display = document.getElementById('hashCalcDisplay');
+            let html = `
+                <div class="hash-calc-step">
+                    <div class="hash-key">${key}</div>
+                    <span class="hash-arrow">→</span>
+                    <span class="hash-formula">h(${key}) = ${key} % ${state.tableSize}</span>
+                    <span class="hash-arrow">=</span>
+                    <div class="hash-result">${hashIndex}</div>
+                </div>
+            `;
+            
+            if (probes.length > 0) {
+                html += `<div class="probing-steps">`;
+                probes.forEach((probe, i) => {
+                    const isLast = i === probes.length - 1;
+                    const status = probe.found ? 'success' : (isLast ? 'current' : 'occupied');
+                    html += `
+                        <div class="probe-step ${status}">
+                            <span>Probe ${i + 1}:</span>
+                            <span>index ${probe.index}</span>
+                            <span>${probe.found ? 'Available' : 'Occupied'}</span>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            display.innerHTML = html;
+        }
+
+        function updateCodeHighlight(lineNumber) {
+            const lines = document.querySelectorAll('.code-line');
+            lines.forEach(line => {
+                line.classList.remove('active');
+                if (parseInt(line.dataset.line) <= lineNumber && lineNumber > 0) {
+                    line.classList.add('executed');
+                }
+            });
+            
+            if (lineNumber > 0) {
+                const activeLine = document.querySelector(`.code-line[data-line="${lineNumber}"]`);
+                if (activeLine) {
+                    activeLine.classList.add('active');
+                }
+            }
+        }
+
+        function updateExplanation(action, key, hashIndex, details = {}) {
+            const panel = document.getElementById('explanationPanel');
+            let html = '';
+            
+            switch(action) {
+                case 'insert':
+                    html = `
+                        <p class="font-semibold text-[var(--accent-green)]">Insert Operation</p>
+                        <div class="explanation-calc">
+                            <p>Key: <span class="explanation-value">${key}</span></p>
+                            <p>Hash: ${key} % ${state.tableSize} = <span class="explanation-highlight">${hashIndex}</span></p>
+                        </div>
+                        ${details.collision ? `
+                            <p class="mt-3 text-[var(--accent-orange)]">Collision detected!</p>
+                            <p class="mt-2">Bucket ${hashIndex} already contains elements.</p>
+                            <p class="mt-2">Using <span class="explanation-highlight">${getCollisionMethodName()}</span> to resolve.</p>
+                        ` : `
+                            <p class="mt-3">Key <span class="explanation-value">${key}</span> inserted at bucket <span class="explanation-highlight">${hashIndex}</span>.</p>
+                        `}
+                    `;
+                    break;
+                case 'search':
+                    html = `
+                        <p class="font-semibold text-[var(--accent-cyan)]">Search Operation</p>
+                        <div class="explanation-calc">
+                            <p>Key: <span class="explanation-value">${key}</span></p>
+                            <p>Hash: ${key} % ${state.tableSize} = <span class="explanation-highlight">${hashIndex}</span></p>
+                        </div>
+                        ${details.found ? `
+                            <p class="mt-3 text-[var(--accent-green)]">Key found!</p>
+                            <p class="mt-2">Found at bucket <span class="explanation-highlight">${details.foundIndex}</span>.</p>
+                            <p class="mt-2">Comparisons made: <span class="explanation-value">${details.comparisons}</span></p>
+                        ` : `
+                            <p class="mt-3 text-[var(--accent-red)]">Key not found!</p>
+                            <p class="mt-2">The key does not exist in the hash table.</p>
+                        `}
+                    `;
+                    break;
+                case 'delete':
+                    html = `
+                        <p class="font-semibold text-[var(--accent-red)]">Delete Operation</p>
+                        <div class="explanation-calc">
+                            <p>Key: <span class="explanation-value">${key}</span></p>
+                            <p>Hash: ${key} % ${state.tableSize} = <span class="explanation-highlight">${hashIndex}</span></p>
+                        </div>
+                        ${details.found ? `
+                            <p class="mt-3 text-[var(--accent-green)]">Key deleted!</p>
+                            <p class="mt-2">Removed from bucket <span class="explanation-highlight">${details.foundIndex}</span>.</p>
+                        ` : `
+                            <p class="mt-3 text-[var(--accent-orange)]">Key not found!</p>
+                            <p class="mt-2">Cannot delete - key does not exist.</p>
+                        `}
+                    `;
+                    break;
+                case 'resize':
+                    html = `
+                        <p class="font-semibold text-[var(--accent-purple)]">Table Resized</p>
+                        <div class="explanation-calc">
+                            <p>Old size: <span class="explanation-value">${details.oldSize}</span></p>
+                            <p>New size: <span class="explanation-highlight">${details.newSize}</span></p>
+                            <p>Elements rehashed: <span class="explanation-value">${details.elements}</span></p>
+                        </div>
+                        <p class="mt-3">All elements have been rehashed to the new table.</p>
+                    `;
+                    break;
+            }
+            
+            panel.innerHTML = html;
+        }
+
+        function addToTimeline(type, message) {
+            const icons = {
+                'insert': 'I',
+                'search': 'S',
+                'delete': 'D',
+                'collision': 'C',
+                'resize': 'R'
+            };
+            
+            const colors = {
+                'insert': 'bg-blue-500',
+                'search': 'bg-cyan-400',
+                'delete': 'bg-red-500',
+                'collision': 'bg-orange-500',
+                'resize': 'bg-purple-500'
+            };
+            
+            state.history.unshift({ type, message, time: new Date() });
+            
+            const timeline = document.getElementById('timeline');
+            const item = document.createElement('div');
+            item.className = `timeline-item ${type}`;
+            item.innerHTML = `
+                <div class="timeline-icon ${colors[type]}">${icons[type]}</div>
+                <div class="timeline-content">${message}</div>
+            `;
+            
+            if (timeline.children.length === 1 && timeline.children[0].classList.contains('text-center')) {
+                timeline.innerHTML = '';
+            }
+            
+            timeline.insertBefore(item, timeline.firstChild);
+            
+            // Keep only last 20 items
+            while (timeline.children.length > 20) {
+                timeline.removeChild(timeline.lastChild);
+            }
+        }
+
+        function updateStatistics() {
+            document.getElementById('statTableSize').textContent = state.tableSize;
+            document.getElementById('statElements').textContent = state.elements;
+            document.getElementById('statCollisions').textContent = state.collisions;
+            document.getElementById('statComparisons').textContent = state.comparisons;
+            
+            const loadFactor = state.elements / state.tableSize;
+            const loadFactorValue = document.getElementById('loadFactorValue');
+            const loadFactorBar = document.getElementById('loadFactorBar');
+            
+            loadFactorValue.textContent = loadFactor.toFixed(2);
+            loadFactorBar.style.width = `${Math.min(loadFactor * 100, 100)}%`;
+            
+            // Update color based on load factor
+            loadFactorBar.className = 'load-factor-fill';
+            if (loadFactor < 0.5) {
+                loadFactorBar.classList.add('load-factor-low');
+                loadFactorValue.style.color = 'var(--accent-green)';
+            } else if (loadFactor < 0.75) {
+                loadFactorBar.classList.add('load-factor-medium');
+                loadFactorValue.style.color = 'var(--accent-yellow)';
+            } else if (loadFactor < 1) {
+                loadFactorBar.classList.add('load-factor-high');
+                loadFactorValue.style.color = 'var(--accent-orange)';
+            } else {
+                loadFactorBar.classList.add('load-factor-critical');
+                loadFactorValue.style.color = 'var(--accent-red)';
+            }
+        }
+
+        function setStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            indicator.className = `status-indicator ${status}`;
+            statusText.textContent = text;
+        }
+
+        // ==========================================
+        // Collision Resolution
+        // ==========================================
+        function changeCollisionMethod() {
+            state.collisionMethod = document.getElementById('collisionMethod').value;
+            const probeSettings = document.getElementById('probeSettings');
+            
+            if (state.collisionMethod !== 'chaining') {
+                probeSettings.style.display = 'block';
+            } else {
+                probeSettings.style.display = 'none';
+            }
+            
+            resetTable();
+        }
+
+        function findInsertIndex(key, hashIndex) {
+            const probes = [{ index: hashIndex, found: false }];
+            
+            if (state.table[hashIndex].length === 0 || hasDeletedMarker(hashIndex)) {
+                probes[0].found = true;
+                return { index: hashIndex, probes, collision: false };
+            }
+            
+            // Collision occurred
+            state.collisions++;
+            let currentIndex;
+            
+            switch (state.collisionMethod) {
+                case 'linear':
+                    for (let i = 1; i < state.tableSize; i++) {
+                        currentIndex = (hashIndex + i) % state.tableSize;
+                        const found = state.table[currentIndex].length === 0 || hasDeletedMarker(currentIndex);
+                        probes.push({ index: currentIndex, found });
+                        if (found) break;
+                    }
+                    break;
+                    
+                case 'quadratic':
+                    for (let i = 1; i < state.tableSize; i++) {
+                        currentIndex = (hashIndex + i * i) % state.tableSize;
+                        const found = state.table[currentIndex].length === 0 || hasDeletedMarker(currentIndex);
+                        probes.push({ index: currentIndex, found });
+                        if (found) break;
+                    }
+                    break;
+                    
+                case 'double':
+                    const step = hash2(key);
+                    for (let i = 1; i < state.tableSize; i++) {
+                        currentIndex = (hashIndex + i * step) % state.tableSize;
+                        const found = state.table[currentIndex].length === 0 || hasDeletedMarker(currentIndex);
+                        probes.push({ index: currentIndex, found });
+                        if (found) break;
+                    }
+                    break;
+            }
+            
+            const lastProbe = probes[probes.length - 1];
+            return { index: lastProbe.index, probes, collision: true };
+        }
+
+        function findSearchIndex(key, hashIndex) {
+            let comparisons = 0;
+            const probes = [{ index: hashIndex, found: false }];
+            
+            // Check initial position
+            if (state.table[hashIndex].length > 0) {
+                comparisons++;
+                if (state.table[hashIndex][0] === key) {
+                    probes[0].found = true;
+                    return { found: true, index: hashIndex, comparisons, probes };
+                }
+            }
+            
+            // If chaining, search the chain
+            if (state.collisionMethod === 'chaining') {
+                for (let i = 0; i < state.table[hashIndex].length; i++) {
+                    comparisons++;
+                    if (state.table[hashIndex][i] === key) {
+                        return { found: true, index: hashIndex, comparisons, probes };
+                    }
+                }
+                return { found: false, index: -1, comparisons, probes };
+            }
+            
+            // Open addressing - probe to find
+            let currentIndex;
+            
+            switch (state.collisionMethod) {
+                case 'linear':
+                    for (let i = 1; i < state.tableSize; i++) {
+                        currentIndex = (hashIndex + i) % state.tableSize;
+                        
+                        if (state.table[currentIndex].length === 0 && !hasDeletedMarker(currentIndex)) {
+                            // Empty slot - key not found
+                            break;
+                        }
+                        
+                        if (state.table[currentIndex].length > 0) {
+                            comparisons++;
+                            probes.push({ index: currentIndex, found: state.table[currentIndex][0] === key });
+                            if (state.table[currentIndex][0] === key) {
+                                return { found: true, index: currentIndex, comparisons, probes };
+                            }
+                        }
+                    }
+                    break;
+                    
+                case 'quadratic':
+                    for (let i = 1; i < state.tableSize; i++) {
+                        currentIndex = (hashIndex + i * i) % state.tableSize;
+                        
+                        if (state.table[currentIndex].length === 0 && !hasDeletedMarker(currentIndex)) {
+                            break;
+                        }
+                        
+                        if (state.table[currentIndex].length > 0) {
+                            comparisons++;
+                            probes.push({ index: currentIndex, found: state.table[currentIndex][0] === key });
+                            if (state.table[currentIndex][0] === key) {
+                                return { found: true, index: currentIndex, comparisons, probes };
+                            }
+                        }
+                    }
+                    break;
+                    
+                case 'double':
+                    const step = hash2(key);
+                    for (let i = 1; i < state.tableSize; i++) {
+                        currentIndex = (hashIndex + i * step) % state.tableSize;
+                        
+                        if (state.table[currentIndex].length === 0 && !hasDeletedMarker(currentIndex)) {
+                            break;
+                        }
+                        
+                        if (state.table[currentIndex].length > 0) {
+                            comparisons++;
+                            probes.push({ index: currentIndex, found: state.table[currentIndex][0] === key });
+                            if (state.table[currentIndex][0] === key) {
+                                return { found: true, index: currentIndex, comparisons, probes };
+                            }
+                        }
+                    }
+                    break;
+            }
+            
+            return { found: false, index: -1, comparisons, probes };
+        }
+
+        // ==========================================
+        // Operations
+        // ==========================================
+        function insertKey() {
+            initAudio();
+            const keyInput = document.getElementById('keyInput');
+            const key = parseInt(keyInput.value);
+            
+            if (isNaN(key)) {
+                alert('Please enter a valid number');
+                return;
+            }
+            
+            const hashIndex = hash(key);
+            let insertIndex = hashIndex;
+            let probes = [];
+            let isCollision = false;
+            
+            if (state.collisionMethod === 'chaining') {
+                if (state.table[hashIndex].length > 0) {
+                    state.collisions++;
+                    isCollision = true;
+                    playSound('collision');
+                } else {
+                    playSound('insert');
+                }
+                state.table[hashIndex].push(key);
+            } else {
+                const result = findInsertIndex(key, hashIndex);
+                insertIndex = result.index;
+                probes = result.probes;
+                isCollision = result.collision;
+                
+                if (isCollision) {
+                    playSound('collision');
+                } else {
+                    playSound('insert');
+                }
+                
+                state.deletedMarkers.delete(insertIndex);
+                state.table[insertIndex] = [key];
+            }
+            
+            state.elements++;
+            
+            updateHashCalcDisplay(key, hashIndex, probes);
+            updateCodeHighlight(isCollision ? 4 : 3);
+            updateExplanation('insert', key, hashIndex, { collision: isCollision });
+            addToTimeline('insert', `Insert ${key} → bucket ${insertIndex}${isCollision ? ' (collision)' : ''}`);
+            
+            if (isCollision) {
+                renderTable(insertIndex, 'collision');
+            } else {
+                renderTable(insertIndex, 'highlight');
+            }
+            
+            updateStatistics();
+            keyInput.value = '';
+            
+            // Check if resize needed
+            const loadFactor = state.elements / state.tableSize;
+            if (loadFactor > 0.75) {
+                setTimeout(() => {
+                    if (confirm('Load factor exceeds 0.75. Resize table?')) {
+                        triggerResize();
+                    }
+                }, 500);
+            }
+        }
+
+        function searchKey() {
+            initAudio();
+            const keyInput = document.getElementById('keyInput');
+            const key = parseInt(keyInput.value);
+            
+            if (isNaN(key)) {
+                alert('Please enter a valid number');
+                return;
+            }
+            
+            state.lastSearchedKey = key;
+            const hashIndex = hash(key);
+            const result = findSearchIndex(key, hashIndex);
+            
+            state.comparisons += result.comparisons;
+            
+            updateHashCalcDisplay(key, hashIndex, result.probes);
+            
+            if (result.found) {
+                playSound('found');
+                updateCodeHighlight(5);
+                updateExplanation('search', key, hashIndex, { found: true, foundIndex: result.index, comparisons: result.comparisons });
+                addToTimeline('search', `Search ${key} → found at bucket ${result.index}`);
+                renderTable(result.index, 'found', result.index);
+                setStatus('idle', 'Found');
+            } else {
+                playSound('notfound');
+                updateExplanation('search', key, hashIndex, { found: false });
+                addToTimeline('search', `Search ${key} → not found`);
+                renderTable(hashIndex, 'not-found');
+                setStatus('idle', 'Not Found');
+            }
+            
+            updateStatistics();
+        }
+
+        function deleteKey() {
+            initAudio();
+            const keyInput = document.getElementById('keyInput');
+            const key = parseInt(keyInput.value);
+            
+            if (isNaN(key)) {
+                alert('Please enter a valid number');
+                return;
+            }
+            
+            const hashIndex = hash(key);
+            const result = findSearchIndex(key, hashIndex);
+            
+            state.comparisons += result.comparisons;
+            
+            updateHashCalcDisplay(key, hashIndex, result.probes);
+            
+            if (result.found) {
+                playSound('delete');
+                
+                if (state.collisionMethod === 'chaining') {
+                    const chainIndex = state.table[result.index].indexOf(key);
+                    if (chainIndex > -1) {
+                        state.table[result.index].splice(chainIndex, 1);
+                    }
+                } else {
+                    // Mark as deleted (tombstone)
+                    state.table[result.index] = [];
+                    state.deletedMarkers.add(result.index);
+                }
+                
+                state.elements--;
+                
+                updateCodeHighlight(5);
+                updateExplanation('delete', key, hashIndex, { found: true, foundIndex: result.index });
+                addToTimeline('delete', `Delete ${key} from bucket ${result.index}`);
+                renderTable(result.index, 'found');
+                setStatus('idle', 'Deleted');
+            } else {
+                playSound('notfound');
+                updateExplanation('delete', key, hashIndex, { found: false });
+                addToTimeline('delete', `Delete ${key} → not found`);
+                renderTable(hashIndex, 'not-found');
+                setStatus('idle', 'Not Found');
+            }
+            
+            updateStatistics();
+            keyInput.value = '';
+        }
+
+        function resetTable() {
+            state.table = [];
+            state.deletedMarkers = new Set();
+            state.elements = 0;
+            state.collisions = 0;
+            state.comparisons = 0;
+            
+            for (let i = 0; i < state.tableSize; i++) {
+                state.table.push([]);
+            }
+            
+            renderTable();
+            updateStatistics();
+            setStatus('idle', 'Ready');
+            
+            document.getElementById('hashCalcDisplay').innerHTML = `
+                <div class="text-center text-[var(--text-muted)] text-sm">
+                    Enter a key and perform an operation to see the hash calculation
+                </div>
+            `;
+            
+            document.getElementById('timeline').innerHTML = `
+                <div class="text-center text-[var(--text-muted)] text-sm py-4">
+                    No operations yet
+                </div>
+            `;
+            
+            document.querySelectorAll('.code-line').forEach(line => {
+                line.classList.remove('active', 'executed');
+            });
+        }
+
+        function resizeTable() {
+            const newSize = parseInt(document.getElementById('tableSizeSelect').value);
+            state.tableSize = newSize;
+            resetTable();
+        }
+
+        function triggerResize() {
+            if (state.elements === 0) {
+                alert('Table is empty. Add some elements first.');
+                return;
+            }
+            
+            const overlay = document.getElementById('resizeOverlay');
+            overlay.classList.add('active');
+            
+            const oldSize = state.tableSize;
+            const oldElements = state.elements;
+            const oldTable = [...state.table];
+            
+            // Find next prime size
+            const newSize = getNextPrime(state.tableSize * 2);
+            state.tableSize = newSize;
+            
+            setTimeout(() => {
+                // Reinitialize table
+                state.table = [];
+                state.deletedMarkers = new Set();
+                state.elements = 0;
+                state.collisions = 0;
+                
+                for (let i = 0; i < state.tableSize; i++) {
+                    state.table.push([]);
+                }
+                
+                // Rehash all elements
+                let rehashed = 0;
+                oldTable.forEach(bucket => {
+                    bucket.forEach(key => {
+                        const newHash = hash(key);
+                        if (state.collisionMethod === 'chaining') {
+                            state.table[newHash].push(key);
+                        } else {
+                            if (state.table[newHash].length === 0) {
+                                state.table[newHash] = [key];
+                            } else {
+                                // Need to probe
+                                const result = findInsertIndex(key, newHash);
+                                state.table[result.index] = [key];
+                            }
+                        }
+                        rehashed++;
+                        state.elements++;
+                    });
+                });
+                
+                overlay.classList.remove('active');
+                
+                updateExplanation('resize', 0, 0, { oldSize, newSize, elements: rehashed });
+                addToTimeline('resize', `Resized from ${oldSize} to ${newSize}`);
+                renderTable();
+                updateStatistics();
+                
+                playSound('found');
+                setStatus('idle', 'Resized');
+            }, 1000);
+        }
+
+        function getNextPrime(n) {
+            const primes = [11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53];
+            for (const p of primes) {
+                if (p > n) return p;
+            }
+            return n * 2 + 1;
+        }
+
+        function generateRandomData() {
+            resetTable();
+            const count = Math.floor(Math.random() * 4) + 5;
+            
+            for (let i = 0; i < count; i++) {
+                const key = Math.floor(Math.random() * 100) + 1;
+                const hashIndex = hash(key);
+                
+                if (state.collisionMethod === 'chaining') {
+                    if (state.table[hashIndex].length > 0) {
+                        state.collisions++;
+                    }
+                    state.table[hashIndex].push(key);
+                } else {
+                    if (state.table[hashIndex].length > 0) {
+                        const result = findInsertIndex(key, hashIndex);
+                        state.table[result.index] = [key];
+                    } else {
+                        state.table[hashIndex] = [key];
+                    }
+                }
+                state.elements++;
+            }
+            
+            renderTable();
+            updateStatistics();
+            addToTimeline('insert', `Generated ${count} random keys`);
+        }
+
+        function generateCollisionDemo() {
+            resetTable();
+            
+            // Generate keys that will cause collisions
+            const baseValue = Math.floor(Math.random() * 5) + 1;
+            const keys = [
+                baseValue,
+                baseValue + state.tableSize,
+                baseValue + state.tableSize * 2
+            ];
+            
+            keys.forEach(key => {
+                const hashIndex = hash(key);
+                
+                if (state.collisionMethod === 'chaining') {
+                    if (state.table[hashIndex].length > 0) {
+                        state.collisions++;
+                    }
+                    state.table[hashIndex].push(key);
+                } else {
+                    if (state.table[hashIndex].length > 0) {
+                        const result = findInsertIndex(key, hashIndex);
+                        state.table[result.index] = [key];
+                    } else {
+                        state.table[hashIndex] = [key];
+                    }
+                }
+                state.elements++;
+            });
+            
+            playSound('collision');
+            renderTable(hash(keys[0]), 'collision');
+            updateStatistics();
+            updateHashCalcDisplay(keys[0], hash(keys[0]));
+            updateExplanation('insert', keys[0], hash(keys[0]), { collision: true });
+            addToTimeline('collision', `Collision demo: ${keys.join(', ')}`);
+        }
+
+        // ==========================================
+        // Initialize on DOM Load
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>

@@ -1,0 +1,2610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Tree Algorithm - ML Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #00e5ff;
+  --accent-alt: #a855f7;
+  --accent-warm: #f472b6;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #22d3ee;
+  --purple: #c084fc;
+  --blue: #3b82f6;
+  --green: #22c55e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.04) 0%, transparent 50%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--green), var(--cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--green), var(--cyan));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.nav-breadcrumb span {
+  color: var(--green);
+}
+
+.hero {
+  min-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--green); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--green); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--green) 50%, var(--cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 620px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Theory Card */
+.theory-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.theory-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--green), var(--cyan), var(--green));
+  opacity: 0.6;
+}
+
+.theory-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.theory-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.theory-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 211, 238, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.theory-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.theory-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px;
+  align-items: start;
+}
+
+.theory-text {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.theory-text p {
+  margin: 0 0 18px 0;
+}
+
+.theory-text p:last-child {
+  margin-bottom: 0;
+}
+
+.theory-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Conceptual Diagram */
+.concept-diagram {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.diagram-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.diagram-box {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 211, 238, 0.1));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+  min-width: 110px;
+}
+
+.diagram-box.highlight {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 211, 238, 0.2));
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.diagram-box-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--green);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diagram-box-value {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.diagram-arrow {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.metric-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  transition: all 0.3s ease;
+}
+
+.metric-item:hover {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.03);
+}
+
+.metric-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.metric-icon.entropy { background: rgba(168, 85, 247, 0.15); }
+.metric-icon.gini { background: rgba(59, 130, 246, 0.15); }
+.metric-icon.gain { background: rgba(34, 197, 94, 0.15); }
+
+.metric-text {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.metric-label {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.key-concepts {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.key-concepts-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-concepts-title::before {
+  content: '';
+  width: 12px;
+  height: 2px;
+  background: var(--green);
+}
+
+.concept-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.concept-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.15);
+  font-size: 13px;
+  color: var(--muted);
+  transition: all 0.3s ease;
+}
+
+.concept-list li:last-child {
+  border-bottom: none;
+}
+
+.concept-list li:hover {
+  padding-left: 8px;
+  color: var(--text);
+}
+
+.concept-list li strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.concept-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--green), var(--cyan));
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* Simulator Section */
+.simulator-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 60px;
+}
+
+.simulator-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--green), var(--cyan), var(--green));
+  opacity: 0.6;
+}
+
+.simulator-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simulator-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.simulator-title svg {
+  color: var(--green);
+}
+
+.simulator-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.1);
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.simulator-body {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 0;
+}
+
+/* Control Panel */
+.control-panel {
+  padding: 24px;
+  border-right: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.control-section {
+  margin-bottom: 24px;
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.control-select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(10, 16, 32, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c7090' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.control-select:hover, .control-select:focus {
+  border-color: var(--green);
+  outline: none;
+}
+
+.control-slider-group {
+  margin-bottom: 16px;
+}
+
+.control-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.control-slider-label span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.control-slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.control-slider {
+  width: 100%;
+  height: 6px;
+  background: rgba(92, 112, 144, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.control-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--green), var(--cyan));
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.control-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+}
+
+.control-btn.primary {
+  background: linear-gradient(135deg, var(--green), var(--cyan));
+  color: var(--bg);
+}
+
+.control-btn.primary:hover {
+  box-shadow: 0 4px 20px -4px var(--green);
+  transform: translateY(-2px);
+}
+
+.control-btn.secondary {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--green);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.control-btn.secondary:hover {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Visualization Panel */
+.viz-panel {
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.viz-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+
+.viz-section {
+  background: rgba(10, 16, 32, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.viz-section-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.viz-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.viz-section-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.viz-canvas-wrap {
+  padding: 16px;
+  min-height: 200px;
+}
+
+.viz-canvas {
+  width: 100%;
+  height: 180px;
+  border-radius: 8px;
+  background: #060a14;
+}
+
+.tree-canvas {
+  height: 220px;
+}
+
+/* Explanation Panel */
+.explanation-panel {
+  padding: 24px;
+  border-left: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.explanation-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explanation-header::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--cyan);
+  border-radius: 2px;
+}
+
+.explanation-step {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.explanation-step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--green);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explanation-step-num::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: rgba(34, 197, 94, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.explanation-step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.explanation-step-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Metrics Display */
+.metrics-display {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.metrics-display-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-name {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.metric-value.highlight {
+  color: var(--green);
+}
+
+/* Advantages Section */
+.advantages-card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.advantages-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--green), var(--cyan), var(--green));
+  opacity: 0.6;
+}
+
+.advantages-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.advantages-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 211, 238, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.advantages-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.advantages-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.advantage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(92, 112, 144, 0.1);
+  transition: all 0.3s ease;
+}
+
+.advantage-item:hover {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.03);
+}
+
+.advantage-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 211, 238, 0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.advantage-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* Help Button */
+.help-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--cyan));
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 32px -8px rgba(34, 197, 94, 0.4),
+    0 0 48px -12px rgba(34, 211, 238, 0.3);
+  transition: all 0.3s ease;
+}
+
+.help-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 12px 40px -8px rgba(34, 197, 94, 0.5),
+    0 0 60px -12px rgba(34, 211, 238, 0.4);
+}
+
+.help-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--cyan));
+  opacity: 0.3;
+  filter: blur(10px);
+  z-index: -1;
+}
+
+/* Help Modal */
+.help-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 13, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  padding: 20px;
+}
+
+.help-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.help-modal {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.98), rgba(8, 12, 22, 0.99));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.help-modal-overlay.active .help-modal {
+  transform: translateY(0) scale(1);
+}
+
+.help-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--green), var(--cyan), var(--green));
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.help-modal-title svg {
+  color: var(--green);
+}
+
+.help-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.help-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.help-modal-body {
+  padding: 28px;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-section-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 2px;
+}
+
+.help-section-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.help-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(92, 112, 144, 0.1);
+}
+
+.help-list li:last-child {
+  border-bottom: none;
+}
+
+.help-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--green), var(--cyan));
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Scroll reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(10, 16, 32, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(8px);
+  max-width: 200px;
+}
+
+.tooltip.visible {
+  opacity: 1;
+}
+
+.tooltip-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--green);
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.tooltip-label {
+  color: var(--muted);
+}
+
+.tooltip-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .simulator-body {
+    grid-template-columns: 260px 1fr 260px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .theory-content {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  
+  .simulator-body {
+    grid-template-columns: 1fr;
+  }
+  
+  .control-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .explanation-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  
+  .advantages-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+  
+  .nav-breadcrumb {
+    display: none;
+  }
+  
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 35vh;
+  }
+  
+  .theory-card {
+    padding: 28px 24px;
+  }
+  
+  .simulator-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .diagram-flow {
+    flex-direction: column;
+  }
+  
+  .diagram-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .help-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+  
+  <nav class="nav">
+    <a href="classificationHolder.html" class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">Back</span>
+    </a>
+    <div class="nav-breadcrumb">
+      <a href="index.html">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="ml_lab.html">Machine Learning</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="supervised.html">Supervised</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <a href="classification.html">Classification</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Decision Tree</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Classification Algorithm</div>
+    <h1 class="main-title">Decision Tree Algorithm</h1>
+    <p class="subtitle">
+      // An interpretable machine learning model that builds hierarchical decision rules<br>
+      // to classify data by recursively splitting datasets into smaller subsets based on feature conditions.
+    </p>
+  </section>
+
+  <section class="section">
+    
+    <!-- Theory Card -->
+    <div class="theory-card reveal">
+      <div class="theory-header">
+        <div class="theory-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="5" r="3"/>
+            <line x1="12" y1="8" x2="12" y2="11"/>
+            <circle cx="6" cy="17" r="3"/>
+            <circle cx="18" cy="17" r="3"/>
+            <line x1="12" y1="11" x2="6" y2="14"/>
+            <line x1="12" y1="11" x2="18" y2="14"/>
+          </svg>
+        </div>
+        <h2 class="theory-title">Understanding Decision Trees</h2>
+      </div>
+      
+      <div class="theory-content">
+        <div class="theory-text">
+          <p>
+            <strong>A Decision Tree is a supervised learning algorithm</strong> used for both classification and regression tasks. It works by recursively splitting the dataset into smaller subsets based on the most significant feature at each step.
+          </p>
+          <p>
+            The tree structure consists of <strong>internal nodes</strong> representing decision rules on features, <strong>branches</strong> representing outcomes of these rules, and <strong>leaf nodes</strong> representing final predicted class labels.
+          </p>
+          
+          <!-- Conceptual Diagram -->
+          <div class="concept-diagram">
+            <div class="diagram-flow">
+              <div class="diagram-box">
+                <div class="diagram-box-title">Start</div>
+                <div class="diagram-box-value">Dataset</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Select</div>
+                <div class="diagram-box-value">Best Feature</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">Create</div>
+                <div class="diagram-box-value">Split</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box highlight">
+                <div class="diagram-box-title">Build</div>
+                <div class="diagram-box-value">Subtrees</div>
+              </div>
+              <span class="diagram-arrow">→</span>
+              <div class="diagram-box">
+                <div class="diagram-box-title">End</div>
+                <div class="diagram-box-value">Leaf Node</div>
+              </div>
+            </div>
+          </div>
+          
+          <p><strong>Splitting Metrics:</strong></p>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <div class="metric-icon entropy">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/>
+                </svg>
+              </div>
+              <div>
+                <div class="metric-text">Entropy</div>
+                <div class="metric-label">Measure of disorder</div>
+              </div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-icon gini">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+              </div>
+              <div>
+                <div class="metric-text">Gini Index</div>
+                <div class="metric-label">Measure of impurity</div>
+              </div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-icon gain">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+                  <line x1="12" y1="20" x2="12" y2="10"/>
+                  <line x1="18" y1="20" x2="18" y2="4"/>
+                  <line x1="6" y1="20" x2="6" y2="16"/>
+                </svg>
+              </div>
+              <div>
+                <div class="metric-text">Information Gain</div>
+                <div class="metric-label">Entropy reduction</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="key-concepts">
+          <div class="key-concepts-title">Key Concepts</div>
+          <ul class="concept-list">
+            <li>
+              <div>
+                <strong>Root Node</strong>
+                The top node containing the full dataset.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Decision Node</strong>
+                A node where the dataset is split based on a feature condition.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Leaf Node</strong>
+                The final node representing a predicted class.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Entropy / Gini Index</strong>
+                Measures of dataset impurity used to determine the best split.
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Information Gain</strong>
+                The reduction in entropy after splitting the dataset.
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Simulator -->
+    <div class="simulator-card reveal">
+      <div class="simulator-header">
+        <h3 class="simulator-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="5" r="3"/>
+            <line x1="12" y1="8" x2="12" y2="11"/>
+            <circle cx="6" cy="17" r="3"/>
+            <circle cx="18" cy="17" r="3"/>
+            <line x1="12" y1="11" x2="6" y2="14"/>
+            <line x1="12" y1="11" x2="18" y2="14"/>
+          </svg>
+          Interactive Decision Tree Simulator
+        </h3>
+        <span class="simulator-badge">STEP-BY-STEP</span>
+      </div>
+      
+      <div class="simulator-body">
+        <!-- Control Panel -->
+        <div class="control-panel">
+          <div class="control-section">
+            <label class="control-label">Dataset</label>
+            <select class="control-select" id="datasetSelect">
+              <option value="playTennis">Play Tennis</option>
+              <option value="customer">Customer Purchase</option>
+              <option value="binary">Simple Binary</option>
+            </select>
+          </div>
+          
+          <div class="control-section">
+            <label class="control-label">Split Metric</label>
+            <select class="control-select" id="metricSelect">
+              <option value="entropy">Entropy</option>
+              <option value="gini">Gini Index</option>
+            </select>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Max Depth</span>
+                <span class="control-slider-value" id="depthValue">3</span>
+              </div>
+              <input type="range" class="control-slider" id="depthSlider" min="1" max="5" value="3">
+            </div>
+            
+            <div class="control-slider-group">
+              <div class="control-slider-label">
+                <span>Animation Speed</span>
+                <span class="control-slider-value" id="speedValue">1.0x</span>
+              </div>
+              <input type="range" class="control-slider" id="speedSlider" min="0.5" max="2" step="0.25" value="1">
+            </div>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-buttons">
+              <button class="control-btn primary" id="startBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Start Training
+              </button>
+              <button class="control-btn secondary" id="stepBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+                Next Step
+              </button>
+              <button class="control-btn secondary" id="resetBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="1 4 1 10 7 10"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Visualization Panel -->
+        <div class="viz-panel">
+          <div class="viz-container">
+            <!-- Dataset Visualization -->
+            <div class="viz-section">
+              <div class="viz-section-header">
+                <span class="viz-section-title">Dataset View</span>
+                <span class="viz-section-info" id="datasetInfo">14 samples | 2 classes</span>
+              </div>
+              <div class="viz-canvas-wrap">
+                <canvas class="viz-canvas" id="dataCanvas"></canvas>
+              </div>
+            </div>
+            
+            <!-- Tree Visualization -->
+            <div class="viz-section">
+              <div class="viz-section-header">
+                <span class="viz-section-title">Decision Tree Structure</span>
+                <span class="viz-section-info" id="treeInfo">Depth: 0 | Nodes: 0</span>
+              </div>
+              <div class="viz-canvas-wrap">
+                <canvas class="viz-canvas tree-canvas" id="treeCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Explanation Panel -->
+        <div class="explanation-panel">
+          <div class="explanation-header">Algorithm Progress</div>
+          
+          <div class="explanation-step" id="currentStep">
+            <div class="explanation-step-num">STEP 1</div>
+            <div class="explanation-step-title" id="stepTitle">Ready to Begin</div>
+            <div class="explanation-step-text" id="stepText">
+              Select your dataset and split metric, then click "Start Training" to begin building the decision tree step by step.
+            </div>
+          </div>
+          
+          <div class="metrics-display">
+            <div class="metrics-display-title">Current Metrics</div>
+            <div class="metric-row">
+              <span class="metric-name">Current Entropy</span>
+              <span class="metric-value" id="currentEntropy">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Best Feature</span>
+              <span class="metric-value" id="bestFeature">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Information Gain</span>
+              <span class="metric-value highlight" id="infoGain">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Tree Depth</span>
+              <span class="metric-value" id="treeDepth">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Prediction Accuracy</span>
+              <span class="metric-value highlight" id="accuracy">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advantages Section -->
+    <div class="advantages-card reveal">
+      <div class="advantages-header">
+        <div class="advantages-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3 class="advantages-title">Advantages of Decision Trees</h3>
+      </div>
+      
+      <div class="advantages-grid">
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Easy to understand and interpret. The tree structure can be visualized and explained to non-experts.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Handles both categorical and numerical data without requiring extensive preprocessing.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+              <path d="M12 20V10"/>
+              <path d="M18 20V4"/>
+              <path d="M6 20v-4"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Requires minimal data preprocessing. No need for normalization or scaling of features.</div>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            </svg>
+          </div>
+          <div class="advantage-text">Forms the foundation for powerful ensemble methods like Random Forest and Gradient Boosting.</div>
+        </div>
+      </div>
+    </div>
+    
+  </section>
+
+  <footer>
+    <p>// Decision Tree algorithm visualization for machine learning education</p>
+  </footer>
+  
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-title"></div>
+  <div class="tooltip-content"></div>
+</div>
+
+<!-- Help Button -->
+<button class="help-btn" id="helpBtn" aria-label="Help">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+</button>
+
+<!-- Help Modal -->
+<div class="help-modal-overlay" id="helpModal">
+  <div class="help-modal">
+    <div class="help-modal-header">
+      <h3 class="help-modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Decision Tree Guide
+      </h3>
+      <button class="help-modal-close" id="closeModal" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="help-modal-body">
+      <div class="help-section">
+        <h4 class="help-section-title">What is a Decision Tree?</h4>
+        <p class="help-section-text">
+          A Decision Tree is a supervised learning algorithm that creates a model predicting the value of a target variable by learning simple decision rules inferred from the data features. It builds a flowchart-like structure where each internal node represents a test on a feature, each branch represents an outcome, and each leaf node represents a class label.
+        </p>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">How to Use the Simulator</h4>
+        <ul class="help-list">
+          <li>Select a dataset from the dropdown menu</li>
+          <li>Choose your preferred split metric (Entropy or Gini)</li>
+          <li>Adjust the maximum tree depth using the slider</li>
+          <li>Click "Start Training" to begin the algorithm</li>
+          <li>Use "Next Step" to advance through each decision split</li>
+          <li>Watch the tree grow and observe the metrics panel</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Visualization Guide</h4>
+        <ul class="help-list">
+          <li><strong>Data Points:</strong> Circles representing individual samples, colored by class</li>
+          <li><strong>Split Lines:</strong> Vertical/horizontal lines showing decision boundaries</li>
+          <li><strong>Tree Nodes:</strong> Circles in the tree view, with decision rules inside</li>
+          <li><strong>Leaf Nodes:</strong> Final nodes showing the predicted class</li>
+        </ul>
+      </div>
+      
+      <div class="help-section">
+        <h4 class="help-section-title">Metrics Explanation</h4>
+        <ul class="help-list">
+          <li><strong>Entropy:</strong> Measures the randomness or disorder in the dataset (0 = pure, 1 = maximum disorder)</li>
+          <li><strong>Gini Index:</strong> Measures the probability of misclassification (0 = pure, 0.5 = maximum impurity)</li>
+          <li><strong>Information Gain:</strong> The reduction in entropy after splitting on a feature</li>
+          <li><strong>Accuracy:</strong> The percentage of correctly classified samples</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === BACKGROUND SCENE ===
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+bgCanvas.width = width;
+bgCanvas.height = height;
+
+let mouseX = width / 2;
+let mouseY = height / 2;
+let targetMouseX = mouseX;
+let targetMouseY = mouseY;
+
+const nodes = [];
+const nodeCount = 50;
+
+function initNodes() {
+  nodes.length = 0;
+  
+  for (let i = 0; i < nodeCount; i++) {
+    nodes.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'green' : 'cyan'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, width, height);
+  
+  const time = Date.now() * 0.001;
+  
+  bgCtx.lineWidth = 1;
+  
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 120) {
+        const alpha = (1 - dist / 120) * 0.15;
+        const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+        
+        if (nodes[i].type === 'green') {
+          bgCtx.strokeStyle = 'rgba(34, 197, 94, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(34, 211, 238, ' + pulseAlpha + ')';
+        }
+        
+        bgCtx.beginPath();
+        bgCtx.moveTo(nodes[i].x, nodes[i].y);
+        bgCtx.lineTo(nodes[j].x, nodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+  
+  nodes.forEach(node => {
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.03;
+    
+    if (node.x < 0 || node.x > width) node.vx *= -1;
+    if (node.y < 0 || node.y > height) node.vy *= -1;
+    
+    const dx = mouseX - node.x;
+    const dy = mouseY - node.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist < 150) {
+      node.x -= dx * 0.01;
+      node.y -= dy * 0.01;
+    }
+    
+    const pulseRadius = node.radius + Math.sin(node.pulse) * 0.5;
+    const glowRadius = pulseRadius + 4;
+    
+    const glow = bgCtx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, glowRadius
+    );
+    
+    if (node.type === 'green') {
+      glow.addColorStop(0, 'rgba(34, 197, 94, 0.4)');
+      glow.addColorStop(1, 'rgba(34, 197, 94, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.4)');
+      glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+    }
+    
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+    bgCtx.fill();
+    
+    bgCtx.fillStyle = node.type === 'green' ? '#22c55e' : '#22d3ee';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pulseRadius), 0, Math.PI * 2);
+    bgCtx.fill();
+  });
+  
+  const gradient = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  gradient.addColorStop(0, 'rgba(34, 197, 94, 0.04)');
+  gradient.addColorStop(0.5, 'rgba(34, 211, 238, 0.02)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = gradient;
+  bgCtx.fillRect(0, 0, width, height);
+}
+
+function animate() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  
+  drawBackground();
+  requestAnimationFrame(animate);
+}
+
+// === DATASETS ===
+const datasets = {
+  playTennis: {
+    name: 'Play Tennis',
+    samples: [
+      { x: 0.15, y: 0.3, class: 0, features: { outlook: 'sunny', humidity: 'high' } },
+      { x: 0.2, y: 0.25, class: 0, features: { outlook: 'sunny', humidity: 'high' } },
+      { x: 0.25, y: 0.35, class: 1, features: { outlook: 'overcast', humidity: 'high' } },
+      { x: 0.35, y: 0.4, class: 1, features: { outlook: 'rain', humidity: 'high' } },
+      { x: 0.4, y: 0.3, class: 1, features: { outlook: 'rain', humidity: 'normal' } },
+      { x: 0.45, y: 0.25, class: 0, features: { outlook: 'rain', humidity: 'normal' } },
+      { x: 0.5, y: 0.35, class: 1, features: { outlook: 'overcast', humidity: 'normal' } },
+      { x: 0.55, y: 0.28, class: 0, features: { outlook: 'sunny', humidity: 'high' } },
+      { x: 0.6, y: 0.32, class: 1, features: { outlook: 'sunny', humidity: 'normal' } },
+      { x: 0.65, y: 0.38, class: 1, features: { outlook: 'rain', humidity: 'normal' } },
+      { x: 0.7, y: 0.42, class: 1, features: { outlook: 'sunny', humidity: 'normal' } },
+      { x: 0.75, y: 0.35, class: 1, features: { outlook: 'overcast', humidity: 'high' } },
+      { x: 0.8, y: 0.28, class: 1, features: { outlook: 'overcast', humidity: 'normal' } },
+      { x: 0.85, y: 0.32, class: 0, features: { outlook: 'rain', humidity: 'high' } }
+    ],
+    features: ['outlook', 'humidity'],
+    splitPositions: { outlook: 0.42, humidity: 0.55 }
+  },
+  customer: {
+    name: 'Customer Purchase',
+    samples: [
+      { x: 0.1, y: 0.2, class: 0, features: { age: 'young', income: 'low' } },
+      { x: 0.15, y: 0.15, class: 0, features: { age: 'young', income: 'low' } },
+      { x: 0.2, y: 0.3, class: 1, features: { age: 'middle', income: 'high' } },
+      { x: 0.35, y: 0.35, class: 1, features: { age: 'middle', income: 'high' } },
+      { x: 0.4, y: 0.2, class: 0, features: { age: 'young', income: 'medium' } },
+      { x: 0.5, y: 0.4, class: 1, features: { age: 'senior', income: 'high' } },
+      { x: 0.55, y: 0.25, class: 1, features: { age: 'middle', income: 'medium' } },
+      { x: 0.65, y: 0.45, class: 1, features: { age: 'senior', income: 'high' } },
+      { x: 0.7, y: 0.3, class: 0, features: { age: 'young', income: 'low' } },
+      { x: 0.8, y: 0.35, class: 1, features: { age: 'middle', income: 'high' } },
+      { x: 0.85, y: 0.4, class: 1, features: { age: 'senior', income: 'medium' } },
+      { x: 0.9, y: 0.25, class: 0, features: { age: 'young', income: 'low' } }
+    ],
+    features: ['age', 'income'],
+    splitPositions: { age: 0.38, income: 0.6 }
+  },
+  binary: {
+    name: 'Simple Binary',
+    samples: [
+      { x: 0.1, y: 0.15, class: 0, features: { x: 'low', y: 'low' } },
+      { x: 0.15, y: 0.2, class: 0, features: { x: 'low', y: 'low' } },
+      { x: 0.2, y: 0.18, class: 0, features: { x: 'low', y: 'low' } },
+      { x: 0.25, y: 0.22, class: 0, features: { x: 'low', y: 'low' } },
+      { x: 0.3, y: 0.35, class: 1, features: { x: 'high', y: 'low' } },
+      { x: 0.35, y: 0.4, class: 1, features: { x: 'high', y: 'low' } },
+      { x: 0.6, y: 0.25, class: 0, features: { x: 'low', y: 'high' } },
+      { x: 0.65, y: 0.3, class: 0, features: { x: 'low', y: 'high' } },
+      { x: 0.7, y: 0.35, class: 1, features: { x: 'high', y: 'high' } },
+      { x: 0.75, y: 0.4, class: 1, features: { x: 'high', y: 'high' } },
+      { x: 0.8, y: 0.45, class: 1, features: { x: 'high', y: 'high' } },
+      { x: 0.85, y: 0.38, class: 1, features: { x: 'high', y: 'high' } }
+    ],
+    features: ['x', 'y'],
+    splitPositions: { x: 0.45, y: 0.28 }
+  }
+};
+
+// === DECISION TREE SIMULATOR ===
+let dataCanvas = null;
+let dataCtx = null;
+let treeCanvas = null;
+let treeCtx = null;
+
+let currentDataset = null;
+let currentMetric = 'entropy';
+let maxDepth = 3;
+let animationSpeed = 1;
+
+let treeNodes = [];
+let currentStep = 0;
+let isTraining = false;
+let splits = [];
+
+function initSimulator() {
+  dataCanvas = document.getElementById('dataCanvas');
+  treeCanvas = document.getElementById('treeCanvas');
+  
+  if (!dataCanvas || !treeCanvas) return;
+  
+  dataCtx = dataCanvas.getContext('2d');
+  treeCtx = treeCanvas.getContext('2d');
+  
+  resizeCanvases();
+  loadDataset('playTennis');
+  drawDataset();
+  drawEmptyTree();
+}
+
+function resizeCanvases() {
+  if (!dataCanvas || !treeCanvas) return;
+  
+  const dataRect = dataCanvas.parentElement.getBoundingClientRect();
+  dataCanvas.width = Math.max(1, dataRect.width - 32);
+  dataCanvas.height = 180;
+  
+  const treeRect = treeCanvas.parentElement.getBoundingClientRect();
+  treeCanvas.width = Math.max(1, treeRect.width - 32);
+  treeCanvas.height = 220;
+}
+
+function loadDataset(name) {
+  currentDataset = JSON.parse(JSON.stringify(datasets[name]));
+  treeNodes = [];
+  splits = [];
+  currentStep = 0;
+  isTraining = false;
+  
+  document.getElementById('datasetInfo').textContent = 
+    currentDataset.samples.length + ' samples | 2 classes';
+  document.getElementById('treeInfo').textContent = 'Depth: 0 | Nodes: 0';
+  
+  updateMetricsDisplay('-', '-', '-', '0', '-');
+  updateStepDisplay(1, 'Ready to Begin', 
+    'Select your dataset and split metric, then click "Start Training" to begin building the decision tree step by step.');
+}
+
+function drawDataset() {
+  if (!dataCtx || !currentDataset) return;
+  
+  const w = dataCanvas.width;
+  const h = dataCanvas.height;
+  
+  // Background
+  dataCtx.fillStyle = '#060a14';
+  dataCtx.fillRect(0, 0, w, h);
+  
+  // Grid
+  dataCtx.strokeStyle = 'rgba(92, 112, 144, 0.1)';
+  dataCtx.lineWidth = 1;
+  
+  for (let x = 0; x <= w; x += 40) {
+    dataCtx.beginPath();
+    dataCtx.moveTo(x, 0);
+    dataCtx.lineTo(x, h);
+    dataCtx.stroke();
+  }
+  
+  for (let y = 0; y <= h; y += 40) {
+    dataCtx.beginPath();
+    dataCtx.moveTo(0, y);
+    dataCtx.lineTo(w, y);
+    dataCtx.stroke();
+  }
+  
+  // Draw splits
+  splits.forEach(split => {
+    dataCtx.strokeStyle = 'rgba(34, 197, 94, 0.6)';
+    dataCtx.lineWidth = 2;
+    dataCtx.setLineDash([6, 4]);
+    
+    if (split.type === 'vertical') {
+      const x = split.position * w;
+      dataCtx.beginPath();
+      dataCtx.moveTo(x, 0);
+      dataCtx.lineTo(x, h);
+      dataCtx.stroke();
+    } else {
+      const y = split.position * h;
+      dataCtx.beginPath();
+      dataCtx.moveTo(0, y);
+      dataCtx.lineTo(w, y);
+      dataCtx.stroke();
+    }
+    dataCtx.setLineDash([]);
+  });
+  
+  // Draw points
+  currentDataset.samples.forEach((sample, i) => {
+    const x = sample.x * w;
+    const y = sample.y * h;
+    
+    // Glow
+    const glow = dataCtx.createRadialGradient(x, y, 0, x, y, 15);
+    if (sample.class === 0) {
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.4)');
+      glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+      glow.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    }
+    dataCtx.fillStyle = glow;
+    dataCtx.beginPath();
+    dataCtx.arc(x, y, 15, 0, Math.PI * 2);
+    dataCtx.fill();
+    
+    // Point
+    dataCtx.fillStyle = sample.class === 0 ? '#22d3ee' : '#a855f7';
+    dataCtx.beginPath();
+    dataCtx.arc(x, y, 6, 0, Math.PI * 2);
+    dataCtx.fill();
+  });
+  
+  // Legend
+  dataCtx.font = '10px JetBrains Mono';
+  dataCtx.fillStyle = '#22d3ee';
+  dataCtx.beginPath();
+  dataCtx.arc(16, 16, 5, 0, Math.PI * 2);
+  dataCtx.fill();
+  dataCtx.fillText('Class A', 28, 20);
+  
+  dataCtx.fillStyle = '#a855f7';
+  dataCtx.beginPath();
+  dataCtx.arc(90, 16, 5, 0, Math.PI * 2);
+  dataCtx.fill();
+  dataCtx.fillText('Class B', 102, 20);
+}
+
+function drawEmptyTree() {
+  if (!treeCtx) return;
+  
+  const w = treeCanvas.width;
+  const h = treeCanvas.height;
+  
+  treeCtx.fillStyle = '#060a14';
+  treeCtx.fillRect(0, 0, w, h);
+  
+  // Placeholder
+  treeCtx.font = '12px JetBrains Mono';
+  treeCtx.fillStyle = 'rgba(92, 112, 144, 0.5)';
+  treeCtx.textAlign = 'center';
+  treeCtx.fillText('Tree will appear here during training', w / 2, h / 2);
+}
+
+function drawTree() {
+  if (!treeCtx || treeNodes.length === 0) return;
+  
+  const w = treeCanvas.width;
+  const h = treeCanvas.height;
+  
+  treeCtx.fillStyle = '#060a14';
+  treeCtx.fillRect(0, 0, w, h);
+  
+  // Draw connections first
+  treeNodes.forEach(node => {
+    if (node.parent !== undefined) {
+      const parent = treeNodes[node.parent];
+      
+      treeCtx.strokeStyle = 'rgba(92, 112, 144, 0.4)';
+      treeCtx.lineWidth = 2;
+      treeCtx.beginPath();
+      treeCtx.moveTo(parent.x, parent.y + 20);
+      treeCtx.lineTo(node.x, node.y - 20);
+      treeCtx.stroke();
+      
+      // Branch label
+      const midX = (parent.x + node.x) / 2;
+      const midY = (parent.y + node.y) / 2;
+      treeCtx.font = '9px JetBrains Mono';
+      treeCtx.fillStyle = 'rgba(92, 112, 144, 0.8)';
+      treeCtx.textAlign = 'center';
+      treeCtx.fillText(node.branch || '', midX, midY);
+    }
+  });
+  
+  // Draw nodes
+  treeNodes.forEach(node => {
+    // Glow
+    const glow = treeCtx.createRadialGradient(node.x, node.y, 0, node.x, node.y, 30);
+    if (node.leaf) {
+      glow.addColorStop(0, node.class === 0 ? 'rgba(34, 211, 238, 0.3)' : 'rgba(168, 85, 247, 0.3)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(34, 197, 94, 0.2)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    }
+    treeCtx.fillStyle = glow;
+    treeCtx.beginPath();
+    treeCtx.arc(node.x, node.y, 30, 0, Math.PI * 2);
+    treeCtx.fill();
+    
+    // Node circle
+    if (node.leaf) {
+      treeCtx.fillStyle = node.class === 0 ? '#22d3ee' : '#a855f7';
+    } else {
+      treeCtx.fillStyle = '#1a2744';
+    }
+    treeCtx.strokeStyle = node.leaf ? (node.class === 0 ? '#22d3ee' : '#a855f7') : '#22c55e';
+    treeCtx.lineWidth = 2;
+    treeCtx.beginPath();
+    treeCtx.arc(node.x, node.y, 20, 0, Math.PI * 2);
+    treeCtx.fill();
+    treeCtx.stroke();
+    
+    // Label
+    treeCtx.font = node.leaf ? 'bold 11px JetBrains Mono' : '10px JetBrains Mono';
+    treeCtx.fillStyle = node.leaf ? '#04060d' : '#22c55e';
+    treeCtx.textAlign = 'center';
+    treeCtx.textBaseline = 'middle';
+    treeCtx.fillText(node.label, node.x, node.y);
+  });
+}
+
+function calculateEntropy(samples) {
+  if (samples.length === 0) return 0;
+  
+  const classCounts = {};
+  samples.forEach(s => {
+    classCounts[s.class] = (classCounts[s.class] || 0) + 1;
+  });
+  
+  let entropy = 0;
+  const total = samples.length;
+  
+  Object.values(classCounts).forEach(count => {
+    const p = count / total;
+    if (p > 0) {
+      entropy -= p * Math.log2(p);
+    }
+  });
+  
+  return entropy;
+}
+
+function calculateGini(samples) {
+  if (samples.length === 0) return 0;
+  
+  const classCounts = {};
+  samples.forEach(s => {
+    classCounts[s.class] = (classCounts[s.class] || 0) + 1;
+  });
+  
+  let gini = 1;
+  const total = samples.length;
+  
+  Object.values(classCounts).forEach(count => {
+    const p = count / total;
+    gini -= p * p;
+  });
+  
+  return gini;
+}
+
+function startTraining() {
+  if (!currentDataset) return;
+  
+  isTraining = true;
+  currentStep = 1;
+  treeNodes = [];
+  splits = [];
+  
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stepBtn').disabled = false;
+  
+  updateStepDisplay(1, 'Analyzing Dataset', 
+    'Loading ' + currentDataset.samples.length + ' samples. Calculating initial impurity measure...');
+  
+  const initialEntropy = currentMetric === 'entropy' 
+    ? calculateEntropy(currentDataset.samples)
+    : calculateGini(currentDataset.samples);
+  
+  updateMetricsDisplay(
+    initialEntropy.toFixed(3),
+    '-',
+    '-',
+    '0',
+    '-'
+  );
+  
+  drawDataset();
+  drawEmptyTree();
+}
+
+function nextStep() {
+  if (!isTraining || !currentDataset) return;
+  
+  currentStep++;
+  
+  switch (currentStep) {
+    case 2:
+      analyzeFeatures();
+      break;
+    case 3:
+      findBestSplit();
+      break;
+    case 4:
+      createSplit();
+      break;
+    case 5:
+      buildNode();
+      break;
+    case 6:
+      continueOrFinish();
+      break;
+    default:
+      finishTraining();
+  }
+}
+
+function analyzeFeatures() {
+  updateStepDisplay(2, 'Calculating Feature Metrics', 
+    'Evaluating each feature using ' + currentMetric + '. Determining potential information gain for each split point.');
+  
+  const currentImpurity = currentMetric === 'entropy' 
+    ? calculateEntropy(currentDataset.samples)
+    : calculateGini(currentDataset.samples);
+  
+  document.getElementById('currentEntropy').textContent = currentImpurity.toFixed(3);
+  document.getElementById('bestFeature').textContent = 'Calculating...';
+}
+
+function findBestSplit() {
+  const feature = currentDataset.features[0];
+  const position = currentDataset.splitPositions[feature];
+  
+  updateStepDisplay(3, 'Best Split Found', 
+    'Feature "' + feature + '" provides the highest information gain. Split position identified at ' + (position * 100).toFixed(0) + '%.');
+  
+  updateMetricsDisplay(
+    document.getElementById('currentEntropy').textContent,
+    feature,
+    '0.28',
+    '0',
+    '-'
+  );
+  
+  document.getElementById('bestFeature').textContent = feature;
+  document.getElementById('infoGain').textContent = '0.28';
+}
+
+function createSplit() {
+  const feature = currentDataset.features[0];
+  const position = currentDataset.splitPositions[feature];
+  
+  splits.push({
+    type: 'vertical',
+    position: position,
+    feature: feature
+  });
+  
+  updateStepDisplay(4, 'Creating Decision Split', 
+    'Dividing dataset at ' + feature + ' = ' + (position * 100).toFixed(0) + '%. Samples are now separated into two groups.');
+  
+  drawDataset();
+}
+
+function buildNode() {
+  const w = treeCanvas.width;
+  const h = treeCanvas.height;
+  
+  const feature = currentDataset.features[0];
+  
+  // Root node
+  treeNodes.push({
+    x: w / 2,
+    y: 50,
+    label: feature.substring(0, 3).toUpperCase(),
+    depth: 0,
+    samples: currentDataset.samples.length
+  });
+  
+  // Left child
+  const leftSamples = currentDataset.samples.filter(s => s.x < currentDataset.splitPositions[feature]);
+  const leftClass = leftSamples.length > 0 
+    ? (leftSamples.filter(s => s.class === 0).length > leftSamples.length / 2 ? 0 : 1)
+    : 0;
+  
+  treeNodes.push({
+    x: w / 4,
+    y: 120,
+    label: leftSamples.length > 6 ? currentDataset.features[1].substring(0, 3).toUpperCase() : (leftClass === 0 ? 'A' : 'B'),
+    leaf: leftSamples.length <= 6,
+    class: leftClass,
+    parent: 0,
+    branch: '<=',
+    depth: 1
+  });
+  
+  // Right child
+  const rightSamples = currentDataset.samples.filter(s => s.x >= currentDataset.splitPositions[feature]);
+  const rightClass = rightSamples.length > 0
+    ? (rightSamples.filter(s => s.class === 0).length > rightSamples.length / 2 ? 0 : 1)
+    : 1;
+  
+  treeNodes.push({
+    x: (w * 3) / 4,
+    y: 120,
+    label: rightSamples.length > 6 ? currentDataset.features[1].substring(0, 3).toUpperCase() : (rightClass === 0 ? 'A' : 'B'),
+    leaf: rightSamples.length <= 6,
+    class: rightClass,
+    parent: 0,
+    branch: '>',
+    depth: 1
+  });
+  
+  // Add second level splits if needed
+  if (leftSamples.length > 6 || rightSamples.length > 6) {
+    const pos2 = currentDataset.splitPositions[currentDataset.features[1]];
+    splits.push({
+      type: 'horizontal',
+      position: pos2
+    });
+    
+    // Add grandchildren
+    if (!treeNodes[1].leaf) {
+      const llClass = leftSamples.filter(s => s.y < pos2).filter(s => s.class === 0).length > 2 ? 0 : 1;
+      const lrClass = leftSamples.filter(s => s.y >= pos2).filter(s => s.class === 0).length > 2 ? 0 : 1;
+      
+      treeNodes.push({
+        x: w / 6,
+        y: 180,
+        label: llClass === 0 ? 'A' : 'B',
+        leaf: true,
+        class: llClass,
+        parent: 1,
+        branch: '<=',
+        depth: 2
+      });
+      
+      treeNodes.push({
+        x: w / 3,
+        y: 180,
+        label: lrClass === 0 ? 'A' : 'B',
+        leaf: true,
+        class: lrClass,
+        parent: 1,
+        branch: '>',
+        depth: 2
+      });
+    }
+    
+    if (!treeNodes[2].leaf) {
+      const rlClass = rightSamples.filter(s => s.y < pos2).filter(s => s.class === 0).length > 2 ? 0 : 1;
+      const rrClass = rightSamples.filter(s => s.y >= pos2).filter(s => s.class === 0).length > 2 ? 0 : 1;
+      
+      treeNodes.push({
+        x: (w * 2) / 3,
+        y: 180,
+        label: rlClass === 0 ? 'A' : 'B',
+        leaf: true,
+        class: rlClass,
+        parent: 2,
+        branch: '<=',
+        depth: 2
+      });
+      
+      treeNodes.push({
+        x: (w * 5) / 6,
+        y: 180,
+        label: rrClass === 0 ? 'A' : 'B',
+        leaf: true,
+        class: rrClass,
+        parent: 2,
+        branch: '>',
+        depth: 2
+      });
+    }
+  }
+  
+  updateStepDisplay(5, 'Building Tree Nodes', 
+    'Created decision node for "' + feature + '". Branches represent split outcomes. Leaf nodes contain final classifications.');
+  
+  document.getElementById('treeInfo').textContent = 'Depth: 2 | Nodes: ' + treeNodes.length;
+  document.getElementById('treeDepth').textContent = '2';
+  
+  drawDataset();
+  drawTree();
+}
+
+function continueOrFinish() {
+  updateStepDisplay(6, 'Refining Tree Structure', 
+    'Continuing to split nodes that still contain mixed classes. Adding additional branches to improve classification accuracy.');
+  
+  document.getElementById('stepBtn').disabled = true;
+  
+  setTimeout(() => {
+    finishTraining();
+  }, 1000 / animationSpeed);
+}
+
+function finishTraining() {
+  isTraining = false;
+  
+  // Calculate accuracy
+  let correct = 0;
+  currentDataset.samples.forEach(sample => {
+    let predicted = 0;
+    const feature = currentDataset.features[0];
+    const split1 = currentDataset.splitPositions[feature];
+    const split2 = currentDataset.splitPositions[currentDataset.features[1]];
+    
+    if (sample.x < split1) {
+      if (treeNodes.length > 3 && !treeNodes[1].leaf) {
+        predicted = sample.y < split2 ? 0 : 1;
+      } else {
+        predicted = treeNodes[1].class;
+      }
+    } else {
+      if (treeNodes.length > 3 && !treeNodes[2].leaf) {
+        predicted = sample.y < split2 ? 0 : 1;
+      } else {
+        predicted = treeNodes[2].class;
+      }
+    }
+    
+    if (predicted === sample.class) correct++;
+  });
+  
+  const accuracy = ((correct / currentDataset.samples.length) * 100).toFixed(1);
+  
+  updateStepDisplay(7, 'Training Complete', 
+    'Decision tree construction finished. The model achieved ' + accuracy + '% accuracy on the training data.');
+  
+  document.getElementById('accuracy').textContent = accuracy + '%';
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stepBtn').disabled = true;
+}
+
+function updateMetricsDisplay(entropy, feature, gain, depth, accuracy) {
+  document.getElementById('currentEntropy').textContent = entropy;
+  document.getElementById('bestFeature').textContent = feature;
+  document.getElementById('infoGain').textContent = gain;
+  document.getElementById('treeDepth').textContent = depth;
+  document.getElementById('accuracy').textContent = accuracy;
+}
+
+function updateStepDisplay(step, title, text) {
+  document.querySelector('.explanation-step-num').textContent = 'STEP ' + step;
+  document.getElementById('stepTitle').textContent = title;
+  document.getElementById('stepText').textContent = text;
+}
+
+function resetSimulator() {
+  isTraining = false;
+  currentStep = 0;
+  treeNodes = [];
+  splits = [];
+  
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stepBtn').disabled = true;
+  
+  loadDataset(document.getElementById('datasetSelect').value);
+  drawDataset();
+  drawEmptyTree();
+}
+
+// === HELP MODAL ===
+function initHelpModal() {
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const closeModal = document.getElementById('closeModal');
+  
+  helpBtn.addEventListener('click', () => {
+    helpModal.classList.add('active');
+  });
+  
+  closeModal.addEventListener('click', () => {
+    helpModal.classList.remove('active');
+  });
+  
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.classList.remove('active');
+    }
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && helpModal.classList.contains('active')) {
+      helpModal.classList.remove('active');
+    }
+  });
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  reveals.forEach(el => observer.observe(el));
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  bgCanvas.width = width;
+  bgCanvas.height = height;
+  initNodes();
+  
+  resizeCanvases();
+  if (currentDataset) {
+    drawDataset();
+    if (treeNodes.length > 0) {
+      drawTree();
+    } else {
+      drawEmptyTree();
+    }
+  }
+});
+
+// === CONTROL BINDINGS ===
+document.addEventListener('DOMContentLoaded', function() {
+  const datasetSelect = document.getElementById('datasetSelect');
+  const metricSelect = document.getElementById('metricSelect');
+  const depthSlider = document.getElementById('depthSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const startBtn = document.getElementById('startBtn');
+  const stepBtn = document.getElementById('stepBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  
+  datasetSelect.addEventListener('change', function() {
+    loadDataset(this.value);
+    drawDataset();
+    drawEmptyTree();
+  });
+  
+  metricSelect.addEventListener('change', function() {
+    currentMetric = this.value;
+  });
+  
+  depthSlider.addEventListener('input', function() {
+    maxDepth = parseInt(this.value);
+    document.getElementById('depthValue').textContent = this.value;
+  });
+  
+  speedSlider.addEventListener('input', function() {
+    animationSpeed = parseFloat(this.value);
+    document.getElementById('speedValue').textContent = this.value + 'x';
+  });
+  
+  startBtn.addEventListener('click', startTraining);
+  stepBtn.addEventListener('click', nextStep);
+  resetBtn.addEventListener('click', resetSimulator);
+});
+
+// === INITIALIZE ===
+initNodes();
+animate();
+initScrollReveal();
+initHelpModal();
+
+requestAnimationFrame(function() {
+  initSimulator();
+});
+</script>
+
+</body>
+</html>

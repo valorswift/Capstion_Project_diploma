@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search Algorithm Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --bg: #04060d;
+  --bg-elevated: #080c16;
+  --card: #0a1020;
+  --border: #152035;
+  --accent: #00e5ff;
+  --accent-alt: #a855f7;
+  --accent-warm: #f472b6;
+  --text: #e8ecf4;
+  --muted: #5c7090;
+  --cyan: #22d3ee;
+  --purple: #c084fc;
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --red: #ef4444;
+  --orange: #f97316;
+  --yellow: #eab308;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.neural-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse at 15% 25%, rgba(168, 85, 247, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 75%, rgba(34, 211, 238, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(0, 229, 255, 0.02) 0%, transparent 60%);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 6, 13, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.nav-brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.nav-brand-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-breadcrumb span {
+  color: var(--accent);
+}
+
+.hero {
+  min-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 20px 40px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(0, 229, 255, 0.08);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+}
+
+.section-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse-neural 2s ease-in-out infinite;
+}
+
+@keyframes pulse-neural {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--accent); }
+  50% { opacity: 0.5; transform: scale(0.8); box-shadow: 0 0 4px var(--accent); }
+}
+
+.main-title {
+  font-size: clamp(32px, 7vw, 54px);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--cyan) 50%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
+  max-width: 520px;
+  line-height: 1.9;
+}
+
+.section {
+  padding: 20px 20px 100px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 28px;
+}
+
+.card {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.95), rgba(8, 12, 22, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  display: block;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), transparent, rgba(168, 85, 247, 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card:hover::after {
+  opacity: 1;
+}
+
+.card:hover {
+  transform: translateY(-10px) scale(1.01);
+  border-color: rgba(0, 229, 255, 0.25);
+  box-shadow:
+    0 30px 80px -20px rgba(0, 229, 255, 0.12),
+    0 0 60px -20px rgba(168, 85, 247, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.card-preview {
+  height: 180px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at center, #0c1428 0%, #060a14 100%);
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.card-preview-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  background: rgba(4, 6, 13, 0.85);
+  padding: 6px 12px;
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+  z-index: 1;
+  border: 1px solid rgba(0, 229, 255, 0.1);
+}
+
+.card-content {
+  padding: 28px;
+}
+
+.card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.tag-linear {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(249, 115, 22, 0.18));
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.tag-logarithmic {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(20, 184, 166, 0.18));
+  color: #34d399;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.tag-constant {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(99, 102, 241, 0.18));
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.tag-loglog {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(236, 72, 153, 0.18));
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.tag-sqrt {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.18), rgba(249, 115, 22, 0.18));
+  color: #facc15;
+  border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+.card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 24px 0;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  color: var(--bg);
+  transition: all 0.3s ease;
+}
+
+.card:hover .card-btn {
+  background: linear-gradient(135deg, var(--cyan), var(--accent));
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px -4px var(--accent);
+}
+
+.card-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.card:hover .card-btn svg {
+  transform: translateX(4px);
+}
+
+.card-meta {
+  text-align: right;
+}
+
+.card-meta-complexity {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hidden { display: none !important; }
+
+/* Footer stats bar */
+.footer-bar {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 24px 32px;
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.9), rgba(8, 12, 22, 0.95));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.footer-stat {
+  text-align: center;
+}
+
+.footer-stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.footer-stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.footer-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px 20px;
+  }
+
+  .nav-breadcrumb {
+    display: none;
+  }
+
+  .hero {
+    padding: 100px 20px 30px;
+    min-height: 40vh;
+  }
+
+  .card-preview {
+    height: 140px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-inner {
+    padding: 20px;
+    justify-content: center;
+  }
+
+  .footer-divider {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="neural-grid"></div>
+
+<div class="content">
+
+  <nav class="nav">
+    <div class="nav-brand" onclick="window.location.href='index.html'">
+      <div class="nav-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04060d" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">AlgoViz</span>
+    </div>
+    <div class="nav-breadcrumb">
+      <a href="#" style="color: var(--muted); text-decoration: none;">Labs</a>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+      <span>Search Algorithms</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="section-tag">Interactive Algorithm Lab</div>
+    <h1 class="main-title">Search Algorithms</h1>
+    <p class="subtitle">
+      // Visualize and understand search algorithms<br>
+      // through interactive real-time animations and complexity analysis.
+    </p>
+  </section>
+
+  <section class="section">
+    <div class="grid">
+
+      <!-- Linear Search -->
+      <div class="card reveal" onclick="openPage('linearSearch.html')">
+        <div class="card-preview">
+          <canvas id="preview-linear"></canvas>
+          <div class="card-preview-overlay">SEQUENTIAL</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-linear">O(n)</span>
+          <h3>Linear Search</h3>
+          <p>
+            Iterates through elements one by one until the target is found.
+            Works on any unsorted or sorted collection.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">Unsorted</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Binary Search -->
+      <div class="card reveal" onclick="openPage('binarySearch.html')">
+        <div class="card-preview">
+          <canvas id="preview-binary"></canvas>
+          <div class="card-preview-overlay">DIVIDE</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-logarithmic">O(log n)</span>
+          <h3>Binary Search</h3>
+          <p>
+            Efficiently halves the search space each step.
+            Requires sorted input for correct operation.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">Sorted</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ternary Search -->
+      <div class="card reveal" onclick="openPage('ternarySearch.html')">
+        <div class="card-preview">
+          <canvas id="preview-ternary"></canvas>
+          <div class="card-preview-overlay">TRIWAY</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-loglog">O(log&#8323; n)</span>
+          <h3>Ternary Search</h3>
+          <p>
+            Divides the array into three equal parts each step.
+            Useful for unimodal functions and optimization.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">Sorted</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exponential Search -->
+      <div class="card reveal" onclick="openPage('expoSearch.html')">
+        <div class="card-preview">
+          <canvas id="preview-expo"></canvas>
+          <div class="card-preview-overlay">EXPONENT</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-logarithmic">O(log n)</span>
+          <h3>Exponential Search</h3>
+          <p>
+            Doubles the index exponentially to find a range, then binary searches within it.
+            Ideal for unbounded or infinite arrays.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">Sorted</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jump Search -->
+      <div class="card reveal" onclick="openPage('jumpsearch.html')">
+        <div class="card-preview">
+          <canvas id="preview-jump"></canvas>
+          <div class="card-preview-overlay">BLOCK</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-sqrt">O(&#8730;n)</span>
+          <h3>Jump Search</h3>
+          <p>
+            Jumps ahead by fixed block size, then linear scans the target block.
+            A middle ground between linear and binary search.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">Sorted</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hashing -->
+      <div class="card reveal" onclick="openPage('hashSearch.html')">
+        <div class="card-preview">
+          <canvas id="preview-hash"></canvas>
+          <div class="card-preview-overlay">BUCKET</div>
+        </div>
+        <div class="card-content">
+          <span class="card-tag tag-constant">O(1) avg</span>
+          <h3>Hashing</h3>
+          <p>
+            Uses a hash function to map keys directly to bucket indices.
+            Average constant-time lookups with proper collision handling.
+          </p>
+          <div class="card-footer">
+            <span class="card-btn">
+              Visualize
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </span>
+            <div class="card-meta">
+              <div class="card-meta-complexity">Hash Table</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer Stats -->
+  <div class="footer-bar">
+    <div class="footer-inner">
+      <div class="footer-stat">
+        <div class="footer-stat-value">6</div>
+        <div class="footer-stat-label">Algorithms</div>
+      </div>
+      <div class="footer-divider"></div>
+      <div class="footer-stat">
+        <div class="footer-stat-value">O(1) – O(n)</div>
+        <div class="footer-stat-label">Complexity Range</div>
+      </div>
+      <div class="footer-divider"></div>
+      <div class="footer-stat">
+        <div class="footer-stat-value">Interactive</div>
+        <div class="footer-stat-label">Real-time Animation</div>
+      </div>
+      <div class="footer-divider"></div>
+      <div class="footer-stat">
+        <div class="footer-stat-value" style="color: var(--green);">Online</div>
+        <div class="footer-stat-label">Status</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// === BACKGROUND NEURAL NETWORK ===
+var bgCanvas = document.getElementById('bg-canvas');
+var bgCtx = bgCanvas.getContext('2d');
+var bgWidth = window.innerWidth;
+var bgHeight = window.innerHeight;
+bgCanvas.width = bgWidth;
+bgCanvas.height = bgHeight;
+
+var mouseX = bgWidth / 2;
+var mouseY = bgHeight / 2;
+var targetMouseX = mouseX;
+var targetMouseY = mouseY;
+
+var nodes = [];
+var nodeCount = 55;
+
+function initNodes() {
+  nodes = [];
+  for (var i = 0; i < nodeCount; i++) {
+    nodes.push({
+      x: Math.random() * bgWidth,
+      y: Math.random() * bgHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      radius: Math.random() * 2 + 1,
+      pulse: Math.random() * Math.PI * 2,
+      type: Math.random() > 0.5 ? 'cyan' : 'purple'
+    });
+  }
+}
+
+function drawBackground() {
+  bgCtx.fillStyle = '#04060d';
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+
+  var time = Date.now() * 0.001;
+  bgCtx.lineWidth = 1;
+
+  for (var i = 0; i < nodes.length; i++) {
+    for (var j = i + 1; j < nodes.length; j++) {
+      var dx = nodes[i].x - nodes[j].x;
+      var dy = nodes[i].y - nodes[j].y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 120) {
+        var alpha = (1 - dist / 120) * 0.12;
+        var pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 2 + i * 0.5));
+
+        if (nodes[i].type === 'cyan') {
+          bgCtx.strokeStyle = 'rgba(34, 211, 238, ' + pulseAlpha + ')';
+        } else {
+          bgCtx.strokeStyle = 'rgba(168, 85, 247, ' + pulseAlpha + ')';
+        }
+
+        bgCtx.beginPath();
+        bgCtx.moveTo(nodes[i].x, nodes[i].y);
+        bgCtx.lineTo(nodes[j].x, nodes[j].y);
+        bgCtx.stroke();
+      }
+    }
+  }
+
+  for (var k = 0; k < nodes.length; k++) {
+    var node = nodes[k];
+    node.x += node.vx;
+    node.y += node.vy;
+    node.pulse += 0.03;
+
+    if (node.x < 0 || node.x > bgWidth) node.vx *= -1;
+    if (node.y < 0 || node.y > bgHeight) node.vy *= -1;
+
+    var dmx = mouseX - node.x;
+    var dmy = mouseY - node.y;
+    var dmd = Math.sqrt(dmx * dmx + dmy * dmy);
+
+    if (dmd < 150) {
+      node.x -= dmx * 0.01;
+      node.y -= dmy * 0.01;
+    }
+
+    var pr = node.radius + Math.sin(node.pulse) * 0.5;
+    var gr = Math.max(1, pr + 4);
+
+    var glow = bgCtx.createRadialGradient(node.x, node.y, 0, node.x, node.y, gr);
+
+    if (node.type === 'cyan') {
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.4)');
+      glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+    } else {
+      glow.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+      glow.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    }
+
+    bgCtx.fillStyle = glow;
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, gr, 0, Math.PI * 2);
+    bgCtx.fill();
+
+    bgCtx.fillStyle = node.type === 'cyan' ? '#22d3ee' : '#a855f7';
+    bgCtx.beginPath();
+    bgCtx.arc(node.x, node.y, Math.max(0.5, pr), 0, Math.PI * 2);
+    bgCtx.fill();
+  }
+
+  var mg = bgCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  mg.addColorStop(0, 'rgba(0, 229, 255, 0.04)');
+  mg.addColorStop(0.5, 'rgba(168, 85, 247, 0.02)');
+  mg.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  bgCtx.fillStyle = mg;
+  bgCtx.fillRect(0, 0, bgWidth, bgHeight);
+}
+
+function animateBg() {
+  mouseX += (targetMouseX - mouseX) * 0.08;
+  mouseY += (targetMouseY - mouseY) * 0.08;
+  drawBackground();
+  requestAnimationFrame(animateBg);
+}
+
+// === PREVIEW: Linear Search — scanning left to right ===
+function initPreviewLinear() {
+  var canvas = document.getElementById('preview-linear');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+
+  var numBars = 18;
+  var values = [];
+  var targetIdx = 12;
+  var time = 0;
+  var scanIdx = 0;
+
+  for (var i = 0; i < numBars; i++) {
+    values.push(10 + Math.random() * 80);
+  }
+
+  function draw() {
+    time += 0.016;
+    scanIdx = Math.floor(time * 3) % numBars;
+
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    var bw = canvas.width / numBars - 3;
+    var mh = canvas.height - 40;
+
+    for (var i = 0; i < numBars; i++) {
+      var x = i * (bw + 3) + 2;
+      var h = values[i] * (mh / 100);
+      var y = canvas.height - 20 - h;
+
+      var grad = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+
+      if (i === scanIdx && scanIdx !== targetIdx) {
+        // currently scanning — white
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(1, '#94a3b8');
+      } else if (i === targetIdx) {
+        // target found — green glow
+        grad.addColorStop(0, '#22c55e');
+        grad.addColorStop(1, '#10b981');
+      } else if (i < scanIdx) {
+        // already scanned — dimmed
+        grad.addColorStop(0, 'rgba(34, 211, 238, 0.25)');
+        grad.addColorStop(1, 'rgba(59, 130, 246, 0.15)');
+      } else {
+        // not yet scanned — default
+        grad.addColorStop(0, '#22d3ee');
+        grad.addColorStop(1, '#3b82f6');
+      }
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(x, y, bw, h, 3);
+      ctx.fill();
+
+      // glow on scan bar
+      if (i === scanIdx && scanIdx !== targetIdx) {
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(x, y, bw, h);
+        ctx.shadowBlur = 0;
+      }
+
+      // target marker
+      if (i === targetIdx) {
+        ctx.shadowColor = 'rgba(34, 197, 94, 0.8)';
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.15)';
+        ctx.fillRect(x - 2, y - 4, bw + 4, h + 4);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // target label
+    ctx.font = '9px JetBrains Mono';
+    ctx.fillStyle = '#22c55e';
+    ctx.textAlign = 'center';
+    ctx.fillText('TARGET', targetIdx * (bw + 3) + 2 + bw / 2, 14);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === PREVIEW: Binary Search — left/right/mid pointers ===
+function initPreviewBinary() {
+  var canvas = document.getElementById('preview-binary');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+
+  var numBars = 16;
+  var values = [];
+  var time = 0;
+  var step = 0;
+  var targetIdx = 10;
+
+  // sorted array
+  for (var i = 0; i < numBars; i++) {
+    values.push(10 + i * 5);
+  }
+
+  // precompute steps of binary search for target at index 10
+  var steps = [];
+  var lo = 0, hi = numBars - 1;
+  while (lo <= hi) {
+    var mid = Math.floor((lo + hi) / 2);
+    steps.push({ lo: lo, hi: hi, mid: mid });
+    if (mid === targetIdx) break;
+    if (values[mid] < values[targetIdx]) {
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+
+  function draw() {
+    time += 0.016;
+    if (Math.floor(time * 1.5) !== Math.floor((time - 0.016) * 1.5)) {
+      step = (step + 1) % steps.length;
+    }
+
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    var s = steps[step];
+    var bw = canvas.width / numBars - 3;
+    var mh = canvas.height - 40;
+
+    for (var i = 0; i < numBars; i++) {
+      var x = i * (bw + 3) + 2;
+      var h = values[i] * (mh / 100);
+      var y = canvas.height - 20 - h;
+
+      var grad = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+
+      if (i === s.mid && i === targetIdx) {
+        grad.addColorStop(0, '#22c55e');
+        grad.addColorStop(1, '#10b981');
+      } else if (i === s.mid) {
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(1, '#e0e0e0');
+      } else if (i < s.lo || i > s.hi) {
+        grad.addColorStop(0, 'rgba(100, 116, 139, 0.15)');
+        grad.addColorStop(1, 'rgba(100, 116, 139, 0.08)');
+      } else {
+        grad.addColorStop(0, '#22d3ee');
+        grad.addColorStop(1, '#3b82f6');
+      }
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(x, y, bw, h, 3);
+      ctx.fill();
+
+      // mid glow
+      if (i === s.mid) {
+        ctx.shadowColor = i === targetIdx ? 'rgba(34, 197, 94, 0.7)' : 'rgba(255, 255, 255, 0.5)';
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(x, y, bw, h);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // pointers
+    ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'center';
+    var loX = s.lo * (bw + 3) + 2 + bw / 2;
+    var hiX = s.hi * (bw + 3) + 2 + bw / 2;
+    var midX = s.mid * (bw + 3) + 2 + bw / 2;
+
+    ctx.fillStyle = '#22d3ee';
+    ctx.fillText('L', loX, 14);
+    ctx.fillStyle = '#a855f7';
+    ctx.fillText('R', hiX, 14);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('M', midX, 14);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === PREVIEW: Ternary Search — two mid points ===
+function initPreviewTernary() {
+  var canvas = document.getElementById('preview-ternary');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+
+  var numBars = 18;
+  var values = [];
+  var time = 0;
+  var step = 0;
+
+  for (var i = 0; i < numBars; i++) {
+    values.push(8 + i * 4.5);
+  }
+
+  // precompute ternary steps
+  var steps = [];
+  var lo = 0, hi = numBars - 1;
+  var targetIdx = 13;
+  for (var s = 0; s < 6; s++) {
+    if (lo > hi) break;
+    var third = Math.max(1, Math.floor((hi - lo) / 3));
+    var mid1 = lo + third;
+    var mid2 = hi - third;
+    steps.push({ lo: lo, hi: hi, mid1: mid1, mid2: mid2 });
+    if (mid1 === targetIdx || mid2 === targetIdx) break;
+    if (values[targetIdx] < values[mid1]) {
+      hi = mid1 - 1;
+    } else if (values[targetIdx] > values[mid2]) {
+      lo = mid2 + 1;
+    } else {
+      lo = mid1 + 1;
+      hi = mid2 - 1;
+    }
+  }
+
+  function draw() {
+    time += 0.016;
+    if (Math.floor(time * 1.2) !== Math.floor((time - 0.016) * 1.2)) {
+      step = (step + 1) % steps.length;
+    }
+
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    var st = steps[step];
+    var bw = canvas.width / numBars - 3;
+    var mh = canvas.height - 40;
+
+    for (var i = 0; i < numBars; i++) {
+      var x = i * (bw + 3) + 2;
+      var h = values[i] * (mh / 100);
+      var y = canvas.height - 20 - h;
+
+      var grad = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+
+      if (i === targetIdx) {
+        grad.addColorStop(0, '#22c55e');
+        grad.addColorStop(1, '#10b981');
+      } else if (i === st.mid1 || i === st.mid2) {
+        grad.addColorStop(0, '#c084fc');
+        grad.addColorStop(1, '#a855f7');
+      } else if (i < st.lo || i > st.hi) {
+        grad.addColorStop(0, 'rgba(100, 116, 139, 0.12)');
+        grad.addColorStop(1, 'rgba(100, 116, 139, 0.06)');
+      } else {
+        grad.addColorStop(0, '#22d3ee');
+        grad.addColorStop(1, '#3b82f6');
+      }
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(x, y, bw, h, 3);
+      ctx.fill();
+
+      if (i === st.mid1 || i === st.mid2) {
+        ctx.shadowColor = 'rgba(168, 85, 247, 0.6)';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = 'rgba(168, 85, 247, 0.08)';
+        ctx.fillRect(x, y, bw, h);
+        ctx.shadowBlur = 0;
+      }
+
+      if (i === targetIdx) {
+        ctx.shadowColor = 'rgba(34, 197, 94, 0.7)';
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+        ctx.fillRect(x - 1, y - 3, bw + 2, h + 3);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // labels
+    ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#c084fc';
+    ctx.fillText('M1', st.mid1 * (bw + 3) + 2 + bw / 2, 14);
+    ctx.fillText('M2', st.mid2 * (bw + 3) + 2 + bw / 2, 14);
+    ctx.fillStyle = '#22d3ee';
+    ctx.fillText('L', st.lo * (bw + 3) + 2 + bw / 2, 14);
+    ctx.fillStyle = '#a855f7';
+    ctx.fillText('R', st.hi * (bw + 3) + 2 + bw / 2, 14);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === PREVIEW: Exponential Search — doubling jumps ===
+function initPreviewExpo() {
+  var canvas = document.getElementById('preview-expo');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+
+  var numBars = 20;
+  var values = [];
+  var time = 0;
+  var targetIdx = 14;
+  var jumpPositions = [1, 2, 4, 8, 16];
+  var currentJump = 0;
+  var scanInBlock = -1;
+
+  for (var i = 0; i < numBars; i++) {
+    values.push(8 + i * 4);
+  }
+
+  function draw() {
+    time += 0.016;
+
+    var phase = Math.floor(time * 2) % (jumpPositions.length + numBars);
+
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    var bw = canvas.width / numBars - 2;
+    var mh = canvas.height - 40;
+
+    for (var i = 0; i < numBars; i++) {
+      var x = i * (bw + 2) + 1;
+      var h = values[i] * (mh / 100);
+      var y = canvas.height - 20 - h;
+
+      var grad = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+
+      var isJumpPoint = false;
+      for (var j = 0; j <= Math.min(phase, jumpPositions.length - 1); j++) {
+        if (jumpPositions[j] === i) isJumpPoint = true;
+      }
+
+      if (i === targetIdx) {
+        grad.addColorStop(0, '#22c55e');
+        grad.addColorStop(1, '#10b981');
+      } else if (phase >= jumpPositions.length && i >= jumpPositions[jumpPositions.length - 1] && i <= Math.min(jumpPositions[jumpPositions.length - 1] + (phase - jumpPositions.length), numBars - 1)) {
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(1, '#e0e0e0');
+      } else if (isJumpPoint && phase < jumpPositions.length) {
+        grad.addColorStop(0, '#f97316');
+        grad.addColorStop(1, '#ea580c');
+      } else {
+        grad.addColorStop(0, '#22d3ee');
+        grad.addColorStop(1, '#3b82f6');
+      }
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(x, y, bw, h, 2);
+      ctx.fill();
+
+      // orange glow on jump points
+      if (isJumpPoint && phase < jumpPositions.length) {
+        ctx.shadowColor = 'rgba(249, 115, 22, 0.6)';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = 'rgba(249, 115, 22, 0.08)';
+        ctx.fillRect(x, y, bw, h);
+        ctx.shadowBlur = 0;
+      }
+
+      if (i === targetIdx) {
+        ctx.shadowColor = 'rgba(34, 197, 94, 0.7)';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+        ctx.fillRect(x - 1, y - 2, bw + 2, h + 2);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // exponential curve
+    ctx.strokeStyle = 'rgba(249, 115, 22, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    for (var k = 0; k < jumpPositions.length && jumpPositions[k] < numBars; k++) {
+      var jx = jumpPositions[k] * (bw + 2) + 1 + bw / 2;
+      var jy = canvas.height - 20 - values[jumpPositions[k]] * (mh / 100) - 8;
+      if (k === 0) ctx.moveTo(jx, jy);
+      else ctx.lineTo(jx, jy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // label
+    ctx.font = '9px JetBrains Mono';
+    ctx.fillStyle = '#f97316';
+    ctx.textAlign = 'left';
+    ctx.fillText('2^k', 8, 16);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === PREVIEW: Jump Search — block jumps ===
+function initPreviewJump() {
+  var canvas = document.getElementById('preview-jump');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+
+  var numBars = 16;
+  var values = [];
+  var time = 0;
+  var blockSize = 4;
+  var targetIdx = 11;
+
+  for (var i = 0; i < numBars; i++) {
+    values.push(10 + i * 5);
+  }
+
+  function draw() {
+    time += 0.016;
+    var phase = Math.floor(time * 1.8) % (numBars + blockSize + 2);
+
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    var bw = canvas.width / numBars - 3;
+    var mh = canvas.height - 40;
+
+    // current jump index
+    var jumpIdx = Math.floor(phase / 2) * blockSize;
+    var inLinearScan = phase >= numBars;
+    var linearPos = inLinearScan ? (phase - numBars) : -1;
+    var blockStart = Math.min(jumpIdx, numBars - 1);
+
+    // draw block dividers
+    for (var b = blockSize; b < numBars; b += blockSize) {
+      var bx = b * (bw + 3);
+      ctx.strokeStyle = 'rgba(234, 179, 8, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(bx, 8);
+      ctx.lineTo(bx, canvas.height - 12);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    for (var i = 0; i < numBars; i++) {
+      var x = i * (bw + 3) + 2;
+      var h = values[i] * (mh / 100);
+      var y = canvas.height - 20 - h;
+
+      var grad = ctx.createLinearGradient(x, y, x, canvas.height - 20);
+
+      if (i === targetIdx) {
+        grad.addColorStop(0, '#22c55e');
+        grad.addColorStop(1, '#10b981');
+      } else if (inLinearScan && i >= blockStart && i <= blockStart + linearPos && i < blockStart + blockSize) {
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(1, '#e0e0e0');
+      } else if (i === jumpIdx && !inLinearScan && jumpIdx < numBars) {
+        grad.addColorStop(0, '#eab308');
+        grad.addColorStop(1, '#ca8a04');
+      } else {
+        grad.addColorStop(0, '#22d3ee');
+        grad.addColorStop(1, '#3b82f6');
+      }
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(x, y, bw, h, 3);
+      ctx.fill();
+
+      if (i === jumpIdx && !inLinearScan && jumpIdx < numBars) {
+        ctx.shadowColor = 'rgba(234, 179, 8, 0.6)';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = 'rgba(234, 179, 8, 0.08)';
+        ctx.fillRect(x, y, bw, h);
+        ctx.shadowBlur = 0;
+      }
+
+      if (i === targetIdx) {
+        ctx.shadowColor = 'rgba(34, 197, 94, 0.7)';
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+        ctx.fillRect(x - 1, y - 3, bw + 2, h + 3);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // block size label
+    ctx.font = '9px JetBrains Mono';
+    ctx.fillStyle = '#eab308';
+    ctx.textAlign = 'left';
+    ctx.fillText('BLOCK: ' + blockSize, 8, 16);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === PREVIEW: Hashing — buckets and keys ===
+function initPreviewHash() {
+  var canvas = document.getElementById('preview-hash');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(1, rect.width);
+  canvas.height = Math.max(1, rect.height);
+
+  var numBuckets = 7;
+  var time = 0;
+  var keys = [14, 23, 7, 31, 9, 18, 5, 27, 12, 3];
+  var currentKeyIdx = 0;
+
+  function hashFunc(key) {
+    return key % numBuckets;
+  }
+
+  // bucket contents
+  var buckets = [];
+  for (var i = 0; i < numBuckets; i++) buckets.push([]);
+
+  function draw() {
+    time += 0.016;
+
+    if (Math.floor(time * 1.5) !== Math.floor((time - 0.016) * 1.5)) {
+      if (currentKeyIdx < keys.length) {
+        var k = keys[currentKeyIdx];
+        var b = hashFunc(k);
+        buckets[b].push(k);
+        currentKeyIdx++;
+      } else {
+        // reset
+        for (var i = 0; i < numBuckets; i++) buckets[i] = [];
+        currentKeyIdx = 0;
+      }
+    }
+
+    ctx.fillStyle = '#060a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    var bucketW = (canvas.width - 40) / numBuckets;
+    var bucketH = canvas.height - 50;
+    var startY = 30;
+
+    // current key indicator
+    if (currentKeyIdx < keys.length) {
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillStyle = '#00e5ff';
+      ctx.textAlign = 'center';
+      ctx.fillText('KEY: ' + keys[currentKeyIdx] + '  →  BUCKET: ' + hashFunc(keys[currentKeyIdx]), canvas.width / 2, 18);
+    }
+
+    for (var i = 0; i < numBuckets; i++) {
+      var bx = 20 + i * bucketW;
+
+      // bucket outline
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(bx + 4, startY, bucketW - 8, bucketH, 6);
+      ctx.stroke();
+
+      // bucket index
+      ctx.font = '9px JetBrains Mono';
+      ctx.fillStyle = 'rgba(100, 116, 139, 0.8)';
+      ctx.textAlign = 'center';
+      ctx.fillText('[' + i + ']', bx + bucketW / 2, canvas.height - 6);
+
+      // items in bucket
+      for (var j = 0; j < buckets[i].length; j++) {
+        var iy = startY + 10 + j * 22;
+        if (iy > startY + bucketH - 20) break;
+
+        var itemW = bucketW - 20;
+        var itemH = 16;
+
+        var isLatest = currentKeyIdx > 0 && buckets[i][j] === keys[currentKeyIdx - 1];
+        var isTarget = currentKeyIdx < keys.length && i === hashFunc(keys[currentKeyIdx]);
+
+        if (isLatest) {
+          ctx.fillStyle = 'rgba(0, 229, 255, 0.25)';
+          ctx.strokeStyle = '#00e5ff';
+        } else {
+          ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+          ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+        }
+
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(bx + 10, iy, itemW, itemH, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '9px JetBrains Mono';
+        ctx.fillStyle = isLatest ? '#00e5ff' : '#60a5fa';
+        ctx.textAlign = 'center';
+        ctx.fillText(buckets[i][j], bx + 10 + itemW / 2, iy + 12);
+      }
+
+      // highlight active bucket
+      if (currentKeyIdx < keys.length && i === hashFunc(keys[currentKeyIdx])) {
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(bx + 4, startY, bucketW - 8, bucketH, 6);
+        ctx.stroke();
+      }
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === NAVIGATION ===
+function openPage(url) {
+  if (url) {
+    window.location.href = url;
+  }
+}
+
+// === SCROLL REVEAL ===
+function initScrollReveal() {
+  var reveals = document.querySelectorAll('.reveal');
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry, index) {
+      if (entry.isIntersecting) {
+        setTimeout(function() {
+          entry.target.classList.add('visible');
+        }, index * 80);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  reveals.forEach(function(el) {
+    observer.observe(el);
+  });
+}
+
+// === EVENT HANDLERS ===
+window.addEventListener('mousemove', function(e) {
+  targetMouseX = e.clientX;
+  targetMouseY = e.clientY;
+});
+
+window.addEventListener('resize', function() {
+  bgWidth = window.innerWidth;
+  bgHeight = window.innerHeight;
+  bgCanvas.width = bgWidth;
+  bgCanvas.height = bgHeight;
+  initNodes();
+  initPreviewLinear();
+  initPreviewBinary();
+  initPreviewTernary();
+  initPreviewExpo();
+  initPreviewJump();
+  initPreviewHash();
+});
+
+// === INIT ===
+initNodes();
+animateBg();
+initScrollReveal();
+
+requestAnimationFrame(function() {
+  initPreviewLinear();
+  initPreviewBinary();
+  initPreviewTernary();
+  initPreviewExpo();
+  initPreviewJump();
+  initPreviewHash();
+});
+</script>
+
+</body>
+</html>

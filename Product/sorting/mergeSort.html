@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Merge Sort Visualizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-card: #161618;
+      --fg: #e8e8e8;
+      --muted: #6b6b6b;
+      --accent-blue: #3b82f6;
+      --accent-yellow: #eab308;
+      --accent-orange: #f97316;
+      --accent-green: #22c55e;
+      --accent-purple: #a855f7;
+      --accent-cyan: #06b6d4;
+      --accent-red: #ef4444;
+      --border: #2a2a2c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-pattern {
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
+        radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .card-header {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--border);
+    }
+
+    .btn-warning {
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Main Array Bars */
+    .main-array-container {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 2px;
+      height: 140px;
+      padding: 12px;
+      position: relative;
+    }
+
+    .bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 32px;
+      border-radius: 4px 4px 0 0;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .bar-value {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px;
+      color: var(--fg);
+    }
+
+    .bar-default { background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%); }
+    
+    .bar-comparing {
+      background: linear-gradient(180deg, var(--accent-yellow) 0%, #ca8a04 100%);
+      box-shadow: 0 0 20px rgba(234, 179, 8, 0.4);
+    }
+    
+    .bar-merging {
+      background: linear-gradient(180deg, var(--accent-orange) 0%, #c2410c 100%);
+      box-shadow: 0 0 20px rgba(249, 115, 22, 0.4);
+    }
+    
+    .bar-sorted {
+      background: linear-gradient(180deg, var(--accent-green) 0%, #16a34a 100%);
+      box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+    }
+
+    .bar-active-left {
+      background: linear-gradient(180deg, var(--accent-blue) 0%, #1d4ed8 100%);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    }
+
+    .bar-active-right {
+      background: linear-gradient(180deg, var(--accent-purple) 0%, #7c3aed 100%);
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+    }
+
+    /* Subarray Container */
+    .subarray-viz {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      min-height: 200px;
+      overflow-y: auto;
+    }
+
+    .subarray-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      opacity: 0;
+      animation: fadeSlideIn 0.3s ease forwards;
+    }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .subarray-group {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
+    }
+
+    .subarray-group.active {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+    }
+
+    .subarray-group.left {
+      border-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .subarray-group.right {
+      border-color: var(--accent-purple);
+      background: rgba(168, 85, 247, 0.1);
+    }
+
+    .mini-bar {
+      width: 24px;
+      border-radius: 3px 3px 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      transition: all 0.2s ease;
+    }
+
+    .mini-bar-value {
+      font-size: 8px;
+      font-weight: 600;
+      padding: 1px;
+    }
+
+    /* Recursion Tree */
+    .tree-container {
+      position: relative;
+      min-height: 280px;
+      overflow: auto;
+      padding: 16px;
+    }
+
+    .tree-node {
+      position: absolute;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      transition: all 0.3s ease;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      opacity: 0;
+    }
+
+    .tree-node.visible {
+      opacity: 1;
+    }
+
+    .tree-node.active {
+      border-color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.1);
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+      transform: scale(1.05);
+    }
+
+    .tree-node.split {
+      border-color: var(--accent-purple);
+      background: rgba(168, 85, 247, 0.1);
+    }
+
+    .tree-node.merge {
+      border-color: var(--accent-orange);
+      background: rgba(249, 115, 22, 0.1);
+    }
+
+    .tree-node.complete {
+      border-color: var(--accent-green);
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    .tree-edge {
+      position: absolute;
+      background: var(--border);
+      height: 1px;
+      transform-origin: left center;
+      z-index: 0;
+      transition: background 0.2s ease;
+    }
+
+    .tree-edge.active {
+      background: var(--accent-cyan);
+      height: 2px;
+    }
+
+    /* Level indicator */
+    .level-indicator {
+      position: absolute;
+      left: 0;
+      font-size: 9px;
+      color: var(--muted);
+      width: 20px;
+      text-align: right;
+      padding-right: 4px;
+    }
+
+    /* Code */
+    .code-line {
+      padding: 6px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .code-line.active {
+      background: rgba(59, 130, 246, 0.1);
+      border-left-color: var(--accent-blue);
+    }
+
+    .code-keyword { color: var(--accent-purple); }
+    .code-variable { color: var(--accent-cyan); }
+    .code-operator { color: var(--accent-yellow); }
+    .code-comment { color: var(--muted); font-style: italic; }
+    .code-function { color: var(--accent-orange); }
+
+    /* Stats */
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-item:last-child { border-bottom: none; }
+
+    .stat-label { color: var(--muted); font-size: 11px; }
+    .stat-value { font-weight: 600; font-size: 12px; }
+
+    /* Progress */
+    .progress-bar {
+      height: 5px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+      transition: width 0.3s ease;
+    }
+
+    /* Explanation */
+    .explanation-text {
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .highlight {
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    .highlight-blue { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+    .highlight-yellow { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+    .highlight-green { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+    .highlight-orange { background: rgba(249, 115, 22, 0.2); color: var(--accent-orange); }
+    .highlight-purple { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+
+    /* History */
+    .history-item {
+      padding: 6px 10px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      font-size: 10px;
+      margin-bottom: 4px;
+      border-left: 2px solid var(--border);
+      animation: slideIn 0.2s ease;
+    }
+
+    .history-item.split { border-left-color: var(--accent-purple); }
+    .history-item.compare { border-left-color: var(--accent-yellow); }
+    .history-item.merge { border-left-color: var(--accent-orange); }
+    .history-item.complete { border-left-color: var(--accent-green); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-5px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Input & Range */
+    .input-field {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--fg);
+      font-size: 12px;
+      width: 100%;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--bg-secondary);
+      border-radius: 2px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent-blue);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Phase Badge */
+    .phase-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in-up { animation: fadeInUp 0.3s ease forwards; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    @media (max-width: 1024px) {
+      .main-array-container { height: 100px; }
+      .bar { min-width: 24px; }
+      .tree-container { min-height: 200px; }
+    }
+  </style>
+</head>
+<body class="bg-pattern">
+  <div class="min-h-screen p-3 lg:p-4">
+    <!-- Header -->
+    <header class="mb-4 fade-in-up">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+        <div>
+          <h1 class="text-xl lg:text-2xl font-bold tracking-tight">
+            Merge Sort <span style="color: var(--accent-blue)">Visualizer</span>
+          </h1>
+          <p class="text-xs mt-0.5" style="color: var(--muted)">
+            Divide and Conquer algorithm visualization
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="phase-badge" id="phaseBadge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple)">
+            <span class="w-1.5 h-1.5 rounded-full" style="background: var(--accent-purple)"></span>
+            Ready
+          </span>
+          <button class="btn btn-secondary text-xs" onclick="showInfoModal()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4M12 8h.01"></path>
+            </svg>
+            About
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-3">
+      <!-- Left: Visualization -->
+      <div class="xl:col-span-8 space-y-3">
+        <!-- Main Array -->
+        <div class="card fade-in-up" style="animation-delay: 0.05s">
+          <div class="card-header">
+            <div class="flex gap-1">
+            </div>
+            <span class="card-title ml-1">Current Array State</span>
+            <div class="ml-auto text-xs" style="color: var(--muted)">
+              Recursion Depth: <span class="font-mono" style="color: var(--accent-purple)" id="depthDisplay">0</span>
+            </div>
+          </div>
+          <div class="main-array-container" id="mainArrayContainer">
+            <!-- Bars here -->
+          </div>
+          <div class="px-3 pb-2">
+            <div class="flex items-center gap-3 text-xs" style="color: var(--muted)">
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: #4a4a4a"></div>Default</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-yellow)"></div>Comparing</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-orange)"></div>Merging</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-green)"></div>Sorted</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-blue)"></div>Left</div>
+              <div class="flex items-center gap-1"><div class="w-2 h-2 rounded" style="background: var(--accent-purple)"></div>Right</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subarray Visualization -->
+        <div class="card fade-in-up" style="animation-delay: 0.1s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-orange)">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="8" y="14" width="8" height="7"></rect>
+            </svg>
+            <span class="card-title">Divide & Merge Visualization</span>
+          </div>
+          <div class="subarray-viz" id="subarrayViz">
+            <div class="text-center text-xs py-8" style="color: var(--muted)">Start sorting to see subarray operations</div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card fade-in-up" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan)">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+            </svg>
+            <span class="card-title">Controls</span>
+          </div>
+          <div class="p-3 space-y-3">
+            <div class="flex flex-col lg:flex-row gap-2">
+              <input type="text" class="input-field flex-1" id="customArrayInput" placeholder="Custom array (e.g., 8, 3, 5, 2, 9, 1)">
+              <div class="flex gap-2">
+                <button class="btn btn-secondary" onclick="generateRandomArray()">Random</button>
+                <button class="btn btn-secondary" onclick="applyCustomArray()">Apply</button>
+              </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-2">
+              <button class="btn btn-primary" id="startBtn" onclick="startSorting()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"></polygon></svg>
+                Start
+              </button>
+              <button class="btn btn-warning" id="pauseBtn" onclick="togglePause()" disabled>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" id="pauseIcon"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                <span id="pauseText">Pause</span>
+              </button>
+              <button class="btn btn-secondary" id="stepBtn" onclick="stepForward()" disabled>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                Step
+              </button>
+              <button class="btn btn-danger" id="resetBtn" onclick="resetVisualization()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                Reset
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs mb-1 block" style="color: var(--muted)">
+                  Speed: <span id="speedValue" class="font-mono" style="color: var(--accent-blue)">300ms</span>
+                </label>
+                <input type="range" min="50" max="800" value="300" id="speedSlider" oninput="updateSpeed(this.value)">
+              </div>
+              <div>
+                <label class="text-xs mb-1 block" style="color: var(--muted)">
+                  Size: <span id="sizeValue" class="font-mono" style="color: var(--accent-blue)">8</span>
+                </label>
+                <input type="range" min="4" max="12" value="8" id="sizeSlider" oninput="updateSize(this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explanation -->
+        <div class="card fade-in-up" style="animation-delay: 0.2s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-green)">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="card-title">Step Explanation</span>
+          </div>
+          <div class="p-3">
+            <div class="explanation-text" id="explanationText">
+              <p>Welcome to <span class="highlight highlight-blue">Merge Sort</span> Visualizer!</p>
+              <p class="mt-2" style="color: var(--muted)">Merge Sort uses the <span class="highlight highlight-purple">Divide and Conquer</span> technique:</p>
+              <ol class="mt-1 ml-3 text-xs" style="color: var(--muted)">
+                <li>1. <span class="highlight highlight-purple">Divide</span> - Split array into halves</li>
+                <li>2. <span class="highlight highlight-blue">Conquer</span> - Recursively sort subarrays</li>
+                <li>3. <span class="highlight highlight-orange">Merge</span> - Combine sorted subarrays</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Info Panels -->
+      <div class="xl:col-span-4 space-y-3">
+        <!-- Recursion Tree -->
+        <div class="card fade-in-up" style="animation-delay: 0.1s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple)">
+              <circle cx="12" cy="5" r="3"></circle>
+              <path d="M12 8v4M5 12l7 4 7-4"></path>
+            </svg>
+            <span class="card-title">Recursion Tree</span>
+          </div>
+          <div class="tree-container" id="treeContainer">
+            <div class="text-center text-xs py-8" style="color: var(--muted)">Tree will appear during sorting</div>
+          </div>
+        </div>
+
+        <!-- Pseudocode -->
+        <div class="card fade-in-up" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-yellow)">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            <span class="card-title">Pseudocode</span>
+          </div>
+          <div class="py-1" id="codeContainer">
+            <div class="code-line" data-line="1"><span class="code-function">mergeSort</span>(arr):</div>
+            <div class="code-line" data-line="2">  <span class="code-keyword">if</span> length <= 1 <span class="code-keyword">return</span></div>
+            <div class="code-line" data-line="3">  mid = length / 2</div>
+            <div class="code-line" data-line="4">  left = arr[0..mid]</div>
+            <div class="code-line" data-line="5">  right = arr[mid..end]</div>
+            <div class="code-line" data-line="6">  <span class="code-function">mergeSort</span>(left)</div>
+            <div class="code-line" data-line="7">  <span class="code-function">mergeSort</span>(right)</div>
+            <div class="code-line" data-line="8">  <span class="code-function">merge</span>(left, right)</div>
+          </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="card fade-in-up" style="animation-delay: 0.2s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-orange)">
+              <path d="M18 20V10M12 20V4M6 20v-6"></path>
+            </svg>
+            <span class="card-title">Statistics</span>
+          </div>
+          <div class="p-3">
+            <div class="stat-item">
+              <span class="stat-label">Array Size</span>
+              <span class="stat-value font-mono" id="statArraySize">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Recursion Depth</span>
+              <span class="stat-value font-mono" style="color: var(--accent-purple)" id="statRecursionDepth">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Comparisons</span>
+              <span class="stat-value font-mono" style="color: var(--accent-yellow)" id="statComparisons">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Merge Operations</span>
+              <span class="stat-value font-mono" style="color: var(--accent-orange)" id="statMerges">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Array Copies</span>
+              <span class="stat-value font-mono" style="color: var(--accent-cyan)" id="statCopies">0</span>
+            </div>
+            <div class="mt-3">
+              <div class="flex justify-between text-xs mb-1" style="color: var(--muted)">
+                <span>Progress</span>
+                <span id="progressPercent">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Complexity -->
+        <div class="card fade-in-up" style="animation-delay: 0.25s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-red)">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span class="card-title">Complexity</span>
+          </div>
+          <div class="p-3 space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Best Case</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(34, 197, 94, 0.2); color: var(--accent-green)">O(n log n)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Average</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow)">O(n log n)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Worst Case</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red)">O(n log n)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs" style="color: var(--muted)">Space</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan)">O(n)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="card fade-in-up" style="animation-delay: 0.3s">
+          <div class="card-header">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-cyan)">
+              <path d="M12 8v4l3 3"></path>
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            <span class="card-title">Step History</span>
+          </div>
+          <div class="p-2 max-h-40 overflow-y-auto" id="historyContainer">
+            <div class="text-xs text-center py-4" style="color: var(--muted)">No operations yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Modal -->
+  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" id="infoModal">
+    <div class="card max-w-md w-full">
+      <div class="card-header">
+        <span class="card-title">About Merge Sort</span>
+        <button class="ml-auto" style="color: var(--muted)" onclick="hideInfoModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="p-4 space-y-3 text-sm">
+        <p><span class="highlight highlight-blue">Merge Sort</span> is a stable, comparison-based sorting algorithm using <span class="highlight highlight-purple">Divide and Conquer</span>.</p>
+        <div class="bg-black/20 rounded p-3 text-xs space-y-2">
+          <p style="color: var(--accent-purple)"><strong>Divide:</strong> Split array into two halves</p>
+          <p style="color: var(--accent-blue)"><strong>Conquer:</strong> Recursively sort each half</p>
+          <p style="color: var(--accent-orange)"><strong>Merge:</strong> Combine sorted halves</p>
+        </div>
+        <p class="text-xs" style="color: var(--muted)">Unlike Quick Sort, Merge Sort guarantees O(n log n) in all cases and is stable, making it ideal for linked lists and external sorting.</p>
+        <button class="btn btn-primary w-full" onclick="hideInfoModal()">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ STATE ============
+    let array = [];
+    let originalArray = [];
+    let sorting = false;
+    let paused = false;
+    let stepMode = false;
+    let stepResolve = null;
+    let speed = 300;
+    let arraySize = 8;
+    
+    let comparisons = 0;
+    let merges = 0;
+    let copies = 0;
+    let maxDepth = 0;
+    let sortedIndices = [];
+    let stepHistory = [];
+    let currentDepth = 0;
+    let mergeSteps = [];
+    let currentStepIndex = 0;
+    
+    // Tree nodes for visualization
+    let treeNodes = [];
+    let nodeIdCounter = 0;
+
+    // ============ DOM ============
+    const mainArrayContainer = document.getElementById('mainArrayContainer');
+    const subarrayViz = document.getElementById('subarrayViz');
+    const treeContainer = document.getElementById('treeContainer');
+    const explanationText = document.getElementById('explanationText');
+    const historyContainer = document.getElementById('historyContainer');
+    const codeLines = document.querySelectorAll('.code-line');
+
+    // ============ UTILITIES ============
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function waitForStep() {
+      if (stepMode) {
+        return new Promise(resolve => { stepResolve = resolve; });
+      }
+      if (paused && sorting) {
+        return new Promise(resolve => {
+          const check = () => {
+            if (!paused || !sorting) resolve();
+            else setTimeout(check, 50);
+          };
+          check();
+        });
+      }
+    }
+
+    function arraysEqual(a, b) {
+      return a.length === b.length && a.every((v, i) => v === b[i]);
+    }
+
+    // ============ ARRAY GENERATION ============
+    function generateRandomArray() {
+      if (sorting) return;
+      array = [];
+      for (let i = 0; i < arraySize; i++) {
+        array.push(Math.floor(Math.random() * 50) + 10);
+      }
+      originalArray = [...array];
+      resetStats();
+      renderMainArray();
+      clearSubarrays();
+      clearTree();
+      updateExplanation('ready');
+    }
+
+    function applyCustomArray() {
+      if (sorting) return;
+      const input = document.getElementById('customArrayInput').value;
+      const values = input.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
+      if (values.length < 2) {
+        updateExplanation('invalid');
+        return;
+      }
+      array = values.slice(0, 12);
+      arraySize = array.length;
+      document.getElementById('sizeSlider').value = arraySize;
+      document.getElementById('sizeValue').textContent = arraySize;
+      originalArray = [...array];
+      resetStats();
+      renderMainArray();
+      clearSubarrays();
+      clearTree();
+      updateExplanation('ready');
+    }
+
+    // ============ RENDERING ============
+    function renderMainArray(highlights = {}) {
+      mainArrayContainer.innerHTML = '';
+      const maxVal = Math.max(...array);
+      const containerHeight = 110;
+
+      array.forEach((value, index) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        const height = Math.max(20, (value / maxVal) * containerHeight);
+        bar.style.height = `${height}px`;
+
+        // Determine color state
+        if (sortedIndices.includes(index)) {
+          bar.classList.add('bar-sorted');
+        } else if (highlights.comparing && highlights.comparing.includes(index)) {
+          bar.classList.add('bar-comparing');
+        } else if (highlights.merging && highlights.merging.includes(index)) {
+          bar.classList.add('bar-merging');
+        } else if (highlights.left && highlights.left.includes(index)) {
+          bar.classList.add('bar-active-left');
+        } else if (highlights.right && highlights.right.includes(index)) {
+          bar.classList.add('bar-active-right');
+        } else {
+          bar.classList.add('bar-default');
+        }
+
+        const valueLabel = document.createElement('span');
+        valueLabel.className = 'bar-value';
+        valueLabel.textContent = value;
+        bar.appendChild(valueLabel);
+
+        mainArrayContainer.appendChild(bar);
+      });
+    }
+
+    function clearSubarrays() {
+      subarrayViz.innerHTML = '<div class="text-center text-xs py-8" style="color: var(--muted)">Start sorting to see subarray operations</div>';
+    }
+
+    function addSubarrayRow(leftArr, rightArr, mergedArr, type, level) {
+      if (subarrayViz.querySelector('.text-center')) {
+        subarrayViz.innerHTML = '';
+      }
+
+      const row = document.createElement('div');
+      row.className = 'subarray-row';
+      row.style.marginLeft = `${level * 20}px`;
+
+      if (type === 'split') {
+        const leftGroup = createMiniBarGroup(leftArr, 'left');
+        const rightGroup = createMiniBarGroup(rightArr, 'right');
+        const separator = document.createElement('span');
+        separator.className = 'mx-2 text-xs';
+        separator.style.color = 'var(--muted)';
+        separator.textContent = '|';
+        row.appendChild(leftGroup);
+        row.appendChild(separator);
+        row.appendChild(rightGroup);
+      } else if (type === 'merge') {
+        if (leftArr && rightArr) {
+          const leftGroup = createMiniBarGroup(leftArr, 'left');
+          const rightGroup = createMiniBarGroup(rightArr, 'right');
+          const arrow = document.createElement('span');
+          arrow.className = 'mx-2 text-xs';
+          arrow.style.color = 'var(--accent-orange)';
+          arrow.textContent = '→';
+          const mergedGroup = createMiniBarGroup(mergedArr, 'merged');
+          row.appendChild(leftGroup);
+          row.appendChild(rightGroup);
+          row.appendChild(arrow);
+          row.appendChild(mergedGroup);
+        } else {
+          const mergedGroup = createMiniBarGroup(mergedArr, 'merged');
+          row.appendChild(mergedGroup);
+        }
+      } else if (type === 'compare') {
+        const group = createMiniBarGroup(mergedArr, 'comparing', leftArr);
+        row.appendChild(group);
+      }
+
+      subarrayViz.appendChild(row);
+      subarrayViz.scrollTop = subarrayViz.scrollHeight;
+    }
+
+    function createMiniBarGroup(arr, type, highlightIdx = []) {
+      const group = document.createElement('div');
+      group.className = `subarray-group ${type}`;
+      
+      const maxVal = Math.max(...arr);
+      arr.forEach((val, idx) => {
+        const miniBar = document.createElement('div');
+        miniBar.className = 'mini-bar';
+        miniBar.style.height = `${Math.max(12, (val / maxVal) * 35)}px`;
+        
+        if (type === 'left') {
+          miniBar.style.background = 'linear-gradient(180deg, var(--accent-blue), #1d4ed8)';
+        } else if (type === 'right') {
+          miniBar.style.background = 'linear-gradient(180deg, var(--accent-purple), #7c3aed)';
+        } else if (type === 'merged') {
+          miniBar.style.background = 'linear-gradient(180deg, var(--accent-orange), #c2410c)';
+        } else if (type === 'comparing') {
+          if (highlightIdx.includes(idx)) {
+            miniBar.style.background = 'linear-gradient(180deg, var(--accent-yellow), #ca8a04)';
+          } else {
+            miniBar.style.background = 'linear-gradient(180deg, #4a4a4a, #2a2a2a)';
+          }
+        }
+        
+        const valLabel = document.createElement('span');
+        valLabel.className = 'mini-bar-value';
+        valLabel.textContent = val;
+        miniBar.appendChild(valLabel);
+        
+        group.appendChild(miniBar);
+      });
+      
+      return group;
+    }
+
+    // Tree visualization
+    function clearTree() {
+      treeContainer.innerHTML = '<div class="text-center text-xs py-8" style="color: var(--muted)">Tree will appear during sorting</div>';
+      treeNodes = [];
+      nodeIdCounter = 0;
+    }
+
+    function addTreeNode(arr, startIdx, level, type, parentId = null) {
+      if (treeContainer.querySelector('.text-center')) {
+        treeContainer.innerHTML = '';
+      }
+
+      const nodeId = nodeIdCounter++;
+      const node = {
+        id: nodeId,
+        arr: [...arr],
+        startIdx,
+        level,
+        type,
+        parentId
+      };
+      treeNodes.push(node);
+
+      renderTree();
+      return nodeId;
+    }
+
+    function updateTreeNodeActive(nodeId) {
+      treeNodes.forEach(n => n.active = n.id === nodeId);
+      renderTree();
+    }
+
+    function renderTree() {
+      treeContainer.innerHTML = '';
+      
+      if (treeNodes.length === 0) return;
+
+      const containerWidth = treeContainer.offsetWidth;
+      const containerHeight = treeContainer.offsetHeight;
+      const nodeHeight = 24;
+      const levelGap = 50;
+
+      // Calculate positions
+      const maxLevel = Math.max(...treeNodes.map(n => n.level));
+      const levelWidths = {};
+      
+      // Count nodes per level
+      treeNodes.forEach(node => {
+        if (!levelWidths[node.level]) levelWidths[node.level] = 0;
+        levelWidths[node.level]++;
+      });
+
+      const levelCounters = {};
+      
+      treeNodes.forEach(node => {
+        if (!levelCounters[node.level]) levelCounters[node.level] = 0;
+        
+        const nodesInLevel = levelWidths[node.level];
+        const levelWidth = containerWidth - 40;
+        const nodeWidth = 80;
+        const gap = Math.max(10, (levelWidth - nodesInLevel * nodeWidth) / (nodesInLevel + 1));
+        
+        const x = 20 + gap + levelCounters[node.level] * (nodeWidth + gap);
+        const y = 10 + node.level * levelGap;
+        
+        node.x = x;
+        node.y = y;
+        
+        levelCounters[node.level]++;
+      });
+
+      // Draw edges
+      treeNodes.forEach(node => {
+        if (node.parentId !== null) {
+          const parent = treeNodes.find(n => n.id === node.parentId);
+          if (parent) {
+            const edge = document.createElement('div');
+            edge.className = 'tree-edge';
+            if (node.active || parent.active) edge.classList.add('active');
+            
+            const dx = node.x + 30 - (parent.x + 30);
+            const dy = node.y - (parent.y + nodeHeight);
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            edge.style.width = `${length}px`;
+            edge.style.left = `${parent.x + 30}px`;
+            edge.style.top = `${parent.y + nodeHeight}px`;
+            edge.style.transform = `rotate(${angle}deg)`;
+            
+            treeContainer.appendChild(edge);
+          }
+        }
+      });
+
+      // Draw nodes
+      treeNodes.forEach(node => {
+        const nodeEl = document.createElement('div');
+        nodeEl.className = 'tree-node visible';
+        if (node.active) nodeEl.classList.add('active');
+        if (node.type) nodeEl.classList.add(node.type);
+        
+        nodeEl.style.left = `${node.x}px`;
+        nodeEl.style.top = `${node.y}px`;
+        nodeEl.textContent = `[${node.arr.join(',')}]`;
+        
+        treeContainer.appendChild(nodeEl);
+      });
+
+      // Add level indicators
+      for (let l = 0; l <= maxLevel; l++) {
+        const indicator = document.createElement('div');
+        indicator.className = 'level-indicator';
+        indicator.style.top = `${10 + l * levelGap + 5}px`;
+        indicator.textContent = `L${l}`;
+        treeContainer.appendChild(indicator);
+      }
+    }
+
+    // ============ STATS & UI ============
+    function resetStats() {
+      comparisons = 0;
+      merges = 0;
+      copies = 0;
+      maxDepth = 0;
+      sortedIndices = [];
+      stepHistory = [];
+      currentDepth = 0;
+      treeNodes = [];
+      nodeIdCounter = 0;
+      updateStats();
+      updatePhase('ready');
+      updateHistory();
+    }
+
+    function updateStats() {
+      document.getElementById('statArraySize').textContent = array.length;
+      document.getElementById('statRecursionDepth').textContent = maxDepth;
+      document.getElementById('statComparisons').textContent = comparisons;
+      document.getElementById('statMerges').textContent = merges;
+      document.getElementById('statCopies').textContent = copies;
+      document.getElementById('depthDisplay').textContent = currentDepth;
+
+      const totalOps = array.length > 0 ? array.length * Math.ceil(Math.log2(array.length)) : 0;
+      const progress = totalOps > 0 ? Math.min(100, Math.round((comparisons / totalOps) * 100)) : 0;
+      document.getElementById('progressPercent').textContent = `${progress}%`;
+      document.getElementById('progressBar').style.width = `${progress}%`;
+    }
+
+    function updatePhase(phase) {
+      const badge = document.getElementById('phaseBadge');
+      const phases = {
+        ready: { bg: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)', dot: 'var(--accent-purple)', text: 'Ready' },
+        dividing: { bg: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)', dot: 'var(--accent-purple)', text: 'Dividing' },
+        merging: { bg: 'rgba(249, 115, 22, 0.15)', color: 'var(--accent-orange)', dot: 'var(--accent-orange)', text: 'Merging' },
+        complete: { bg: 'rgba(34, 197, 94, 0.15)', color: 'var(--accent-green)', dot: 'var(--accent-green)', text: 'Complete' }
+      };
+      const p = phases[phase] || phases.ready;
+      badge.style.background = p.bg;
+      badge.style.color = p.color;
+      badge.querySelector('span').style.background = p.dot;
+      badge.lastChild.textContent = p.text;
+    }
+
+    function highlightCode(lineNum) {
+      codeLines.forEach(line => {
+        line.classList.remove('active');
+        if (parseInt(line.dataset.line) === lineNum) {
+          line.classList.add('active');
+        }
+      });
+    }
+
+    function addHistory(type, text) {
+      stepHistory.push({ type, text });
+      updateHistory();
+    }
+
+    function updateHistory() {
+      if (stepHistory.length === 0) {
+        historyContainer.innerHTML = '<div class="text-xs text-center py-4" style="color: var(--muted)">No operations yet</div>';
+        return;
+      }
+      
+      historyContainer.innerHTML = stepHistory.slice(-20).map(h => 
+        `<div class="history-item ${h.type}">${h.text}</div>`
+      ).join('');
+      
+      historyContainer.scrollTop = historyContainer.scrollHeight;
+    }
+
+    function updateExplanation(type, data = {}) {
+      let html = '';
+      switch (type) {
+        case 'ready':
+          html = `<p>Ready! Array has <span class="highlight highlight-blue">${array.length}</span> elements.</p>
+                  <p class="mt-2" style="color: var(--muted)">Click <span class="highlight highlight-blue">Start</span> to begin the divide and conquer process.</p>`;
+          break;
+        case 'invalid':
+          html = `<p class="highlight highlight-orange">Invalid input!</p><p class="mt-2" style="color: var(--muted)">Enter comma-separated positive numbers.</p>`;
+          break;
+        case 'split':
+          html = `<p><span class="highlight highlight-purple">Divide Phase</span></p>
+                  <p class="mt-2">Splitting array at index ${data.mid}:</p>
+                  <p class="mt-1">Left: <span class="highlight highlight-blue">${data.left.join(', ')}</span></p>
+                  <p>Right: <span class="highlight highlight-purple">${data.right.join(', ')}</span></p>
+                  <p class="mt-2" style="color: var(--muted)">Recursion depth: ${data.depth}</p>`;
+          break;
+        case 'compare':
+          html = `<p><span class="highlight highlight-yellow">Compare</span></p>
+                  <p class="mt-2">Comparing: <span class="highlight highlight-yellow">${data.val1}</span> vs <span class="highlight highlight-yellow">${data.val2}</span></p>
+                  <p class="mt-1">${data.val1 <= data.val2 ? 
+                    `<span class="highlight highlight-blue">${data.val1}</span> is smaller, goes first` : 
+                    `<span class="highlight highlight-purple">${data.val2}</span> is smaller, goes first`}</p>`;
+          break;
+        case 'merge':
+          html = `<p><span class="highlight highlight-orange">Merge Phase</span></p>
+                  <p class="mt-2">Merging: <span class="highlight highlight-blue">${data.left.join(', ')}</span> + <span class="highlight highlight-purple">${data.right.join(', ')}</span></p>
+                  <p class="mt-1">Result: <span class="highlight highlight-orange">${data.merged.join(', ')}</span></p>`;
+          break;
+        case 'complete':
+          html = `<p class="highlight highlight-green"><strong>Sorting Complete!</strong></p>
+                  <p class="mt-2">Comparisons: <span class="highlight highlight-yellow">${comparisons}</span> | Merges: <span class="highlight highlight-orange">${merges}</span></p>
+                  <p class="mt-2" style="color: var(--muted)">Array is sorted in ascending order.</p>`;
+          break;
+        case 'paused':
+          html = `<p><span class="highlight highlight-yellow">Paused</span></p><p class="mt-2" style="color: var(--muted)">Click Resume or Step to continue.</p>`;
+          break;
+      }
+      explanationText.innerHTML = html;
+    }
+
+    // ============ MERGE SORT ALGORITHM ============
+    async function mergeSort(arr, start, end, depth, parentId = null) {
+      if (!sorting) return;
+      
+      currentDepth = depth;
+      maxDepth = Math.max(maxDepth, depth);
+      updateStats();
+
+      if (end - start <= 1) {
+        // Base case - single element
+        return;
+      }
+
+      const mid = Math.floor((start + end) / 2);
+      
+      // Visualize split
+      highlightCode(3);
+      const leftArr = arr.slice(start, mid);
+      const rightArr = arr.slice(mid, end);
+      
+      updateExplanation('split', { mid, left: leftArr, right: rightArr, depth });
+      addHistory('split', `Split [${leftArr.concat(rightArr).join(', ')}]`);
+      addSubarrayRow(leftArr, rightArr, null, 'split', depth);
+      
+      const nodeId = addTreeNode(leftArr.concat(rightArr), start, depth, 'split', parentId);
+      updateTreeNodeActive(nodeId);
+      
+      highlightCode(4);
+      await sleep(speed);
+      await waitForStep();
+
+      highlightCode(5);
+      await sleep(speed / 2);
+
+      // Recursive call on left
+      highlightCode(6);
+      updatePhase('dividing');
+      const leftId = addTreeNode(leftArr, start, depth + 1, 'split', nodeId);
+      updateTreeNodeActive(leftId);
+      await sleep(speed / 2);
+      
+      await mergeSort(arr, start, mid, depth + 1, leftId);
+
+      // Recursive call on right
+      highlightCode(7);
+      const rightId = addTreeNode(rightArr, mid, depth + 1, 'split', nodeId);
+      updateTreeNodeActive(rightId);
+      await sleep(speed / 2);
+      
+      await mergeSort(arr, mid, end, depth + 1, rightId);
+
+      // Merge
+      highlightCode(8);
+      updatePhase('merging');
+      updateTreeNodeActive(nodeId);
+      await merge(arr, start, mid, end, depth, nodeId);
+    }
+
+    async function merge(arr, start, mid, end, depth, nodeId) {
+      if (!sorting) return;
+
+      const left = arr.slice(start, mid);
+      const right = arr.slice(mid, end);
+      const result = [];
+      
+      copies++;
+      let i = 0, j = 0;
+
+      // Highlight regions in main array
+      renderMainArray({
+        left: Array.from({length: mid - start}, (_, k) => start + k),
+        right: Array.from({length: end - mid}, (_, k) => mid + k)
+      });
+
+      // Merge process with visualization
+      while (i < left.length && j < right.length) {
+        if (!sorting) return;
+        
+        comparisons++;
+        updateStats();
+
+        // Show comparison
+        const comparingIndices = [start + i, mid + j].filter(idx => idx < end);
+        renderMainArray({ comparing: comparingIndices });
+        
+        updateExplanation('compare', { val1: left[i], val2: right[j] });
+        addHistory('compare', `Compare ${left[i]} vs ${right[j]}`);
+        
+        // Update tree node
+        treeNodes.find(n => n.id === nodeId).type = 'merge';
+        renderTree();
+        
+        await sleep(speed);
+        await waitForStep();
+
+        if (left[i] <= right[j]) {
+          result.push(left[i]);
+          i++;
+        } else {
+          result.push(right[j]);
+          j++;
+        }
+        
+        // Show partial merge result
+        addSubarrayRow(left.slice(i), right.slice(j), [...result, ...left.slice(i), ...right.slice(j)], 'compare', depth);
+      }
+
+      // Add remaining elements
+      while (i < left.length) {
+        result.push(left[i]);
+        i++;
+      }
+      while (j < right.length) {
+        result.push(right[j]);
+        j++;
+      }
+
+      // Copy back to original array
+      for (let k = 0; k < result.length; k++) {
+        arr[start + k] = result[k];
+      }
+      array = [...arr];
+      
+      merges++;
+      copies++;
+      updateStats();
+
+      // Show merge result
+      renderMainArray({
+        merging: Array.from({length: result.length}, (_, k) => start + k)
+      });
+      
+      updateExplanation('merge', { left, right, merged: result });
+      addHistory('merge', `Merge [${result.join(', ')}]`);
+      addSubarrayRow(left, right, result, 'merge', depth);
+      
+      // Update tree node to show completion
+      treeNodes.find(n => n.id === nodeId).arr = [...result];
+      treeNodes.find(n => n.id === nodeId).type = 'complete';
+      renderTree();
+      
+      await sleep(speed);
+      await waitForStep();
+      
+      renderMainArray();
+    }
+
+    async function runMergeSort() {
+      const arr = [...array];
+      await mergeSort(arr, 0, arr.length, 0);
+      
+      if (sorting) {
+        // Mark all as sorted
+        sortedIndices = Array.from({length: array.length}, (_, i) => i);
+        renderMainArray();
+        updatePhase('complete');
+        highlightCode(0);
+        updateExplanation('complete');
+        
+        // Mark root node as complete
+        if (treeNodes.length > 0) {
+          treeNodes[0].type = 'complete';
+          renderTree();
+        }
+      }
+      
+      return true;
+    }
+
+    // ============ CONTROLS ============
+    function startSorting() {
+      if (array.length === 0) generateRandomArray();
+      
+      sorting = true;
+      paused = false;
+      stepMode = false;
+      
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('pauseBtn').disabled = false;
+      document.getElementById('stepBtn').disabled = false;
+
+      runMergeSort().then(complete => {
+        if (complete) {
+          sorting = false;
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('pauseBtn').disabled = true;
+          document.getElementById('stepBtn').disabled = true;
+        }
+      });
+    }
+
+    function togglePause() {
+      if (!sorting) return;
+      paused = !paused;
+      
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      
+      if (paused) {
+        pauseText.textContent = 'Resume';
+        pauseIcon.innerHTML = '<polygon points="5 3 19 12 5 21"></polygon>';
+        updateExplanation('paused');
+      } else {
+        pauseText.textContent = 'Pause';
+        pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+      }
+    }
+
+    function stepForward() {
+      if (!sorting) {
+        if (array.length === 0) generateRandomArray();
+        sorting = true;
+        paused = true;
+        stepMode = true;
+        
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('pauseBtn').disabled = false;
+        document.getElementById('stepBtn').disabled = false;
+
+        runMergeSort().then(complete => {
+          if (complete) {
+            sorting = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stepBtn').disabled = true;
+          }
+        });
+      } else {
+        stepMode = true;
+        if (stepResolve) {
+          stepResolve();
+          stepResolve = null;
+        }
+      }
+    }
+
+    function resetVisualization() {
+      sorting = false;
+      paused = false;
+      stepMode = false;
+      
+      array = [...originalArray];
+      resetStats();
+      renderMainArray();
+      clearSubarrays();
+      clearTree();
+      highlightCode(0);
+      updateExplanation('ready');
+      
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('pauseBtn').disabled = true;
+      document.getElementById('stepBtn').disabled = true;
+      
+      const pauseText = document.getElementById('pauseText');
+      const pauseIcon = document.getElementById('pauseIcon');
+      pauseText.textContent = 'Pause';
+      pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+    }
+
+    function updateSpeed(value) {
+      speed = 850 - parseInt(value);
+      document.getElementById('speedValue').textContent = `${speed}ms`;
+    }
+
+    function updateSize(value) {
+      arraySize = parseInt(value);
+      document.getElementById('sizeValue').textContent = arraySize;
+      if (!sorting) generateRandomArray();
+    }
+
+    // ============ MODAL ============
+    function showInfoModal() {
+      document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function hideInfoModal() {
+      document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    document.getElementById('infoModal').addEventListener('click', function(e) {
+      if (e.target === this) hideInfoModal();
+    });
+
+    // ============ KEYBOARD ============
+    document.addEventListener('keydown', function(e) {
+      if (e.target.tagName === 'INPUT') return;
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          sorting ? togglePause() : startSorting();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          stepForward();
+          break;
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          resetVisualization();
+          break;
+        case 'Escape':
+          hideInfoModal();
+          break;
+      }
+    });
+
+    // ============ INIT ============
+    document.addEventListener('DOMContentLoaded', function() {
+      generateRandomArray();
+    });
+  </script>
+</body>
+</html>

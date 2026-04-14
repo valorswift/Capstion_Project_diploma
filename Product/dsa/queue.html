@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Studio: Queue Learning Dashboard</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+<style>
+:root {
+  /* Dark Mode Variables Only */
+  --bg-body: #0f172a;
+  --bg-sidebar: rgba(30, 41, 59, 0.95);
+  --bg-card: rgba(30, 41, 59, 0.7);
+  --bg-input: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  
+  /* Queue Theme Colors */
+  --color-simple: #3b82f6;   /* Blue */
+  --color-circular: #22c55e; /* Green */
+  --color-priority: #f59e0b; /* Orange */
+  --color-deque: #ec4899;    /* Pink */
+  
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --sidebar-width: 280px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body {
+  min-height: 100vh;
+  background: var(--bg-body);
+  color: var(--text-main);
+  overflow-x: hidden;
+}
+
+/* --- Layout Structure --- */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--border-color);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
+  z-index: 50;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-brand {
+  font-size: 1.2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--color-simple), var(--color-circular));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.nav-menu { padding: 20px 12px; flex: 1; }
+.nav-group-label {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); margin: 20px 12px 8px; font-weight: 700;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  border-radius: 10px; color: var(--text-muted); text-decoration: none;
+  font-weight: 500; transition: all 0.2s; cursor: pointer; margin-bottom: 4px;
+}
+.nav-item:hover { background: var(--bg-body); color: var(--color-simple); }
+.nav-item.active {
+  background: rgba(59, 130, 246, 0.1); color: var(--color-simple); font-weight: 600; border: 1px solid rgba(59, 130, 246, 0.2);
+}
+.nav-item i { font-size: 1.2rem; }
+
+.sidebar-footer {
+  padding: 20px; border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+/* --- Main Content --- */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding: 30px;
+  transition: margin-left 0.3s ease;
+  position: relative;
+}
+
+/* --- Top Bar --- */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.btn-back {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: var(--text-main);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  border-color: var(--color-simple);
+  color: var(--color-simple);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* --- Mobile Header --- */
+.mobile-header {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0; height: 60px;
+  background: var(--bg-card); backdrop-filter: blur(10px); z-index: 40;
+  align-items: center; justify-content: space-between; padding: 0 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* --- View Switching --- */
+.view-section { display: none; animation: fadeIn 0.4s ease; }
+.view-section.active { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- UI Components --- */
+h1, h2, h3 { color: var(--text-main); }
+h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 5px; background: linear-gradient(135deg, var(--color-simple), var(--color-circular)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.section-desc { color: var(--text-muted); margin-bottom: 25px; line-height: 1.5; }
+
+.card {
+  background: var(--bg-card); border-radius: 16px; padding: 20px;
+  box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 20px;
+}
+
+.btn-icon {
+  background: transparent; border: 1px solid var(--border-color); color: var(--text-main);
+  width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: 0.2s;
+}
+.btn-icon:hover { background: var(--bg-body); transform: translateY(-2px); }
+
+/* --- Visualizer Specifics --- */
+.controls-wrapper {
+  background: var(--bg-input); padding: 20px; border-radius: 16px;
+  box-shadow: var(--shadow); border: 1px solid rgba(128,128,128,0.1);
+  display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 20px;
+}
+
+.select-group { flex: 1; min-width: 200px; }
+.input-group { display: flex; gap: 10px; flex: 2; }
+.input-group input { flex: 1; }
+
+label {
+  display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;
+}
+
+select, input {
+  width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);
+  background: var(--bg-body); color: var(--text-main); font-weight: 500;
+}
+
+button {
+  padding: 10px 18px; border: none; border-radius: 8px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: 0.2s; color: white;
+}
+button:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.btn-blue { background: var(--color-simple); }
+.btn-red { background: #ef4444; }
+
+.visual-stage {
+  min-height: 320px; background: linear-gradient(180deg, rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0));
+  border-radius: 16px; border: 2px dashed var(--border-color); position: relative;
+  display: flex; justify-content: center; align-items: center; overflow: hidden; margin-bottom: 20px;
+}
+
+/* Queue Items */
+.queue-item {
+  width: 60px; height: 60px; background: var(--bg-input); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  border: 2px solid transparent; position: relative; animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.queue-item.removing { animation: slideOut 0.4s forwards; }
+
+.queue-container { display: flex; gap: 12px; align-items: center; }
+.empty-msg { color: var(--text-muted); opacity: 0.6; }
+
+.simple-mode .queue-item { border-color: var(--color-simple); color: var(--color-simple); background: rgba(59, 130, 246, 0.1); }
+.priority-mode .queue-item { border-color: var(--color-priority); flex-direction: column; font-size: 0.9rem; line-height: 1.2; background: rgba(245, 158, 11, 0.1); color: var(--color-priority);}
+.priority-badge { font-size: 0.6rem; background: var(--color-priority); color: white; padding: 2px 6px; border-radius: 4px; margin-top: 2px; }
+
+/* Circular Specifics */
+.circular-container {
+  width: 320px;
+  height: 320px;
+  border: 4px dashed var(--color-circular);
+  border-radius: 50%;
+  position: relative;
+  margin: auto;
+}
+.circular-mode .queue-item {
+  border-color: var(--color-circular); color: var(--color-circular); background: rgba(34, 197, 94, 0.1);
+  position: absolute; width: 45px; height: 45px; font-size: 0.9rem;
+}
+
+/* Deque Specifics */
+.deque-mode .queue-item { border-color: var(--color-deque); color: var(--color-deque); background: rgba(236, 72, 153, 0.1); }
+
+/* --- Status Bar --- */
+.status-bar {
+  padding: 12px 16px; background: var(--bg-input); border-radius: 12px;
+  font-size: 0.9rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;
+  border-left: 4px solid var(--color-simple);
+}
+
+/* --- Concept Panel --- */
+.concept-panel {
+  background: var(--bg-card); border-radius: 12px; padding: 16px;
+  border-left: 5px solid var(--color-simple); margin-top: 15px;
+}
+.concept-panel h4 { color: var(--color-simple); font-size: 1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.concept-panel p { font-size: 0.9rem; color: var(--text-main); line-height: 1.5; margin-bottom: 8px; }
+.code-snippet { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: var(--text-main); display: inline-block; }
+
+/* --- Educational Diagrams --- */
+.diagram-container { display: flex; justify-content: center; margin: 20px 0; flex-wrap: wrap; gap: 20px;min-height: 260px;}
+.memory-diagram { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.mem-box {
+  width: 200px; height: 50px; border: 2px solid var(--border-color); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; background: var(--bg-card); position: relative;
+}
+.pointer {
+  position: absolute; left: -60px; color: #ef4444; font-weight: bold; font-size: 0.8rem;
+  display: flex; align-items: center; gap: 5px;
+}
+
+.comparison-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.comparison-table th, .comparison-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+.comparison-table th { color: var(--color-simple); font-size: 0.9rem; text-transform: uppercase; }
+
+.quiz-container { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+.quiz-btn { display: block; width: 100%; margin: 5px 0; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; text-align: left; color: var(--text-main); transition: 0.2s; }
+.quiz-btn:hover { border-color: var(--color-simple); color: var(--color-simple); }
+.quiz-btn.correct { background: var(--color-circular); color: white; border-color: var(--color-circular); }
+.quiz-btn.wrong { background: var(--color-deque); color: white; border-color: var(--color-deque); }
+
+/* Animations */
+@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideOut { to { transform: translateX(-20px); opacity: 0; } }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); width: 260px; box-shadow: var(--shadow-lg); }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; padding: 20px; padding-top: 80px; }
+  .mobile-header { display: flex; }
+  .input-group { flex-direction: column; }
+}
+
+.circular-item {
+  width: 50px;
+  height: 50px;
+  border: 2px solid var(--color-circular);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--color-circular);
+  font-weight: bold;
+  position: absolute;
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile Header -->
+<div class="mobile-header">
+  <div class="sidebar-brand" style="font-size:1rem;">
+    <i class="ri-stack-line"></i> Queue Studio
+  </div>
+  <button class="btn-icon" onclick="toggleSidebar()">
+    <i class="ri-menu-4-line"></i>
+  </button>
+</div>
+
+<div class="app-layout">
+  
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <i class="ri-stack-line"></i> Queue Studio
+      </div>
+      <button class="btn-icon" onclick="toggleSidebar()" style="width:30px; height:30px;">
+        <i class="ri-arrow-left-s-line"></i>
+      </button>
+    </div>
+
+    <div class="nav-menu">
+      <div class="nav-item active" onclick="navigate('visualizer')">
+        <i class="ri-bar-chart-box-line"></i> Visualizer
+      </div>
+
+      <div class="nav-group-label">Core Concepts</div>
+      <div class="nav-item" onclick="navigate('basics')">
+        <i class="ri-question-mark"></i> What is a Queue?
+      </div>
+      <div class="nav-item" onclick="navigate('memory')">
+        <i class="ri-cpu-line"></i> Memory & Microprocessor
+      </div>
+      <div class="nav-item" onclick="navigate('circular')">
+        <i class="ri-refresh-line"></i> Circular Buffer
+      </div>
+      
+      <div class="nav-group-label">Types & Analysis</div>
+      <div class="nav-item" onclick="navigate('priority')">
+        <i class="ri-signal-tower-line"></i> Priority Queue
+      </div>
+      <div class="nav-item" onclick="navigate('deque')">
+        <i class="ri-arrow-left-right-line"></i> Deque
+      </div>
+      <div class="nav-item" onclick="navigate('compare')">
+        <i class="ri-scales-3-line"></i> Queue vs Stack
+      </div>
+      <div class="nav-item" onclick="navigate('complexity')">
+        <i class="ri-time-line"></i> Time Complexity
+      </div>
+
+      <div class="nav-group-label">Advanced</div>
+      <div class="nav-item" onclick="navigate('os')">
+        <i class="ri-server-line"></i> OS & Scheduling
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span style="font-size: 0.75rem; color: var(--text-muted);">DSA Learning Studio</span>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div style="font-size: 0.9rem; color: var(--text-muted);">
+        <i class="ri-home-4-line"></i> / Queue Dashboard
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <a href="linear.html" class="btn-back">
+            <i class="ri-arrow-left-line"></i> Back to Arrays
+        </a>
+      </div>
+    </div>
+
+    <!-- VIEW 1: VISUALIZER -->
+    <section id="view-visualizer" class="view-section active">
+      <h1>Queue Visualizer</h1>
+      <p class="section-desc">Interactive demonstration of FIFO, Circular, Priority, and Deque operations.</p>
+
+      <div class="controls-wrapper">
+        <div class="select-group">
+          <label>Queue Type</label>
+          <select id="queueType" onchange="changeMode()">
+            <option value="simple">Simple Queue (FIFO)</option>
+            <option value="circular">Circular Queue</option>
+            <option value="priority">Priority Queue</option>
+            <option value="deque">Deque (Double Ended)</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <div style="flex:1;">
+            <label>Value</label>
+            <input type="text" id="valInput" placeholder="e.g. 10" onkeypress="handleEnter(event)">
+          </div>
+          <div id="prioGroup" style="flex:1; display:none;">
+            <label>Priority (1-10)</label>
+            <input type="number" id="prioInput" placeholder="High # = High Prio" max="10" min="1">
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button class="btn-blue" onclick="enqueue()"><i class="ri-add-line"></i> Enqueue</button>
+          <button class="btn-red" onclick="dequeue()"><i class="ri-subtract-line"></i> Dequeue</button>
+          <button onclick="clearQueue()" style="background:#64748b; color:white;"><i class="ri-delete-bin-line"></i></button>
+        </div>
+      </div>
+
+      <!-- Dynamic Visualization Area -->
+      <div class="visual-stage" id="stage">
+        <!-- Content Injected via JS -->
+      </div>
+
+      <!-- Dynamic Concept Panel -->
+      <div class="concept-panel" id="conceptPanel">
+        <h4><i class="ri-lightbulb-flash-line"></i> Concept Insight</h4>
+        <p id="conceptText">Select a queue type and perform an operation to see the underlying pointer logic here.</p>
+      </div>
+
+      <div class="status-bar" id="statusBox">
+        <i class="ri-information-line"></i> <span id="statusText">Ready.</span>
+      </div>
+    </section>
+
+    <!-- VIEW 2: BASICS -->
+    <section id="view-basics" class="view-section">
+      <h1>What is a Queue?</h1>
+      <p class="section-desc">A linear data structure that follows a specific order in which operations are performed.</p>
+      
+      <div class="card">
+        <h3>FIFO Principle</h3>
+        <p style="margin-top:10px; color:var(--text-muted);">
+          The order is <strong>First-In-First-Out</strong>. The first element added is the first one to be removed.
+        </p>
+        <div class="diagram-container" style="gap:20px; align-items:center; flex-direction:row;">
+             <div style="text-align:center; font-weight:bold; color:var(--color-simple);">Front</div>
+             <div class="queue-item simple-mode">10</div>
+             <div class="queue-item simple-mode">20</div>
+             <div class="queue-item simple-mode">30</div>
+             <div style="text-align:center; font-weight:bold; color:var(--color-simple);">Rear</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Real-Life Analogy</h3>
+        <p style="color:var(--text-muted);">A line of people waiting for a bus ticket. The person at the front gets served first. New people join at the rear.</p>
+      </div>
+    </section>
+
+    <!-- VIEW 3: MEMORY -->
+    <section id="view-memory" class="view-section">
+      <h1>Queue in Memory</h1>
+      <p class="section-desc">How queues are mapped to contiguous RAM blocks.</p>
+
+      <div class="card">
+        <h3>Memory Layout</h3>
+        <div class="diagram-container">
+            <div class="memory-diagram">
+                <div class="mem-box">
+                    <div class="pointer" style="top:10px;">Rear <i class="ri-arrow-right-line"></i></div>
+                    Value: 30
+                </div>
+                <div class="mem-box">Value: 20</div>
+                <div class="mem-box">
+                    <div class="pointer" style="top:10px;">Front <i class="ri-arrow-right-line"></i></div>
+                    Value: 10
+                </div>
+                <div class="mem-box" style="border-style:dashed; opacity:0.5;">Empty</div>
+            </div>
+        </div>
+        <ul style="margin-left:20px; line-height:1.8; color:var(--text-muted);">
+            <li><strong>Contiguous Memory:</strong> Queue elements are stored next to each other in RAM.</li>
+            <li><strong>Front Pointer:</strong> Tracks the index of the first element.</li>
+            <li><strong>Rear Pointer:</strong> Tracks the index of the last element.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW 4: CIRCULAR -->
+    <section id="view-circular" class="view-section">
+      <h1>Circular Queue</h1>
+      <p class="section-desc">Solving the problem of memory wastage in simple queues.</p>
+
+      <div class="card">
+        <h3>The Concept</h3>
+        <p style="color:var(--text-muted);">In a simple queue, once `rear` reaches the end, we can't add more items even if the front is empty. A circular queue connects the end back to the start.</p>
+        
+        <div class="diagram-container">
+           <div style="display:flex; align-items:center; justify-content:center; gap:30px; flex-wrap:wrap;">
+
+  <!-- Circle Wrapper -->
+  <div style="position:relative; width:220px; height:220px;">
+
+    <!-- Circle -->
+    <div style="
+      width:220px;
+      height:220px;
+      border:3px dashed var(--color-circular);
+      border-radius:50%;
+      position:absolute;
+    "></div>
+
+    <!-- Items -->
+    <div class="circular-item" style="top:10px; left:50%; transform:translateX(-50%);">1</div>
+    <div class="circular-item" style="right:10px; top:50%; transform:translateY(-50%);">2</div>
+    <div class="circular-item" style="bottom:10px; left:50%; transform:translateX(-50%);">3</div>
+    <div class="circular-item" style="left:10px; top:50%; transform:translateY(-50%);">4</div>
+
+  </div>
+
+  <!-- Text -->
+  <div style="max-width:250px; color:var(--text-muted); font-size:0.9rem;">
+    When Rear reaches the last index, it wraps around to index 0.<br><br>
+    <div class="code-snippet">rear = (rear + 1) % SIZE</div>
+  </div>
+
+</div>
+            <div style="margin-left:20px; color:var(--text-muted); font-size:0.9rem;">
+                When Rear reaches the last index, it wraps around to index 0.<br><br>
+                <div class="code-snippet">rear = (rear + 1) % SIZE</div>
+            </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>Applications</h3>
+        <ul style="margin-left:20px; color:var(--text-muted); line-height:1.6;">
+            <li><strong>Keyboard Buffer:</strong> Strokes are stored in a ring buffer.</li>
+            <li><strong>Traffic Systems:</strong> Traffic light cycles.</li>
+            <li><strong>CPU Scheduling:</strong> Round Robin algorithm.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW 5: PRIORITY -->
+    <section id="view-priority" class="view-section">
+      <h1>Priority Queue</h1>
+      <p class="section-desc">Elements are served based on priority, not arrival time.</p>
+
+      <div class="card">
+        <h3>How it Works</h3>
+        <p style="color:var(--text-muted);">Each element has a priority number. Higher priority (usually a larger number or lower number depending on impl) is dequeued first.</p>
+        <div class="diagram-container">
+            <div style="display:flex; gap:10px;">
+                <div class="queue-item priority-mode">
+                    Task A
+                    <span class="priority-badge">P:10</span>
+                </div>
+                <div class="queue-item priority-mode">
+                    Task B
+                    <span class="priority-badge">P:5</span>
+                </div>
+                <div class="queue-item priority-mode">
+                    Task C
+                    <span class="priority-badge">P:1</span>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Applications</h3>
+        <ul style="margin-left:20px; color:var(--text-muted);">
+            <li><strong>CPU Scheduling:</strong> High priority processes get CPU time first.</li>
+            <li><strong>Dijkstra's Algorithm:</strong> Selecting the next shortest path node.</li>
+            <li><strong>Interrupt Handling:</strong> Hardware interrupts have strict priorities.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW 6: DEQUE -->
+    <section id="view-deque" class="view-section">
+      <h1>Double Ended Queue (Deque)</h1>
+      <p class="section-desc">Insertion and deletion can happen from both front and rear.</p>
+
+      <div class="card">
+        <h3>Operations</h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+            <div>
+                <h4 style="color:var(--color-deque); margin-bottom:5px;">Input Restricted Deque</h4>
+                <p style="color:var(--text-muted);">Insertion at one end, deletion at both.</p>
+            </div>
+            <div>
+                <h4 style="color:var(--color-deque); margin-bottom:5px;">Output Restricted Deque</h4>
+                <p style="color:var(--text-muted);">Deletion at one end, insertion at both.</p>
+            </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Applications</h3>
+        <p style="color:var(--text-muted);">Used in <strong>Sliding Window</strong> problems, <strong>Undo/Redo</strong> stacks (conceptually), and <strong>Palindrome Checkers</strong>.</p>
+      </div>
+    </section>
+
+    <!-- VIEW 7: COMPARE -->
+    <section id="view-compare" class="view-section">
+      <h1>Queue vs Stack</h1>
+      <div class="card">
+        <table class="comparison-table">
+            <thead>
+                <tr><th>Feature</th><th>Queue</th><th>Stack</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Principle</strong></td><td>FIFO (First In First Out)</td><td>LIFO (Last In First Out)</td></tr>
+                <tr><td><strong>Pointers</strong></td><td>Front & Rear</td><td>Top</td></tr>
+                <tr><td><strong>Ends</strong></td><td>Insert at Rear, Delete from Front</td><td>Insert/Delete from Top</td></tr>
+                <tr><td><strong>Primary Use</strong></td><td>Scheduling, Buffering</td><td>Recursion, Undo systems</td></tr>
+            </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VIEW 8: COMPLEXITY -->
+    <section id="view-complexity" class="view-section">
+      <h1>Time Complexity</h1>
+      <div class="card">
+        <table class="comparison-table">
+            <thead>
+                <tr><th>Operation</th><th>Simple Queue</th><th>Priority Queue (Heap)</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Enqueue</strong></td><td style="color:var(--color-circular);">O(1)</td><td style="color:var(--color-priority);">O(log n)</td></tr>
+                <tr><td><strong>Dequeue</strong></td><td style="color:var(--color-circular);">O(1)</td><td style="color:var(--color-priority);">O(log n)</td></tr>
+                <tr><td><strong>Peek</strong></td><td style="color:var(--color-circular);">O(1)</td><td style="color:var(--color-circular);">O(1)</td></tr>
+                <tr><td><strong>Is Empty?</strong></td><td style="color:var(--color-circular);">O(1)</td><td style="color:var(--color-circular);">O(1)</td></tr>
+            </tbody>
+        </table>
+        <p style="margin-top:15px; font-size:0.9rem; color:var(--text-muted);">
+            * Priority Queues are often implemented using Heaps to achieve O(log n) efficiency. If implemented with a simple array, enqueue is O(1) but dequeue becomes O(n).
+        </p>
+      </div>
+    </section>
+
+    <!-- VIEW 9: OS -->
+    <section id="view-os" class="view-section">
+      <h1>Queues in Operating Systems</h1>
+      <p class="section-desc">The OS is essentially a massive queue manager.</p>
+
+      <div class="card">
+        <h3>Process Scheduling</h3>
+        <div class="diagram-container">
+            <!-- Simple SVG Diagram -->
+            <svg width="400" height="200" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- Ready Queue -->
+                <rect x="20" y="50" width="100" height="100" rx="5" fill="rgba(59, 130, 246, 0.2)" stroke="#3b82f6" stroke-width="2"/>
+                <text x="70" y="45" text-anchor="middle" font-size="12" fill="#f8fafc">Ready Queue</text>
+                <rect x="35" y="70" width="70" height="20" fill="#3b82f6" rx="2"/>
+                <rect x="35" y="100" width="70" height="20" fill="#3b82f6" rx="2"/>
+
+                <!-- CPU -->
+                <rect x="180" y="75" width="80" height="50" rx="5" fill="#f59e0b" stroke="#f59e0b" stroke-width="2"/>
+                <text x="220" y="105" text-anchor="middle" fill="white" font-weight="bold">CPU</text>
+
+                <!-- IO Queue -->
+                <rect x="300" y="50" width="80" height="100" rx="5" fill="rgba(34, 197, 94, 0.2)" stroke="#22c55e" stroke-width="2"/>
+                <text x="340" y="45" text-anchor="middle" font-size="12" fill="#f8fafc">IO Queue</text>
+                <rect x="315" y="70" width="50" height="20" fill="#22c55e" rx="2"/>
+
+                <!-- Arrows -->
+                <path d="M120 100 L170 100" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+                <path d="M260 100 L290 100" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+                <path d="M340 160 L340 180 L70 180 L70 160" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+                <defs>
+                    <marker id="arrow" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+        <ul style="margin-left:20px; color:var(--text-muted); line-height:1.6;">
+            <li><strong>Ready Queue:</strong> Processes waiting for CPU time.</li>
+            <li><strong>Device Queue:</strong> Processes waiting for I/O (disk, network).</li>
+            <li><strong>Job Queue:</strong> All processes in the system.</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// --- STATE ---
+let queue = [];
+let mode = 'simple';
+
+const stage = document.getElementById('stage');
+const valInput = document.getElementById('valInput');
+const prioInput = document.getElementById('prioInput');
+const prioGroup = document.getElementById('prioGroup');
+const statusText = document.getElementById('statusText');
+const statusBox = document.getElementById('statusBox');
+const conceptPanel = document.getElementById('conceptPanel');
+const conceptText = document.getElementById('conceptText');
+
+// --- UTILS ---
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function setStatus(msg, type='info') {
+  statusText.textContent = msg;
+  statusBox.style.borderLeftColor = type === 'error' ? '#ef4444' : 
+                                    type === 'success' ? '#22c55e' : 
+                                    getThemeColor();
+}
+
+function getThemeColor() {
+  return {
+    'simple': 'var(--color-simple)',
+    'circular': 'var(--color-circular)',
+    'priority': 'var(--color-priority)',
+    'deque': 'var(--color-deque)'
+  }[mode];
+}
+
+function handleEnter(e) {
+  if(e.key === 'Enter') enqueue();
+}
+
+// --- NAVIGATION ---
+const sidebar = document.getElementById('sidebar');
+
+function toggleSidebar() {
+  sidebar.classList.toggle('open');
+}
+
+function navigate(viewId) {
+  // Update UI
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.getElementById(`view-${viewId}`).classList.add('active');
+  
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const items = document.querySelectorAll('.nav-item');
+  for(let item of items) {
+    if(item.getAttribute('onclick').includes(viewId)) {
+      item.classList.add('active');
+      break;
+    }
+  }
+
+  // Close sidebar on mobile
+  if(window.innerWidth <= 900) {
+    sidebar.classList.remove('open');
+  }
+
+  // If navigating to visualizer, reset text
+  if(viewId === 'visualizer') {
+    conceptText.textContent = "Select a queue type and perform an operation to see the underlying pointer logic here.";
+  }
+}
+
+// --- VISUALIZER LOGIC ---
+
+function changeMode() {
+  mode = document.getElementById('queueType').value;
+  queue = [];
+  
+  prioGroup.style.display = mode === 'priority' ? 'block' : 'none';
+  stage.className = 'visual-stage'; // Reset classes
+  stage.classList.add(`${mode}-mode`);
+
+  let desc = "";
+  let color = getThemeColor();
+  conceptPanel.style.borderLeftColor = color;
+  conceptPanel.querySelector('h4').style.color = color;
+  
+  switch(mode) {
+    case 'simple': 
+      desc = "FIFO. Rear moves right on Enqueue. Front moves right on Dequeue."; 
+      break;
+    case 'circular': 
+      desc = "Ring Buffer. Uses Modulo arithmetic: (i+1)%Size."; 
+      break;
+    case 'priority': 
+      desc = "Elements sorted by priority. Highest priority value served first."; 
+      break;
+    case 'deque': 
+      desc = "Double Ended. Insert/Remove from both Front and Rear."; 
+      break;
+  }
+  setStatus(desc);
+  updateConcept("Mode Changed", desc);
+  render();
+}
+
+function clearQueue() {
+  queue = [];
+  render();
+  setStatus("Queue cleared.");
+  updateConcept("Cleared", "All elements removed. Pointers reset.");
+}
+
+async function enqueue() {
+  const val = valInput.value.trim();
+  if(!val) return setStatus("Please enter a value.", "error");
+
+  let item = { value: val };
+  
+  if (mode === 'priority') {
+    const p = parseInt(prioInput.value);
+    if(isNaN(p)) return setStatus("Enter a priority (1-10).", "error");
+    item.priority = p;
+    queue.push(item);
+    queue.sort((a, b) => b.priority - a.priority);
+  } else {
+    queue.push(item);
+  }
+
+  valInput.value = "";
+  prioInput.value = "";
+  valInput.focus();
+  
+  render(true);
+  setStatus(`Enqueued: ${val}`, "success");
+  
+  // Dynamic Concept Explanation
+  if(mode === 'simple') updateConcept("Enqueue (Simple)", `
+    <p><strong>Rear Pointer:</strong> Incremented to the next index.</p>
+    <p><strong>Memory:</strong> Value '${val}' is stored at the new Rear position.</p>
+  `);
+  else if(mode === 'circular') updateConcept("Enqueue (Circular)", `
+    <p><strong>Logic:</strong> Rear = (Rear + 1) % Size</p>
+    <p>This wraps the pointer around to index 0 if it hits the max size, preventing "False Overflow".</p>
+  `);
+  else if(mode === 'priority') updateConcept("Enqueue (Priority)", `
+    <p><strong>Sorting:</strong> '${val}' inserted and re-sorted based on priority (${item.priority}).</p>
+    <p>Higher priority items bubble to the front (Left).</p>
+  `);
+}
+
+async function dequeue() {
+  if(queue.length === 0) return setStatus("Queue Underflow! Queue is empty.", "error");
+  
+  // Visual removal
+  const firstItem = stage.querySelector('.queue-item:first-child');
+  if(firstItem) {
+    firstItem.classList.add('removing');
+    await sleep(400);
+  }
+
+  const removed = queue.shift();
+  render();
+  setStatus(`Dequeued: ${removed.value}`, "success");
+
+  if(mode === 'simple') updateConcept("Dequeue (Simple)", `
+    <p><strong>Front Pointer:</strong> Incremented to the next index.</p>
+    <p>The data at the old Front is marked as free/overwriteable.</p>
+  `);
+  else if(mode === 'circular') updateConcept("Dequeue (Circular)", `
+    <p><strong>Logic:</strong> Front = (Front + 1) % Size</p>
+    <p>Front pointer wraps around. The space becomes available for new elements.</p>
+  `);
+}
+
+function render(animate = false) {
+  stage.innerHTML = '';
+  if (queue.length === 0) {
+    stage.innerHTML = `<div class="empty-msg">Queue is empty</div>`;
+    return;
+  }
+
+  if (mode === 'circular') {
+    renderCircular(animate);
+  } else {
+    renderLinear(animate);
+  }
+}
+
+function renderLinear(animate) {
+  const container = document.createElement('div');
+  container.className = 'queue-container';
+  
+  queue.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'queue-item';
+    el.textContent = item.value;
+    
+    if(mode === 'priority') {
+      el.innerHTML = `${item.value}<span class="priority-badge">P:${item.priority}</span>`;
+    }
+    
+    container.appendChild(el);
+  });
+  stage.appendChild(container);
+}
+
+function renderCircular() {
+  const circle = document.createElement('div');
+  circle.className = 'circular-container';
+
+  const count = queue.length;
+
+  // Dynamic radius based on size
+  const radius = count > 6 ? 110 : 90;
+
+  const angleStep = (2 * Math.PI) / count;
+
+  queue.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'queue-item';
+    el.textContent = item.value;
+
+    const angle = i * angleStep - Math.PI / 2;
+
+    const x = radius * Math.cos(angle);
+    const y = radius * Math.sin(angle);
+
+    el.style.left = `calc(50% + ${x}px - 22px)`;
+    el.style.top = `calc(50% + ${y}px - 22px)`;
+
+    circle.appendChild(el);
+  });
+
+  stage.appendChild(circle);
+}
+
+function updateConcept(title, content) {
+  conceptPanel.querySelector('h4').innerHTML = `<i class="ri-lightbulb-flash-line"></i> ${title}`;
+  conceptText.innerHTML = content;
+}
+
+// Init
+changeMode();
+
+</script>
+</body>
+</html>

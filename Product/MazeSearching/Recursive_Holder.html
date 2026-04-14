@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursive Backtracking | Tactical</title>
+    <!-- Remix Icon -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    
+    <style>
+        /* --- Tactical Grid Theme --- */
+        :root {
+            --bg-deep: #050b14;
+            --bg-card: #0f172a;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #1e293b;
+            --grid-color: rgba(255, 255, 255, 0.03);
+            
+            /* Algorithm Accent: Pink/Magenta for Backtracking */
+            --color-backtrack: #ec4899; 
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace; /* Tech font */
+        }
+
+        body {
+            min-height: 100vh;
+            background-color: var(--bg-deep);
+            /* Grid Pattern */
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Navigation --- */
+        .page-nav {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .back-btn {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: 4px; 
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex; align-items: center; gap: 8px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .back-btn:hover {
+            border-color: var(--color-backtrack);
+            background: var(--color-backtrack);
+            color: #fff;
+            box-shadow: 0 0 15px var(--color-backtrack);
+        }
+
+        /* --- Main Content --- */
+        .wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        /* Glowing Title */
+        .title-container {
+            margin-bottom: 60px;
+            position: relative;
+        }
+        
+        .title {
+            font-size: 3rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(236, 72, 153, 0.2);
+        }
+        
+        .title span { color: var(--color-backtrack); }
+
+        .subtitle {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* --- Grid Layout --- */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            width: 100%;
+            max-width: 900px; /* Narrower for 2 cards */
+        }
+
+        /* --- Tech Cards --- */
+        .card {
+            background: var(--bg-card);
+            border:1px solid var(--border);
+            border-radius: 8px;
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+            
+            /* Entrance Animation */
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUp 0.6s ease forwards;
+        }
+
+        /* Corner Accents */
+        .card::before, .card::after {
+            content: '';
+            position: absolute;
+            width: 0; height: 2px;
+            background: var(--color-backtrack);
+            transition: width 0.3s ease;
+        }
+        .card::before { top: 0; left: 0; }
+        .card::after { bottom: 0; right: 0; }
+
+        .card:hover {
+            transform: translateY(-8px);
+            border-color: var(--color-backtrack);
+            box-shadow: 0 10px 40px -10px rgba(236, 72, 153, 0.3);
+        }
+        .card:hover::before, .card:hover::after { width: 100%; }
+
+        /* Icon Styling */
+        .icon-box {
+            width: 90px; height: 90px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(236, 72, 153, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 50%; 
+            font-size: 3rem;
+            color: var(--color-backtrack);
+            transition: 0.3s;
+            box-shadow: inset 0 0 20px rgba(236, 72, 153, 0.1);
+        }
+
+        .card:hover .icon-box {
+            background: var(--color-backtrack);
+            color: #fff;
+            box-shadow: 0 0 30px var(--color-backtrack);
+            transform: scale(1.1);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 5px;
+        }
+
+        .card-desc {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .tag {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 4px 12px;
+            background: rgba(236, 72, 153, 0.1);
+            color: var(--color-backtrack);
+            font-size: 0.75rem;
+            border-radius: 50px;
+            font-weight: 600;
+        }
+
+        @keyframes slideUp {
+            to { opacity:1; transform: translateY(0); }
+        }
+
+        /* --- Footer / Info --- */
+        .info-bar {
+            margin-top: 80px;
+            padding: 15px 30px;
+            background: rgba(15, 23, 42, 0.5);
+            border:1px dashed var(--border);
+            border-radius: 8px;
+            display: flex; align-items: center; gap: 15px;
+            max-width: 800px;
+        }
+        .info-bar i { color: var(--color-backtrack); font-size: 1.2rem; }
+        .info-text { font-size: 0.85rem; color: var(--text-muted); font-family: 'Inter', sans-serif; text-align: left;}
+
+        /* --- Responsive --- */
+        @media (max-width: 768px) {
+            .title { font-size: 2rem; }
+            .cards { grid-template-columns: 1fr; }
+            .page-nav { padding: 15px 20px; }
+            .card { padding: 40px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="page-nav">
+        <button class="back-btn" onclick="goBack()">
+            <i class="ri-arrow-left-s-line"></i> Return
+        </button>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title-container">
+            <h1 class="title">Recursive <span>Backtracking</span></h1>
+            <p class="subtitle">Explores a path until it hits a dead end, then retreats to the last decision point.</p>
+        </div>
+
+        <section class="cards">
+            
+            <!-- 2D Maze Search -->
+            <div class="card" onclick="navigate('recusriveBackTrackSearch.html')">
+                <div class="icon-box">
+                    <i class="ri-corner-up-left-line"></i>
+                </div>
+                <h2 class="card-title">2D Maze Search</h2>
+                <p class="card-desc">See function stack depth. The algorithm commits to a branch and rewinds only when blocked.</p>
+                <span class="tag">Call Stack</span>
+            </div>
+
+            <!-- 3D Maze Search -->
+            <div class="card" onclick="navigate('3dRecrsiveBacktracking.html')">
+                <div class="icon-box">
+                    <i class="ri-git-branch-line"></i>
+                </div>
+                <h2 class="card-title">3D Maze Search</h2>
+                <p class="card-desc">Visualizes decision tree. Watch agent dive deep, hit walls, and retreat instantly.</p>
+                <span class="tag">Interactive 3D</span>
+            </div>
+
+        </section>
+
+        <div class="info-bar">
+            <i class="ri-information-line"></i>
+            <div class="info-text">
+                <strong>Core Logic:</strong> Uses recursion to maintain state. When a path fails, the function returns false, triggering the previous frame to try the next neighbor.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation Logic ---
+        function navigate(url) {
+            window.location.href = url;
+        }
+
+        function goBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                // Fallback if history is empty
+                window.location.href = 'graphHolder.html'; 
+            }
+        }
+
+        // --- Staggered Animation ---
+        document.addEventListener("DOMContentLoaded", () => {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.2}s`;
+            });
+        });
+    </script>
+</body>
+</html>

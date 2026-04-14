@@ -1,0 +1,2183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ternary Search Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #111113;
+            --bg-tertiary: #1a1a1d;
+            --bg-card: #151518;
+            --border: #2a2a2f;
+            --border-light: #3a3a42;
+            --text-primary: #e8e8ed;
+            --text-secondary: #8a8a95;
+            --text-muted: #5a5a65;
+            --accent-cyan: #00d4ff;
+            --accent-purple: #a855f7;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --accent-yellow: #facc15;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --accent-teal: #14b8a6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .bg-pattern {
+            background-image: 
+                radial-gradient(circle at 5% 95%, rgba(250, 204, 21, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 95% 5%, rgba(0, 212, 255, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.03) 0%, transparent 60%),
+                linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        }
+
+        .grid-bg {
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.012) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.012) 1px, transparent 1px);
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-light);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+
+        /* Array Visualization */
+        .array-container {
+            padding: 20px;
+            min-height: 220px;
+        }
+
+        .blocks-wrapper {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .array-block-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .pointer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 36px;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: all 0.3s ease;
+        }
+
+        .pointer-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .pointer-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 5px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+        }
+
+        .pointer-label.low {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--accent-cyan);
+        }
+
+        .pointer-label.mid1 {
+            background: rgba(250, 204, 21, 0.2);
+            color: var(--accent-yellow);
+        }
+
+        .pointer-label.mid2 {
+            background: rgba(249, 115, 22, 0.2);
+            color: var(--accent-orange);
+        }
+
+        .pointer-label.high {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+
+        .pointer-arrow {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid currentColor;
+        }
+
+        .pointer-container.low .pointer-arrow { color: var(--accent-cyan); }
+        .pointer-container.mid1 .pointer-arrow { color: var(--accent-yellow); }
+        .pointer-container.mid2 .pointer-arrow { color: var(--accent-orange); }
+        .pointer-container.high .pointer-arrow { color: var(--accent-red); }
+
+        .array-block {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            border: 2px solid transparent;
+        }
+
+        .array-block.state-default {
+            background: var(--bg-tertiary);
+            border-color: var(--border);
+            color: var(--text-secondary);
+        }
+
+        .array-block.state-active {
+            background: rgba(59, 130, 246, 0.12);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .array-block.state-mid1 {
+            background: rgba(250, 204, 21, 0.15);
+            border-color: var(--accent-yellow);
+            color: var(--accent-yellow);
+            transform: scale(1.12);
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.35);
+        }
+
+        .array-block.state-mid2 {
+            background: rgba(249, 115, 22, 0.15);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+            transform: scale(1.12);
+            box-shadow: 0 0 20px rgba(249, 115, 22, 0.35);
+        }
+
+        .array-block.state-eliminated {
+            background: rgba(42, 42, 47, 0.3);
+            border-color: rgba(42, 42, 47, 0.5);
+            color: var(--text-muted);
+            opacity: 0.4;
+            transform: scale(0.95);
+        }
+
+        .array-block.state-found {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            transform: scale(1.15);
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+            animation: pulse-found 1s ease infinite;
+        }
+
+        .array-block.state-not-found {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .array-block.state-low {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .array-block.state-high {
+            border-color: var(--accent-red);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+        }
+
+        .block-index {
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 3px;
+            font-weight: 500;
+        }
+
+        @keyframes pulse-found {
+            0%, 100% { box-shadow: 0 0 30px rgba(34, 197, 94, 0.5); }
+            50% { box-shadow: 0 0 45px rgba(34, 197, 94, 0.7); }
+        }
+
+        /* Range indicator */
+        .range-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 12px;
+            padding: 10px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .range-segment {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .range-segment.left {
+            background: rgba(250, 204, 21, 0.1);
+            color: var(--accent-yellow);
+            border: 1px solid var(--accent-yellow);
+        }
+
+        .range-segment.middle {
+            background: rgba(168, 85, 247, 0.1);
+            color: var(--accent-purple);
+            border: 1px solid var(--accent-purple);
+        }
+
+        .range-segment.right {
+            background: rgba(249, 115, 22, 0.1);
+            color: var(--accent-orange);
+            border: 1px solid var(--accent-orange);
+        }
+
+        .range-segment.eliminated {
+            background: rgba(42, 42, 47, 0.5);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            opacity: 0.6;
+        }
+
+        .range-segment.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid var(--accent-blue);
+        }
+
+        /* Section divider */
+        .section-divider {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 12px 0;
+            flex-wrap: wrap;
+        }
+
+        .section-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .section-label.left { color: var(--accent-yellow); }
+        .section-label.middle { color: var(--accent-purple); }
+        .section-label.right { color: var(--accent-orange); }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            outline: none;
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--accent-cyan);
+            outline-offset: 2px;
+        }
+
+        .btn-primary {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: #00bde6;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-success {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .btn-success:hover {
+            background: rgba(34, 197, 94, 0.25);
+        }
+
+        .btn-warning {
+            background: rgba(249, 115, 22, 0.15);
+            color: var(--accent-orange);
+            border-color: var(--accent-orange);
+        }
+
+        .btn-warning:hover {
+            background: rgba(249, 115, 22, 0.25);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-purple {
+            background: rgba(168, 85, 247, 0.15);
+            color: var(--accent-purple);
+            border-color: var(--accent-purple);
+        }
+
+        .btn-purple:hover {
+            background: rgba(168, 85, 247, 0.25);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Input styles */
+        .input {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            outline: none;
+            width: 100%;
+        }
+
+        .input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Slider */
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-teal);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Code display */
+        .code-container {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            line-height: 1.85;
+        }
+
+        .code-line {
+            display: flex;
+            padding: 2px 10px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .code-line.active {
+            background: rgba(20, 184, 166, 0.15);
+            border-left-color: var(--accent-teal);
+        }
+
+        .code-line.executed {
+            background: rgba(34, 197, 94, 0.05);
+        }
+
+        .line-number {
+            width: 22px;
+            color: var(--text-muted);
+            user-select: none;
+        }
+
+        .line-content {
+            flex: 1;
+        }
+
+        .keyword { color: var(--accent-purple); }
+        .variable { color: var(--accent-cyan); }
+        .operator { color: var(--accent-orange); }
+        .comment { color: var(--text-muted); font-style: italic; }
+        .number { color: var(--accent-yellow); }
+        .function { color: var(--accent-teal); }
+
+        /* Progress bar */
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-teal), var(--accent-cyan));
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+
+        /* Timeline */
+        .timeline {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 8px 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        .timeline::-webkit-scrollbar { height: 6px; }
+        .timeline::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .timeline-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 90px;
+            padding: 8px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .timeline-item.active {
+            background: rgba(20, 184, 166, 0.15);
+            border-color: var(--accent-teal);
+        }
+
+        .timeline-step {
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .timeline-action {
+            color: var(--text-primary);
+            font-weight: 600;
+            text-align: center;
+        }
+
+        /* Stats */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Complexity badge */
+        .complexity-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .complexity-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .complexity-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .complexity-best { color: var(--accent-green); }
+        .complexity-avg { color: var(--accent-yellow); }
+        .complexity-worst { color: var(--accent-orange); }
+
+        /* Explanation panel */
+        .explanation-text {
+            font-size: 13px;
+            line-height: 1.75;
+            color: var(--text-secondary);
+        }
+
+        .explanation-highlight {
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        .explanation-value {
+            color: var(--accent-yellow);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        .explanation-calc {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            border-left: 3px solid var(--accent-teal);
+        }
+
+        /* Phase badge */
+        .phase-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .phase-badge.searching {
+            background: rgba(0, 212, 255, 0.15);
+            color: var(--accent-cyan);
+        }
+
+        .phase-badge.complete {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: fixed;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            max-width: 280px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-indicator.idle {
+            background: rgba(138, 138, 149, 0.15);
+            color: var(--text-secondary);
+        }
+
+        .status-indicator.running {
+            background: rgba(0, 212, 255, 0.15);
+            color: var(--accent-cyan);
+        }
+
+        .status-indicator.paused {
+            background: rgba(250, 204, 21, 0.15);
+            color: var(--accent-yellow);
+        }
+
+        .status-indicator.completed {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green);
+        }
+
+        .status-indicator.failed {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-indicator.running .status-dot {
+            animation: blink 1s ease infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Pointer info display */
+        .pointer-info {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .pointer-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+
+        .pointer-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .pointer-dot.low { background: var(--accent-cyan); }
+        .pointer-dot.mid1 { background: var(--accent-yellow); }
+        .pointer-dot.mid2 { background: var(--accent-orange); }
+        .pointer-dot.high { background: var(--accent-red); }
+
+        /* Decision tree */
+        .decision-tree {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .decision-branch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .decision-branch.active {
+            background: rgba(20, 184, 166, 0.1);
+            border-left-color: var(--accent-teal);
+        }
+
+        .decision-branch .condition {
+            color: var(--text-secondary);
+        }
+
+        .decision-branch .action {
+            color: var(--accent-cyan);
+            margin-left: auto;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1280px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .array-block {
+                width: 40px;
+                height: 40px;
+                font-size: 12px;
+            }
+            .controls-grid {
+                grid-template-columns: 1fr 1fr !important;
+            }
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="bg-pattern grid-bg">
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Header -->
+    <header class="border-b border-[var(--border)] bg-[var(--bg-secondary)]/80 backdrop-blur-sm sticky top-0 z-50">
+        <div class="max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--accent-yellow)] to-[var(--accent-orange)] flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--bg-primary)]">
+                        <path d="M12 3v18"></path>
+                        <path d="M8 7l4-4 4 4"></path>
+                        <path d="M8 17l4 4 4-4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">Ternary Search Visualizer</h1>
+                    <p class="text-xs text-[var(--text-muted)]">Divide Into Three Parts</p>
+                </div>
+            </div>
+            <div id="statusIndicator" class="status-indicator idle">
+                <span class="status-dot"></span>
+                <span id="statusText">Ready</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="max-w-[1600px] mx-auto p-4">
+        <div class="dashboard-grid grid grid-cols-[280px_1fr_300px] gap-4">
+            <!-- Left Panel - Controls -->
+            <div class="space-y-4">
+                <!-- Input Controls -->
+                <div class="card animate-in" style="animation-delay: 0.1s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                        </svg>
+                        Input Configuration
+                    </div>
+                    <div class="card-body space-y-4">
+                        <div>
+                            <label class="block text-xs text-[var(--text-muted)] mb-2 uppercase tracking-wider">Sorted Array (comma-separated)</label>
+                            <input type="text" id="arrayInput" class="input" placeholder="3, 8, 12, 15, 22, 33..." data-tooltip="Enter sorted numbers in ascending order. Ternary Search requires a sorted array.">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-[var(--text-muted)] mb-2 uppercase tracking-wider">Target Value</label>
+                            <input type="number" id="targetInput" class="input" placeholder="22" data-tooltip="The value you want to search for using Ternary Search.">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="btn btn-secondary text-xs" onclick="generateSortedArray()" data-tooltip="Generate a random sorted array.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                </svg>
+                                Generate
+                            </button>
+                            <button class="btn btn-primary text-xs" onclick="applyCustomInput()" data-tooltip="Apply your custom array and target values.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Case Generation -->
+                <div class="card animate-in" style="animation-delay: 0.15s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                            <circle cx="12" cy="13" r="3"></circle>
+                        </svg>
+                        Special Cases
+                    </div>
+                    <div class="card-body space-y-2">
+                        <button class="btn btn-success w-full justify-start" onclick="generateBestCase()" data-tooltip="Target at mid1 position - best case O(1).">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                            Best Case
+                        </button>
+                        <button class="btn btn-warning w-full justify-start" onclick="generateWorstCase()" data-tooltip="Target requires maximum iterations.">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 9v4"></path>
+                                <path d="M12 17h.01"></path>
+                                <path d="M3.6 9h16.8a1 1 0 0 1 .9 1.45l-8.34 15.11a1 1 0 0 1-1.79 0L2.72 10.45A1 1 0 0 1 3.6 9z"></path>
+                            </svg>
+                            Worst Case
+                        </button>
+                        <button class="btn btn-danger w-full justify-start" onclick="generateNotFoundCase()" data-tooltip="Target doesn't exist in array.">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="m15 9-6 6"></path>
+                                <path d="m9 9 6 6"></path>
+                            </svg>
+                            Not Found Case
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Speed Control -->
+                <div class="card animate-in" style="animation-delay: 0.2s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2v4"></path>
+                            <path d="m16.2 7.8 2.9-2.9"></path>
+                            <path d="M18 12h4"></path>
+                            <path d="m16.2 16.2 2.9 2.9"></path>
+                            <path d="M12 18v4"></path>
+                            <path d="m4.9 19.1 2.9-2.9"></path>
+                            <path d="M2 12h4"></path>
+                            <path d="m4.9 4.9 2.9 2.9"></path>
+                        </svg>
+                        Speed Control
+                    </div>
+                    <div class="card-body">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs text-[var(--text-muted)]">Slow</span>
+                            <span id="speedValue" class="font-mono text-sm font-semibold text-[var(--accent-teal)]">900ms</span>
+                            <span class="text-xs text-[var(--text-muted)]">Fast</span>
+                        </div>
+                        <input type="range" id="speedSlider" class="slider" min="300" max="2000" value="900" data-tooltip="Adjust animation speed for better understanding of each step.">
+                    </div>
+                </div>
+
+                <!-- Complexity Info -->
+                <div class="card animate-in" style="animation-delay: 0.25s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3v18h18"></path>
+                            <path d="m19 9-5 5-4-4-3 3"></path>
+                        </svg>
+                        Time Complexity
+                    </div>
+                    <div class="card-body">
+                        <div class="complexity-badge">
+                            <span class="complexity-label">Best Case</span>
+                            <span class="complexity-value complexity-best">O(1)</span>
+                        </div>
+                        <div class="complexity-badge">
+                            <span class="complexity-label">Average Case</span>
+                            <span class="complexity-value complexity-avg">O(log₃ n)</span>
+                        </div>
+                        <div class="complexity-badge">
+                            <span class="complexity-label">Worst Case</span>
+                            <span class="complexity-value complexity-worst">O(log₃ n)</span>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-[var(--border)]">
+                            <p class="text-xs text-[var(--text-muted)]">Ternary Search divides the range into 3 parts, but more comparisons per step than binary search.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel - Visualization -->
+            <div class="space-y-4">
+                <!-- Array Visualization -->
+                <div class="card animate-in" style="animation-delay: 0.1s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                            <line x1="3" x2="21" y1="9" y2="9"></line>
+                            <line x1="9" x2="9" y1="21" y2="9"></line>
+                        </svg>
+                        Sorted Array Visualization
+                        <span id="phaseBadge" class="phase-badge ml-auto" style="display: none;"></span>
+                    </div>
+                    <div id="arrayContainer" class="array-container" data-tooltip="Yellow = mid1, Orange = mid2, Blue = active range, Faded = eliminated sections.">
+                        <!-- Array blocks will be generated here -->
+                    </div>
+                    <!-- Pointer Info -->
+                    <div class="px-4 pb-4">
+                        <div class="pointer-info">
+                            <div class="pointer-item">
+                                <span class="pointer-dot low"></span>
+                                <span>Low: <span id="lowDisplay">0</span></span>
+                            </div>
+                            <div class="pointer-item">
+                                <span class="pointer-dot mid1"></span>
+                                <span>Mid1: <span id="mid1Display">-</span></span>
+                            </div>
+                            <div class="pointer-item">
+                                <span class="pointer-dot mid2"></span>
+                                <span>Mid2: <span id="mid2Display">-</span></span>
+                            </div>
+                            <div class="pointer-item">
+                                <span class="pointer-dot high"></span>
+                                <span>High: <span id="highDisplay">-</span></span>
+                            </div>
+                        </div>
+                        <!-- Section Divider -->
+                        <div id="sectionDivider" class="section-divider" style="display: none;">
+                            <div class="section-label left" id="leftSection">Left Section</div>
+                            <div class="section-label middle" id="middleSection">Middle Section</div>
+                            <div class="section-label right" id="rightSection">Right Section</div>
+                        </div>
+                        <!-- Range Indicator -->
+                        <div id="rangeIndicator" class="range-indicator" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Decision Tree -->
+                <div class="card animate-in" style="animation-delay: 0.15s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 16v-4"></path>
+                            <path d="M12 8h.01"></path>
+                        </svg>
+                        Decision Logic
+                    </div>
+                    <div class="card-body">
+                        <div id="decisionTree" class="decision-tree">
+                            <div class="decision-branch" id="decision-found-mid1">
+                                <span class="condition">target == arr[mid1]</span>
+                                <span class="action">return mid1</span>
+                            </div>
+                            <div class="decision-branch" id="decision-found-mid2">
+                                <span class="condition">target == arr[mid2]</span>
+                                <span class="action">return mid2</span>
+                            </div>
+                            <div class="decision-branch" id="decision-left">
+                                <span class="condition">target < arr[mid1]</span>
+                                <span class="action">search left section</span>
+                            </div>
+                            <div class="decision-branch" id="decision-right">
+                                <span class="condition">target > arr[mid2]</span>
+                                <span class="action">search right section</span>
+                            </div>
+                            <div class="decision-branch" id="decision-middle">
+                                <span class="condition">else</span>
+                                <span class="action">search middle section</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="card animate-in" style="animation-delay: 0.2s">
+                    <div class="card-body">
+                        <div class="controls-grid grid grid-cols-5 gap-2">
+                            <button id="btnStart" class="btn btn-primary" onclick="startSearch()" data-tooltip="Start automatic execution.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                                Start
+                            </button>
+                            <button id="btnPause" class="btn btn-secondary" onclick="pauseSearch()" disabled data-tooltip="Pause execution.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <rect x="6" y="4" width="4" height="16"></rect>
+                                    <rect x="14" y="4" width="4" height="16"></rect>
+                                </svg>
+                                Pause
+                            </button>
+                            <button id="btnStepForward" class="btn btn-secondary" onclick="stepForward()" data-tooltip="Execute one step.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                                    <line x1="19" x2="19" y1="5" y2="19"></line>
+                                </svg>
+                                Step
+                            </button>
+                            <button id="btnStepBack" class="btn btn-secondary" onclick="stepBack()" data-tooltip="Go back one step.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                                    <line x1="5" x2="5" y1="19" y2="5"></line>
+                                </svg>
+                                Back
+                            </button>
+                            <button id="btnReset" class="btn btn-danger" onclick="resetVisualization()" data-tooltip="Reset visualization.">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                    <path d="M3 3v5h5"></path>
+                                </svg>
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="card animate-in" style="animation-delay: 0.25s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        Search Timeline
+                    </div>
+                    <div class="card-body">
+                        <div id="timeline" class="timeline" data-tooltip="Shows the history of midpoints and search decisions.">
+                            <div class="text-sm text-[var(--text-muted)]">Start the search to see timeline...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Code & Explanation -->
+            <div class="space-y-4">
+                <!-- Code Visualization -->
+                <div class="card animate-in" style="animation-delay: 0.1s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 18 22 12 16 6"></polyline>
+                            <polyline points="8 6 2 12 8 18"></polyline>
+                        </svg>
+                        Algorithm Code
+                    </div>
+                    <div class="card-body">
+                        <div id="codeContainer" class="code-container">
+                            <div class="code-line" data-line="1">
+                                <span class="line-number">1</span>
+                                <span class="line-content"><span class="keyword">while</span> low <= high</span>
+                            </div>
+                            <div class="code-line" data-line="2">
+                                <span class="line-number">2</span>
+                                <span class="line-content">    <span class="variable">mid1</span> = low + (high-low)/<span class="number">3</span></span>
+                            </div>
+                            <div class="code-line" data-line="3">
+                                <span class="line-number">3</span>
+                                <span class="line-content">    <span class="variable">mid2</span> = high - (high-low)/<span class="number">3</span></span>
+                            </div>
+                            <div class="code-line" data-line="4">
+                                <span class="line-number">4</span>
+                                <span class="line-content">    <span class="keyword">if</span> arr[mid1] == target</span>
+                            </div>
+                            <div class="code-line" data-line="5">
+                                <span class="line-number">5</span>
+                                <span class="line-content">        <span class="keyword">return</span> mid1</span>
+                            </div>
+                            <div class="code-line" data-line="6">
+                                <span class="line-number">6</span>
+                                <span class="line-content">    <span class="keyword">if</span> arr[mid2] == target</span>
+                            </div>
+                            <div class="code-line" data-line="7">
+                                <span class="line-number">7</span>
+                                <span class="line-content">        <span class="keyword">return</span> mid2</span>
+                            </div>
+                            <div class="code-line" data-line="8">
+                                <span class="line-number">8</span>
+                                <span class="line-content">    <span class="keyword">if</span> target < arr[mid1]</span>
+                            </div>
+                            <div class="code-line" data-line="9">
+                                <span class="line-number">9</span>
+                                <span class="line-content">        high = mid1 - <span class="number">1</span></span>
+                            </div>
+                            <div class="code-line" data-line="10">
+                                <span class="line-number">10</span>
+                                <span class="line-content">    <span class="keyword">else if</span> target > arr[mid2]</span>
+                            </div>
+                            <div class="code-line" data-line="11">
+                                <span class="line-number">11</span>
+                                <span class="line-content">        low = mid2 + <span class="number">1</span></span>
+                            </div>
+                            <div class="code-line" data-line="12">
+                                <span class="line-number">12</span>
+                                <span class="line-content">    <span class="keyword">else</span></span>
+                            </div>
+                            <div class="code-line" data-line="13">
+                                <span class="line-number">13</span>
+                                <span class="line-content">        low = mid1 + <span class="number">1</span></span>
+                            </div>
+                            <div class="code-line" data-line="14">
+                                <span class="line-number">14</span>
+                                <span class="line-content">        high = mid2 - <span class="number">1</span></span>
+                            </div>
+                            <div class="code-line" data-line="15">
+                                <span class="line-number">15</span>
+                                <span class="line-content"><span class="keyword">return</span> -<span class="number">1</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Explanation Panel -->
+                <div class="card animate-in" style="animation-delay: 0.15s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        Step Explanation
+                    </div>
+                    <div class="card-body">
+                        <div id="explanationPanel" class="explanation-text">
+                            <p>Welcome to the Ternary Search Visualizer!</p>
+                            <p class="mt-3">Ternary Search works on <span class="explanation-highlight">sorted arrays</span> by dividing the search range into three parts using two midpoints.</p>
+                            <div class="explanation-calc mt-4">
+                                <p class="text-[var(--text-muted)]">Key Formulas:</p>
+                                <p>mid1 = low + (high - low) / 3</p>
+                                <p>mid2 = high - (high - low) / 3</p>
+                            </div>
+                            <p class="mt-3">Click <span class="explanation-highlight">Start</span> to begin or <span class="explanation-highlight">Step</span> for manual control.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="card animate-in" style="animation-delay: 0.2s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3v18h18"></path>
+                            <path d="M18 17V9"></path>
+                            <path d="M13 17V5"></path>
+                            <path d="M8 17v-3"></path>
+                        </svg>
+                        Statistics
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Array Size</span>
+                                <span id="statArraySize" class="stat-value text-[var(--accent-cyan)]">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Current Step</span>
+                                <span id="statStep" class="stat-value text-[var(--accent-teal)]">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Comparisons</span>
+                                <span id="statComparisons" class="stat-value text-[var(--accent-purple)]">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Search Range</span>
+                                <span id="statRange" class="stat-value text-[var(--accent-yellow)]">-</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-[var(--border)]">
+                            <div class="flex justify-between mb-2">
+                                <span class="text-xs text-[var(--text-muted)]">Search Progress</span>
+                                <span id="progressText" class="text-xs font-mono text-[var(--text-secondary)]">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="card animate-in" style="animation-delay: 0.25s">
+                    <div class="card-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" x2="12" y1="16" y2="12"></line>
+                            <line x1="12" x2="12.01" y1="8" y2="8"></line>
+                        </svg>
+                        Color Legend
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded bg-[var(--bg-tertiary)] border border-[var(--border)]"></div>
+                                <span class="text-xs text-[var(--text-secondary)]">Default</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded bg-[rgba(250,204,21,0.15)] border border-[var(--accent-yellow)]"></div>
+                                <span class="text-xs text-[var(--text-secondary)]">Mid1</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded bg-[rgba(249,115,22,0.15)] border border-[var(--accent-orange)]"></div>
+                                <span class="text-xs text-[var(--text-secondary)]">Mid2</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded bg-[rgba(59,130,246,0.12)] border border-[var(--accent-blue)]"></div>
+                                <span class="text-xs text-[var(--text-secondary)]">Active Range</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded bg-[rgba(42,42,47,0.3)] border border-[rgba(42,42,47,0.5)]"></div>
+                                <span class="text-xs text-[var(--text-secondary)]">Eliminated</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded bg-[rgba(34,197,94,0.15)] border border-[var(--accent-green)]"></div>
+                                <span class="text-xs text-[var(--text-secondary)]">Found</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ==========================================
+        // State Management
+        // ==========================================
+        const state = {
+            array: [],
+            target: null,
+            low: 0,
+            high: -1,
+            mid1: -1,
+            mid2: -1,
+            step: 0,
+            comparisons: 0,
+            isRunning: false,
+            isPaused: false,
+            isComplete: false,
+            found: false,
+            foundIndex: -1,
+            history: [],
+            currentHistoryIndex: -1,
+            intervalId: null,
+            speed: 900,
+            eliminatedIndices: new Set(),
+            selectedSection: null
+        };
+
+        // Audio Context
+        let audioContext = null;
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioContext) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            switch(type) {
+                case 'compare':
+                    oscillator.frequency.value = 520;
+                    gainNode.gain.value = 0.08;
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                    break;
+                case 'found':
+                    oscillator.frequency.value = 660;
+                    gainNode.gain.value = 0.12;
+                    oscillator.start();
+                    setTimeout(() => oscillator.frequency.value = 880, 80);
+                    setTimeout(() => oscillator.frequency.value = 1040, 160);
+                    oscillator.stop(audioContext.currentTime + 0.25);
+                    break;
+                case 'notfound':
+                    oscillator.frequency.value = 200;
+                    gainNode.gain.value = 0.08;
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                    break;
+                case 'section':
+                    oscillator.frequency.value = 440;
+                    gainNode.gain.value = 0.06;
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.12);
+                    break;
+            }
+        }
+
+        // ==========================================
+        // Initialization
+        // ==========================================
+        function initialize() {
+            generateSortedArray();
+            setupEventListeners();
+            setupTooltips();
+        }
+
+        function setupEventListeners() {
+            const speedSlider = document.getElementById('speedSlider');
+            speedSlider.addEventListener('input', (e) => {
+                state.speed = 2300 - parseInt(e.target.value);
+                document.getElementById('speedValue').textContent = `${e.target.value}ms`;
+            });
+        }
+
+        // ==========================================
+        // Tooltip System
+        // ==========================================
+        function setupTooltips() {
+            const tooltip = document.getElementById('tooltip');
+            const elements = document.querySelectorAll('[data-tooltip]');
+            
+            elements.forEach(element => {
+                element.addEventListener('mouseenter', (e) => {
+                    const text = e.target.closest('[data-tooltip]').dataset.tooltip;
+                    tooltip.textContent = text;
+                    tooltip.classList.add('visible');
+                    
+                    const rect = e.target.getBoundingClientRect();
+                    tooltip.style.left = `${Math.min(rect.left, window.innerWidth - 300)}px`;
+                    tooltip.style.top = `${rect.bottom + 10}px`;
+                });
+                
+                element.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                });
+            });
+        }
+
+        // ==========================================
+        // Array Generation
+        // ==========================================
+        function generateSortedArray() {
+            const size = Math.floor(Math.random() * 5) + 12;
+            let current = Math.floor(Math.random() * 8) + 3;
+            state.array = [];
+            
+            for (let i = 0; i < size; i++) {
+                state.array.push(current);
+                current += Math.floor(Math.random() * 7) + 4;
+            }
+            
+            state.target = state.array[Math.floor(Math.random() * state.array.length)];
+            
+            document.getElementById('arrayInput').value = state.array.join(', ');
+            document.getElementById('targetInput').value = state.target;
+            
+            resetVisualization();
+        }
+
+        function applyCustomInput() {
+            const arrayInput = document.getElementById('arrayInput').value;
+            const targetInput = document.getElementById('targetInput').value;
+            
+            if (arrayInput.trim()) {
+                const parsed = arrayInput.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+                state.array = parsed.sort((a, b) => a - b);
+                document.getElementById('arrayInput').value = state.array.join(', ');
+            }
+            
+            if (targetInput.trim()) {
+                state.target = parseInt(targetInput.trim());
+            }
+            
+            if (state.array.length > 0 && !isNaN(state.target)) {
+                resetVisualization();
+            }
+        }
+
+        function generateBestCase() {
+            const size = 15;
+            let current = 3;
+            state.array = [];
+            
+            for (let i = 0; i < size; i++) {
+                state.array.push(current);
+                current += 5;
+            }
+            
+            // Target at first mid1 position
+            const third = Math.floor(size / 3);
+            state.target = state.array[third];
+            
+            document.getElementById('arrayInput').value = state.array.join(', ');
+            document.getElementById('targetInput').value = state.target;
+            
+            resetVisualization();
+        }
+
+        function generateWorstCase() {
+            const size = 18;
+            let current = 2;
+            state.array = [];
+            
+            for (let i = 0; i < size; i++) {
+                state.array.push(current);
+                current += 4;
+            }
+            
+            // Target requires maximum iterations
+            state.target = state.array[state.array.length - 1];
+            
+            document.getElementById('arrayInput').value = state.array.join(', ');
+            document.getElementById('targetInput').value = state.target;
+            
+            resetVisualization();
+        }
+
+        function generateNotFoundCase() {
+            const size = 15;
+            let current = 10;
+            state.array = [];
+            
+            for (let i = 0; i < size; i++) {
+                state.array.push(current);
+                current += 8;
+            }
+            
+            state.target = 999; // Definitely not in array
+            
+            document.getElementById('arrayInput').value = state.array.join(', ');
+            document.getElementById('targetInput').value = state.target;
+            
+            resetVisualization();
+        }
+
+        // ==========================================
+        // Rendering
+        // ==========================================
+        function renderArray() {
+            const container = document.getElementById('arrayContainer');
+            container.innerHTML = '';
+            
+            const blocksWrapper = document.createElement('div');
+            blocksWrapper.className = 'blocks-wrapper';
+            
+            state.array.forEach((value, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'array-block-wrapper';
+                
+                // Pointer container
+                const pointerContainer = document.createElement('div');
+                pointerContainer.className = 'pointer-container';
+                
+                const isLow = index === state.low;
+                const isMid1 = index === state.mid1;
+                const isMid2 = index === state.mid2;
+                const isHigh = index === state.high;
+                
+                if (isLow && !state.isComplete) {
+                    pointerContainer.classList.add('visible', 'low');
+                    pointerContainer.innerHTML = `
+                        <span class="pointer-label low">L</span>
+                        <div class="pointer-arrow"></div>
+                    `;
+                } else if (isMid1 && !state.isComplete) {
+                    pointerContainer.classList.add('visible', 'mid1');
+                    pointerContainer.innerHTML = `
+                        <span class="pointer-label mid1">M1</span>
+                        <div class="pointer-arrow"></div>
+                    `;
+                } else if (isMid2 && !state.isComplete) {
+                    pointerContainer.classList.add('visible', 'mid2');
+                    pointerContainer.innerHTML = `
+                        <span class="pointer-label mid2">M2</span>
+                        <div class="pointer-arrow"></div>
+                    `;
+                } else if (isHigh && !state.isComplete) {
+                    pointerContainer.classList.add('visible', 'high');
+                    pointerContainer.innerHTML = `
+                        <span class="pointer-label high">H</span>
+                        <div class="pointer-arrow"></div>
+                    `;
+                }
+                
+                const block = document.createElement('div');
+                block.className = 'array-block state-default';
+                block.dataset.index = index;
+                block.innerHTML = `<span class="block-value">${value}</span>`;
+                
+                const indexLabel = document.createElement('div');
+                indexLabel.className = 'block-index';
+                indexLabel.textContent = index;
+                
+                wrapper.appendChild(pointerContainer);
+                wrapper.appendChild(block);
+                wrapper.appendChild(indexLabel);
+                blocksWrapper.appendChild(wrapper);
+            });
+            
+            container.appendChild(blocksWrapper);
+            updateBlockStates();
+            updateSectionDivider();
+            updateRangeIndicator();
+        }
+
+        function updateBlockStates() {
+            const blocks = document.querySelectorAll('.array-block');
+            
+            blocks.forEach((block, index) => {
+                block.className = 'array-block state-default';
+                
+                if (state.isComplete) {
+                    if (state.found && index === state.foundIndex) {
+                        block.classList.add('state-found');
+                    } else if (!state.found) {
+                        block.classList.add('state-not-found');
+                    } else {
+                        block.classList.add('state-eliminated');
+                    }
+                } else {
+                    if (state.eliminatedIndices.has(index)) {
+                        block.classList.add('state-eliminated');
+                    } else if (index >= state.low && index <= state.high) {
+                        if (index === state.mid1) {
+                            block.classList.add('state-mid1');
+                        } else if (index === state.mid2) {
+                            block.classList.add('state-mid2');
+                        } else {
+                            block.classList.add('state-active');
+                        }
+                        
+                        if (index === state.low) block.classList.add('state-low');
+                        if (index === state.high) block.classList.add('state-high');
+                    }
+                }
+            });
+        }
+
+        function updateSectionDivider() {
+            const divider = document.getElementById('sectionDivider');
+            
+            if (state.mid1 >= 0 && state.mid2 >= 0 && !state.isComplete) {
+                divider.style.display = 'flex';
+                
+                const left = document.getElementById('leftSection');
+                const middle = document.getElementById('middleSection');
+                const right = document.getElementById('rightSection');
+                
+                left.textContent = `Left [${state.low}-${state.mid1 - 1}]`;
+                middle.textContent = `Middle [${state.mid1 + 1}-${state.mid2 - 1}]`;
+                right.textContent = `Right [${state.mid2 + 1}-${state.high}]`;
+                
+                // Highlight selected section
+                left.classList.remove('active');
+                middle.classList.remove('active');
+                right.classList.remove('active');
+                
+                if (state.selectedSection === 'left') {
+                    left.classList.add('active');
+                    left.style.background = 'rgba(250, 204, 21, 0.2)';
+                    middle.style.background = 'var(--bg-tertiary)';
+                    right.style.background = 'var(--bg-tertiary)';
+                } else if (state.selectedSection === 'middle') {
+                    left.style.background = 'var(--bg-tertiary)';
+                    middle.classList.add('active');
+                    middle.style.background = 'rgba(168, 85, 247, 0.2)';
+                    right.style.background = 'var(--bg-tertiary)';
+                } else if (state.selectedSection === 'right') {
+                    left.style.background = 'var(--bg-tertiary)';
+                    middle.style.background = 'var(--bg-tertiary)';
+                    right.classList.add('active');
+                    right.style.background = 'rgba(249, 115, 22, 0.2)';
+                } else {
+                    left.style.background = 'var(--bg-tertiary)';
+                    middle.style.background = 'var(--bg-tertiary)';
+                    right.style.background = 'var(--bg-tertiary)';
+                }
+            } else {
+                divider.style.display = 'none';
+            }
+        }
+
+        function updateRangeIndicator() {
+            const indicator = document.getElementById('rangeIndicator');
+            
+            if (state.isComplete || state.mid1 < 0) {
+                indicator.style.display = 'none';
+                return;
+            }
+            
+            indicator.style.display = 'flex';
+            
+            let html = '';
+            
+            // Left section
+            if (state.low < state.mid1) {
+                const isEliminated = state.selectedSection === 'middle' || state.selectedSection === 'right';
+                html += `<div class="range-segment left ${isEliminated ? 'eliminated' : (state.selectedSection === 'left' ? 'active' : '')}">Left: ${state.low}-${state.mid1 - 1}</div>`;
+            }
+            
+            // Middle section
+            if (state.mid1 < state.mid2 - 1) {
+                const isEliminated = state.selectedSection === 'left' || state.selectedSection === 'right';
+                html += `<div class="range-segment middle ${isEliminated ? 'eliminated' : (state.selectedSection === 'middle' ? 'active' : '')}">Middle: ${state.mid1 + 1}-${state.mid2 - 1}</div>`;
+            }
+            
+            // Right section
+            if (state.mid2 < state.high) {
+                const isEliminated = state.selectedSection === 'left' || state.selectedSection === 'middle';
+                html += `<div class="range-segment right ${isEliminated ? 'eliminated' : (state.selectedSection === 'right' ? 'active' : '')}">Right: ${state.mid2 + 1}-${state.high}</div>`;
+            }
+            
+            indicator.innerHTML = html;
+        }
+
+        function updateDecisionTree(decision) {
+            const decisions = ['found-mid1', 'found-mid2', 'left', 'right', 'middle'];
+            
+            decisions.forEach(d => {
+                const el = document.getElementById(`decision-${d}`);
+                el.classList.remove('active');
+            });
+            
+            if (decision) {
+                const el = document.getElementById(`decision-${decision}`);
+                if (el) el.classList.add('active');
+            }
+        }
+
+        function updatePointerDisplays() {
+            document.getElementById('lowDisplay').textContent = state.low;
+            document.getElementById('mid1Display').textContent = state.mid1 >= 0 ? state.mid1 : '-';
+            document.getElementById('mid2Display').textContent = state.mid2 >= 0 ? state.mid2 : '-';
+            document.getElementById('highDisplay').textContent = state.high >= 0 ? state.high : '-';
+        }
+
+        function updateCodeHighlight(lineNumber) {
+            const lines = document.querySelectorAll('.code-line');
+            lines.forEach(line => {
+                line.classList.remove('active');
+                if (parseInt(line.dataset.line) <= lineNumber && lineNumber > 0) {
+                    line.classList.add('executed');
+                }
+            });
+            
+            if (lineNumber > 0) {
+                const activeLine = document.querySelector(`.code-line[data-line="${lineNumber}"]`);
+                if (activeLine) {
+                    activeLine.classList.add('active');
+                }
+            }
+        }
+
+        function updateExplanation() {
+            const panel = document.getElementById('explanationPanel');
+            const mid1Value = state.mid1 >= 0 ? state.array[state.mid1] : '-';
+            const mid2Value = state.mid2 >= 0 ? state.array[state.mid2] : '-';
+            
+            if (state.isComplete) {
+                if (state.found) {
+                    panel.innerHTML = `
+                        <p class="text-[var(--accent-green)] font-semibold text-base">Element Found!</p>
+                        <p class="mt-3">The target value <span class="explanation-value">${state.target}</span> was found at index <span class="explanation-highlight">${state.foundIndex}</span>.</p>
+                        <div class="explanation-calc">
+                            <p>Total comparisons: <span class="text-[var(--accent-yellow)]">${state.comparisons}</span></p>
+                            <p>Steps taken: <span class="text-[var(--text-muted)]">${state.step}</span></p>
+                        </div>
+                        <p class="mt-3 text-[var(--text-muted)]">Time Complexity: <span class="text-[var(--accent-green)]">O(log₃ n)</span></p>
+                    `;
+                } else {
+                    panel.innerHTML = `
+                        <p class="text-[var(--accent-red)] font-semibold text-base">Element Not Found</p>
+                        <p class="mt-3">The target value <span class="explanation-value">${state.target}</span> does not exist in the array.</p>
+                        <p class="mt-3">The search range has been exhausted (low > high).</p>
+                        <div class="explanation-calc">
+                            <p>Total comparisons: <span class="text-[var(--accent-yellow)]">${state.comparisons}</span></p>
+                        </div>
+                    `;
+                }
+            } else if (state.mid1 >= 0 && state.mid2 >= 0) {
+                let decisionText = '';
+                
+                if (state.target === mid1Value) {
+                    decisionText = 'Target matches mid1 - element found!';
+                } else if (state.target === mid2Value) {
+                    decisionText = 'Target matches mid2 - element found!';
+                } else if (state.target < mid1Value) {
+                    decisionText = `Since ${state.target} < ${mid1Value}, searching the <span class="text-[var(--accent-yellow)]">left section</span>.`;
+                } else if (state.target > mid2Value) {
+                    decisionText = `Since ${state.target} > ${mid2Value}, searching the <span class="text-[var(--accent-orange)]">right section</span>.`;
+                } else {
+                    decisionText = `Since ${mid1Value} < ${state.target} < ${mid2Value}, searching the <span class="text-[var(--accent-purple)]">middle section</span>.`;
+                }
+                
+                panel.innerHTML = `
+                    <p class="font-semibold text-[var(--accent-cyan)]">Step ${state.step}</p>
+                    <div class="explanation-calc">
+                        <p>Range: <span class="explanation-highlight">${state.low}</span> to <span class="explanation-highlight">${state.high}</span></p>
+                        <p class="mt-1">mid1 = ${state.low} + (${state.high} - ${state.low}) / 3 = <span class="explanation-highlight">${state.mid1}</span></p>
+                        <p class="mt-1">mid2 = ${state.high} - (${state.high} - ${state.low}) / 3 = <span class="explanation-highlight">${state.mid2}</span></p>
+                        <p class="mt-2">arr[mid1] = <span class="explanation-value">${mid1Value}</span></p>
+                        <p>arr[mid2] = <span class="explanation-value">${mid2Value}</span></p>
+                        <p>target = <span class="explanation-value">${state.target}</span></p>
+                    </div>
+                    <p class="mt-3">${decisionText}</p>
+                `;
+            } else {
+                panel.innerHTML = `
+                    <p>Ready to search for <span class="explanation-value">${state.target}</span> in the sorted array.</p>
+                    <div class="explanation-calc mt-4">
+                        <p>Array size: <span class="explanation-highlight">${state.array.length}</span> elements</p>
+                        <p>Maximum iterations: <span class="explanation-highlight">${Math.ceil(Math.log(state.array.length) / Math.log(3))}</span></p>
+                    </div>
+                    <p class="mt-3">Ternary Search will divide the range into <span class="text-[var(--accent-yellow)]">three parts</span> using two midpoints.</p>
+                `;
+            }
+        }
+
+        function updateTimeline() {
+            const timeline = document.getElementById('timeline');
+            
+            if (state.history.length === 0) {
+                timeline.innerHTML = '<div class="text-sm text-[var(--text-muted)]">Start the search to see timeline...</div>';
+                return;
+            }
+            
+            timeline.innerHTML = state.history.map((item, i) => `
+                <div class="timeline-item ${i === state.currentHistoryIndex ? 'active' : ''}">
+                    <span class="timeline-step">Step ${i + 1}</span>
+                    <span class="timeline-action">${item.text}</span>
+                </div>
+            `).join('');
+            
+            timeline.scrollLeft = timeline.scrollWidth;
+        }
+
+        function updateStatistics() {
+            document.getElementById('statArraySize').textContent = state.array.length;
+            document.getElementById('statStep').textContent = state.step;
+            document.getElementById('statComparisons').textContent = state.comparisons;
+            document.getElementById('statRange').textContent = state.high >= 0 ? `${state.low} → ${state.high}` : '-';
+            
+            const maxSteps = Math.ceil(Math.log(state.array.length) / Math.log(3)) + 2;
+            const progress = maxSteps > 0 ? Math.min((state.step / maxSteps) * 100, 100) : 0;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = `${Math.round(progress)}%`;
+        }
+
+        function updatePhaseBadge() {
+            const badge = document.getElementById('phaseBadge');
+            
+            if (state.isComplete) {
+                badge.style.display = 'inline-flex';
+                badge.className = 'phase-badge complete';
+                badge.textContent = state.found ? 'Complete - Found' : 'Complete - Not Found';
+            } else if (state.step > 0) {
+                badge.style.display = 'inline-flex';
+                badge.className = 'phase-badge searching';
+                badge.textContent = `Searching - Step ${state.step}`;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function setStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            indicator.className = `status-indicator ${status}`;
+            statusText.textContent = text;
+        }
+
+        function updateButtons() {
+            const btnStart = document.getElementById('btnStart');
+            const btnPause = document.getElementById('btnPause');
+            const btnStepForward = document.getElementById('btnStepForward');
+            const btnStepBack = document.getElementById('btnStepBack');
+            
+            btnStart.disabled = state.isRunning && !state.isPaused;
+            btnPause.disabled = !state.isRunning || state.isPaused || state.isComplete;
+            btnStepForward.disabled = (state.isRunning && !state.isPaused) || state.isComplete;
+            btnStepBack.disabled = state.history.length === 0 || state.isRunning;
+        }
+
+        // ==========================================
+        // Algorithm Execution
+        // ==========================================
+        function startSearch() {
+            initAudio();
+            
+            if (state.isComplete) {
+                resetVisualization();
+            }
+            
+            state.isRunning = true;
+            state.isPaused = false;
+            setStatus('running', 'Searching');
+            updateButtons();
+            
+            if (state.step === 0) {
+                stepForward();
+            }
+            
+            state.intervalId = setInterval(() => {
+                if (!state.isPaused && !state.isComplete) {
+                    stepForward();
+                }
+            }, state.speed);
+        }
+
+        function pauseSearch() {
+            state.isPaused = true;
+            clearInterval(state.intervalId);
+            setStatus('paused', 'Paused');
+            updateButtons();
+        }
+
+        function stepForward() {
+            initAudio();
+            
+            if (state.isComplete) return;
+            
+            const n = state.array.length;
+            
+            // Initialize
+            if (state.step === 0) {
+                state.low = 0;
+                state.high = n - 1;
+            }
+            
+            // Check if search range is valid
+            if (state.low > state.high) {
+                state.isComplete = true;
+                state.found = false;
+                updateCodeHighlight(15);
+                playSound('notfound');
+                finishSearch();
+                return;
+            }
+            
+            // Calculate midpoints
+            const third = Math.floor((state.high - state.low) / 3);
+            state.mid1 = state.low + third;
+            state.mid2 = state.high - third;
+            
+            state.step++;
+            state.selectedSection = null;
+            
+            // Record history
+            state.history.push({
+                step: state.step,
+                mid1: state.mid1,
+                mid2: state.mid2,
+                low: state.low,
+                high: state.high,
+                text: `m1=${state.mid1} m2=${state.mid2}`
+            });
+            state.currentHistoryIndex = state.history.length - 1;
+            
+            updateCodeHighlight(3);
+            playSound('compare');
+            
+            const mid1Value = state.array[state.mid1];
+            const mid2Value = state.array[state.mid2];
+            
+            // Check mid1
+            state.comparisons++;
+            if (mid1Value === state.target) {
+                state.isComplete = true;
+                state.found = true;
+                state.foundIndex = state.mid1;
+                updateDecisionTree('found-mid1');
+                updateCodeHighlight(5);
+                playSound('found');
+                finishSearch();
+                return;
+            }
+            
+            // Check mid2
+            state.comparisons++;
+            if (mid2Value === state.target) {
+                state.isComplete = true;
+                state.found = true;
+                state.foundIndex = state.mid2;
+                updateDecisionTree('found-mid2');
+                updateCodeHighlight(7);
+                playSound('found');
+                finishSearch();
+                return;
+            }
+            
+            // Determine which section to search
+            if (state.target < mid1Value) {
+                // Search left section
+                updateDecisionTree('left');
+                state.selectedSection = 'left';
+                
+                // Eliminate middle and right sections
+                for (let i = state.mid1; i <= state.high; i++) {
+                    state.eliminatedIndices.add(i);
+                }
+                
+                state.high = state.mid1 - 1;
+                updateCodeHighlight(9);
+                playSound('section');
+            } else if (state.target > mid2Value) {
+                // Search right section
+                updateDecisionTree('right');
+                state.selectedSection = 'right';
+                
+                // Eliminate left and middle sections
+                for (let i = state.low; i <= state.mid2; i++) {
+                    state.eliminatedIndices.add(i);
+                }
+                
+                state.low = state.mid2 + 1;
+                updateCodeHighlight(11);
+                playSound('section');
+            } else {
+                // Search middle section
+                updateDecisionTree('middle');
+                state.selectedSection = 'middle';
+                
+                // Eliminate left and right sections
+                for (let i = state.low; i < state.mid1; i++) {
+                    state.eliminatedIndices.add(i);
+                }
+                for (let i = state.mid2 + 1; i <= state.high; i++) {
+                    state.eliminatedIndices.add(i);
+                }
+                
+                state.low = state.mid1 + 1;
+                state.high = state.mid2 - 1;
+                updateCodeHighlight(14);
+                playSound('section');
+            }
+            
+            renderArray();
+            updateExplanation();
+            updateTimeline();
+            updateStatistics();
+            updatePhaseBadge();
+            updatePointerDisplays();
+            updateButtons();
+        }
+
+        function stepBack() {
+            if (state.history.length === 0) return;
+            
+            const lastEntry = state.history.pop();
+            state.currentHistoryIndex = state.history.length - 1;
+            
+            if (state.history.length === 0) {
+                state.low = 0;
+                state.high = state.array.length - 1;
+                state.mid1 = -1;
+                state.mid2 = -1;
+                state.step = 0;
+                state.comparisons = 0;
+                state.isComplete = false;
+                state.found = false;
+                state.foundIndex = -1;
+                state.eliminatedIndices.clear();
+                state.selectedSection = null;
+                updateCodeHighlight(0);
+            } else {
+                const prevState = state.history[state.history.length - 1];
+                state.low = prevState.low;
+                state.high = prevState.high;
+                state.mid1 = prevState.mid1;
+                state.mid2 = prevState.mid2;
+                state.step = prevState.step;
+                state.selectedSection = null;
+                
+                // Rebuild eliminated indices
+                state.eliminatedIndices.clear();
+                for (const entry of state.history) {
+                    if (entry.high < state.high) {
+                        // Right section was eliminated
+                    }
+                }
+                
+                state.comparisons = state.history.length * 2;
+                state.isComplete = false;
+                state.found = false;
+                state.foundIndex = -1;
+            }
+            
+            updateDecisionTree(null);
+            renderArray();
+            updateExplanation();
+            updateTimeline();
+            updateStatistics();
+            updatePhaseBadge();
+            updatePointerDisplays();
+            updateButtons();
+        }
+
+        function resetVisualization() {
+            clearInterval(state.intervalId);
+            
+            state.low = 0;
+            state.high = state.array.length - 1;
+            state.mid1 = -1;
+            state.mid2 = -1;
+            state.step = 0;
+            state.comparisons = 0;
+            state.isRunning = false;
+            state.isPaused = false;
+            state.isComplete = false;
+            state.found = false;
+            state.foundIndex = -1;
+            state.history = [];
+            state.currentHistoryIndex = -1;
+            state.eliminatedIndices.clear();
+            state.selectedSection = null;
+            
+            renderArray();
+            updateCodeHighlight(0);
+            updateExplanation();
+            updateTimeline();
+            updateStatistics();
+            setStatus('idle', 'Ready');
+            updatePhaseBadge();
+            updatePointerDisplays();
+            updateButtons();
+            updateDecisionTree(null);
+            
+            document.querySelectorAll('.code-line').forEach(line => {
+                line.classList.remove('executed');
+            });
+        }
+
+        function finishSearch() {
+            clearInterval(state.intervalId);
+            state.isRunning = false;
+            state.isPaused = false;
+            state.selectedSection = null;
+            
+            if (state.found) {
+                setStatus('completed', 'Found');
+            } else {
+                setStatus('failed', 'Not Found');
+            }
+            
+            renderArray();
+            updateExplanation();
+            updateStatistics();
+            updatePhaseBadge();
+            updatePointerDisplays();
+            updateButtons();
+        }
+
+        // ==========================================
+        // Initialize on DOM Load
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>

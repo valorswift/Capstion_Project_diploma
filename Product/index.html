@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concepts Visualizer | CS Lab</title>
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+<style>
+  :root {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --primary-light: rgba(99, 102, 241, 0.15);
+    --primary-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+    
+    --bg-body: #0a0a0f;
+    --bg-sidebar: #12121a;
+    --bg-card: #16161f;
+    --bg-elevated: #1c1c28;
+    --bg-window: rgba(18, 18, 26, 0.98);
+    --text-main: #f1f5f9;
+    --text-muted: #64748b;
+    --text-dim: #475569;
+    --border: #1e1e2e;
+    --border-light: #2a2a3e;
+    
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+    --shadow: 0 4px 6px rgba(0,0,0,0.3);
+    --shadow-lg: 0 20px 40px rgba(0,0,0,0.5);
+    --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.25);
+    
+    --sidebar-width: 260px;
+    --header-height: 64px;
+    --radius: 12px;
+    --radius-lg: 20px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  [data-theme-color="cyan"] {
+    --primary: #06b6d4; --primary-hover: #0891b2; --primary-light: rgba(6, 182, 212, 0.15);
+    --primary-gradient: linear-gradient(135deg, #06b6d4, #3b82f6);
+  }
+  [data-theme-color="violet"] {
+    --primary: #8b5cf6; --primary-hover: #7c3aed; --primary-light: rgba(139, 92, 246, 0.15);
+    --primary-gradient: linear-gradient(135deg, #8b5cf6, #ec4899);
+  }
+  [data-theme-color="green"] {
+    --primary: #10b981; --primary-hover: #059669; --primary-light: rgba(16, 185, 129, 0.15);
+    --primary-gradient: linear-gradient(135deg, #10b981, #06b6d4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: var(--bg-body);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-width); height: 100vh;
+    background: var(--bg-sidebar); border-right: 1px solid var(--border);
+    z-index: 1000; display: flex; flex-direction: column;
+    transform: translateX(-100%); transition: var(--transition);
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .sidebar-header {
+    padding: 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--primary-gradient); display: flex;
+    align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; color: white;
+  }
+  .brand-text { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.5px; }
+  .brand-text span { color: var(--primary); }
+
+  .profile-section { padding: 20px; border-bottom: 1px solid var(--border); }
+  .profile-card {
+    display: flex; align-items: center; gap: 12px; padding: 12px;
+    background: var(--bg-elevated); border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .profile-avatar {
+    width: 40px; height: 40px; border-radius: 10px; background: var(--primary-gradient);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;
+  }
+  .profile-info h4 { font-size: 0.9rem; font-weight: 600; }
+  .profile-info span { font-size: 0.75rem; color: var(--text-muted); }
+
+  .nav-section { padding: 20px 12px; flex: 1; overflow-y: auto; }
+  .nav-label {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-dim); font-weight: 700; padding: 0 12px; margin-bottom: 8px;
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    border-radius: 10px; color: var(--text-muted); cursor: pointer;
+    transition: var(--transition); font-size: 0.9rem; font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--bg-elevated); color: var(--text-main); }
+  .nav-item.active { background: var(--primary-light); color: var(--primary); }
+  .nav-item i { font-size: 1.15rem; width: 20px; }
+
+  .sidebar-footer { padding: 20px; border-top: 1px solid var(--border); }
+  .btn-feedback {
+    width: 100%; padding: 12px; background: transparent; border: 1px dashed var(--border-light);
+    color: var(--text-muted); border-radius: 10px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 0.85rem; transition: var(--transition);
+  }
+  .btn-feedback:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Main Content */
+  .main-content {
+    margin-left: 0; min-height: 100vh; transition: var(--transition);
+    display: flex; flex-direction: column;
+  }
+
+  @media(min-width: 1024px) {
+    .sidebar { transform: translateX(0); }
+    .sidebar.collapsed { transform: translateX(-100%); }
+    .main-content { margin-left: var(--sidebar-width); }
+    .main-content.expanded { margin-left: 0; }
+    body.focus-mode .sidebar { transform: translateX(-100%); }
+    body.focus-mode .main-content { margin-left: 0; }
+  }
+
+  /* Top Bar */
+  .topbar {
+    height: var(--header-height); background: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; position: sticky; top: 0; z-index: 500;
+  }
+
+  .topbar-left { display: flex; align-items: center; gap: 16px; }
+  
+  .search-container { position: relative; width: 320px; }
+  .search-input {
+    width: 100%; padding: 10px 16px 10px 40px; background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text-main); font-size: 0.9rem; outline: none; transition: var(--transition);
+  }
+  .search-input:focus { border-color: var(--primary); background: var(--bg-card); }
+  .search-input::placeholder { color: var(--text-dim); }
+  .search-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--text-dim); font-size: 1rem;
+  }
+
+  .topbar-actions { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 10px; background: transparent;
+    border: 1px solid var(--border); color: var(--text-muted);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; transition: var(--transition);
+  }
+  .icon-btn:hover { background: var(--bg-elevated); color: var(--text-main); border-color: var(--border-light); }
+
+  /* Main Grid */
+  .main-wrapper { padding: 24px; flex: 1; }
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .section-title {
+    font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 10px;
+  }
+  .section-badge {
+    font-size: 0.7rem; background: var(--primary-light); color: var(--primary);
+    padding: 4px 10px; border-radius: 20px; font-weight: 600;
+  }
+
+  /* Stats Row */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; display: flex; align-items: center; gap: 16px;
+    transition: var(--transition);
+  }
+  .stat-card:hover { border-color: var(--border-light); }
+  .stat-icon {
+    width: 44px; height: 44px; border-radius: 10px; background: var(--bg-elevated);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--primary); font-size: 1.2rem;
+  }
+  .stat-info h4 { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; margin-bottom: 2px; }
+  .stat-info p { font-size: 1.4rem; font-weight: 700; }
+
+  /* Cards Grid */
+  .cards-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+  }
+
+  /* MODERN CARD DESIGN */
+  .lab-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+
+  .lab-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--primary-gradient); opacity: 0; transition: opacity 0.3s; z-index: 2;
+  }
+
+  /* Gradient Border Effect on Hover */
+  .lab-card::after {
+    content: ''; position: absolute; inset: 0; border-radius: var(--radius-lg);
+    padding: 1px; background: linear-gradient(135deg, var(--primary), transparent, var(--primary));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    opacity: 0; transition: opacity 0.4s ease; pointer-events: none;
+  }
+
+  .lab-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-glow);
+  }
+  .lab-card:hover::before { opacity: 1; }
+  .lab-card:hover::after { opacity: 1; }
+
+  /* Preview Section */
+  .card-preview {
+    height: 180px; background: radial-gradient(ellipse at center, #1c1c28 0%, #12121a 100%);
+    position: relative; overflow: hidden; border-bottom: 1px solid var(--border);
+  }
+
+  .card-preview canvas {
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* Live Badge */
+  .live-badge {
+    position: absolute; top: 12px; right: 12px; padding: 4px 10px;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+    border-radius: 6px; font-size: 0.65rem; font-weight: 700;
+    color: #10b981; display: flex; align-items: center; gap: 4px;
+    text-transform: uppercase; letter-spacing: 0.5px; z-index: 5;
+  }
+  .live-badge::before {
+    content: ''; width: 6px; height: 6px; background: #10b981;
+    border-radius: 50%; animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Card Body */
+  .card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+  
+  .card-tag {
+    display: inline-block; padding: 4px 10px; background: var(--bg-elevated);
+    border-radius: 6px; font-size: 0.7rem; color: var(--text-muted);
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 12px; width: fit-content;
+  }
+
+  .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: var(--text-main); }
+  .card-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px; flex: 1; }
+
+  .card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 16px; border-top: 1px solid var(--border);
+  }
+  
+  .card-meta { display: flex; gap: 12px; }
+  .meta-item {
+    font-size: 0.7rem; color: var(--text-dim);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .meta-item i { font-size: 0.8rem; }
+
+  .btn-open-lab {
+    padding: 8px 16px; background: var(--primary-gradient); color: white;
+    border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: var(--transition);
+  }
+  .btn-open-lab:hover { transform: translateX(2px); opacity: 0.9; }
+  .btn-open-lab i { transition: transform 0.2s; }
+  .btn-open-lab:hover i { transform: translateX(3px); }
+
+  /* Pin Button */
+  .pin-btn {
+    position: absolute; top: 12px; left: 12px; width: 32px; height: 32px;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+    border: none; border-radius: 8px; color: var(--text-muted);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: var(--transition); z-index: 10;
+  }
+  .lab-card:hover .pin-btn { opacity: 1; }
+  .pin-btn.active { color: #f59e0b; opacity: 1; }
+  .pin-btn:hover { background: rgba(0,0,0,0.8); }
+
+  /* Focus Mode */
+  .focus-exit-btn {
+    position: fixed; bottom: 30px; right: 30px; padding: 12px 20px;
+    background: var(--primary); color: white; border: none;
+    border-radius: 12px; cursor: pointer; z-index: 2000;
+    display: none; align-items: center; gap: 8px; font-weight: 600;
+    box-shadow: var(--shadow-lg);
+  }
+  body.focus-mode .focus-exit-btn { display: flex; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px); z-index: 3000; display: flex;
+    align-items: center; justify-content: center; opacity: 0;
+    pointer-events: none; transition: var(--transition);
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  
+  /* .modal {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); width: 90%; max-width: 500px;
+    max-height: 85vh; overflow: hidden; transform: scale(0.95);
+    transition: var(--transition);
+  } */
+  .modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 500px;
+  max-height: 85vh;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+  transform: scale(0.95);
+  transition: var(--transition);
+}
+  .modal-overlay.open .modal { transform: scale(1); }
+
+  .modal-header {
+    padding: 20px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-header h3 { font-size: 1.1rem; font-weight: 700; }
+  .close-btn {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 1.2rem; cursor: pointer; padding: 4px;
+    transition: var(--transition);
+  }
+  .close-btn:hover { color: var(--text-main); transform: rotate(90deg); }
+
+  /* .modal-body { padding: 20px; overflow-y: auto; } */
+  .modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+  
+  .setting-section { margin-bottom: 24px; }
+  .setting-section h4 {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-dim); margin-bottom: 12px;
+  }
+  .setting-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px; background: var(--bg-elevated); border-radius: 10px;
+    margin-bottom: 8px;
+  }
+  .setting-info h5 { font-size: 0.9rem; font-weight: 600; margin-bottom: 2px; }
+  .setting-info p { font-size: 0.75rem; color: var(--text-muted); }
+
+  /* Toggle Switch */
+  .switch { position: relative; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0; background: var(--border-light);
+    transition: 0.3s; border-radius: 24px;
+  }
+  .slider:before {
+    position: absolute; content: ""; height: 18px; width: 18px;
+    left: 3px; bottom: 3px; background: white;
+    transition: 0.3s; border-radius: 50%;
+  }
+  input:checked + .slider { background: var(--primary); }
+  input:checked + .slider:before { transform: translateX(20px); }
+
+  /* Color Options */
+  .theme-options { display: flex; gap: 12px; }
+  .theme-circle {
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: var(--transition);
+  }
+  .theme-circle.active { border-color: white; transform: scale(1.1); }
+  .t-indigo { background: #6366f1; }
+  .t-cyan { background: #06b6d4; }
+  .t-violet { background: #8b5cf6; }
+  .t-green { background: #10b981; }
+
+  /* Buttons */
+  .btn-small {
+    padding: 8px 16px; background: var(--primary); color: white; border: none;
+    border-radius: 6px; font-weight: 600; cursor: pointer; transition: var(--transition);
+  }
+  .btn-small:hover { opacity: 0.9; }
+
+  .btn-danger {
+    width: 100%; padding: 12px; background: transparent; border: 1px solid #ef4444;
+    color: #ef4444; border-radius: 8px; cursor: pointer; font-weight: 600;
+    transition: var(--transition); margin-top: 8px;
+  }
+  .btn-danger:hover { background: rgba(239,68,68,0.1); }
+  .btn-danger.secondary { border-color: var(--text-dim); color: var(--text-muted); }
+  .btn-danger.secondary:hover { border-color: #ef4444; color: #ef4444; background: transparent; }
+
+  /* Toast */
+  .toast-container {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    z-index: 4000; display: flex; flex-direction: column; gap: 10px;
+  }
+  .toast {
+    background: var(--bg-elevated); color: var(--text-main);
+    padding: 14px 20px; border-radius: 10px; border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    animation: slideUp 0.3s ease;
+  }
+  .toast i { color: var(--primary); }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .empty-state {
+    grid-column: 1 / -1; text-align: center; padding: 80px 20px;
+    color: var(--text-muted);
+  }
+  .empty-state i { font-size: 4rem; margin-bottom: 16px; color: var(--text-dim); }
+
+  @media(max-width: 768px) {
+    .stats-row { grid-template-columns: 1fr; }
+    .search-container { display: none; }
+  }
+</style>
+</head>
+<body data-theme-color="indigo">
+
+<!-- Sidebar -->
+<aside id="sidebar" class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">CV</div>
+    <div class="brand-text">Concepts <span>Visualizer</span></div>
+  </div>
+
+  <div class="profile-section">
+    <div class="profile-card">
+      <div class="profile-avatar" id="profileInitial">G</div>
+      <div class="profile-info">
+        <h4 id="displayName">Guest</h4>
+        <span>Explorer</span>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav-section">
+    <div class="nav-label">Navigation</div>
+    <div id="navContainer"></div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="btn-feedback" onclick="openModal('feedbackModal')">
+      <i class="ri-feedback-line"></i> Send Feedback
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main id="main" class="main-content">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="icon-btn" onclick="toggleSidebar()" aria-label="Menu">
+        <i class="ri-menu-line"></i>
+      </button>
+      <div class="search-container">
+        <i class="ri-search-line search-icon"></i>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search algorithms...">
+      </div>
+    </div>
+    
+    <div class="topbar-actions">
+      <button class="icon-btn" onclick="openModal('settingsModal')" aria-label="Settings">
+        <i class="ri-settings-4-line"></i>
+      </button>
+      <button class="icon-btn" id="focusBtn" onclick="toggleFocus()" aria-label="Focus Mode">
+        <i class="ri-focus-3-line"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="main-wrapper">
+    <div class="section-header">
+      <h1 class="section-title">
+        Visual Lab
+        <span class="section-badge" id="categoryLabel">All Modules</span>
+      </h1>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon"><i class="ri-pushpin-fill"></i></div>
+        <div class="stat-info">
+          <h4>Pinned Modules</h4>
+          <p id="pinnedCount">0</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i class="ri-history-line"></i></div>
+        <div class="stat-info">
+          <h4>Recent Activity</h4>
+          <p id="recentCount">0</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i class="ri-folder-line"></i></div>
+        <div class="stat-info">
+          <h4>Total Topics</h4>
+          <p id="topicCount">9</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="cardsContainer" class="cards-grid"></div>
+  </div>
+</main>
+
+<!-- Focus Exit Button -->
+<button class="focus-exit-btn" onclick="toggleFocus()">
+  <i class="ri-close-line"></i> Exit Focus Mode
+</button>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Settings</h3>
+      <button class="close-btn" onclick="closeModal('settingsModal')">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="setting-section">
+        <h4>Account</h4>
+        <div class="setting-item">
+          <div class="setting-info">
+            <h5>Display Name</h5>
+            <p>Update your profile name</p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" id="nameInput" placeholder="Enter name" 
+              style="background: var(--bg-body); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; color: var(--text-main);">
+            <button class="btn-small" onclick="confirmNameChange()">Confirm</button>
+          </div>
+        </div>
+      </div>
+      <!-- Change password option -->
+      <div class="setting-section">
+        <h4>Security</h4>
+      
+        <div class="setting-item">
+          <div class="setting-info">
+            <h5>Change Password</h5>
+            <p>Enter a new password for your account</p>
+          </div>
+      
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="password" id="newPasswordInput" placeholder="New password"
+              style="background: var(--bg-body); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; color: var(--text-main);">
+      
+            <button class="btn-small" onclick="updatePassword()">Confirm</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="setting-section">
+        <h4>Appearance</h4>
+        <div class="setting-item">
+          <div class="setting-info">
+            <h5>Accent Color</h5>
+            <p>Choose your theme color</p>
+          </div>
+          <div class="theme-options">
+            <div class="theme-circle t-indigo active" onclick="setTheme('indigo', this)"></div>
+            <div class="theme-circle t-cyan" onclick="setTheme('cyan', this)"></div>
+            <div class="theme-circle t-violet" onclick="setTheme('violet', this)"></div>
+            <div class="theme-circle t-green" onclick="setTheme('green', this)"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="setting-section">
+        <h4>Data Management</h4>
+        <button class="btn-danger secondary" onclick="clearPins()">
+          <i class="ri-pushpin-line"></i> Clear Pinned Items
+        </button>
+        <button class="btn-danger secondary" onclick="clearRecents()">
+          <i class="ri-history-line"></i> Clear Recent History
+        </button>
+        <button class="btn-danger" onclick="clearAllData()">
+          <i class="ri-delete-bin-line"></i> Clear All Data
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="feedbackModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Send Feedback</h3>
+      <button class="close-btn" onclick="closeModal('feedbackModal')">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <textarea placeholder="Share your thoughts..." style="width: 100%; height: 120px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; padding: 12px; color: var(--text-main); resize: none; margin-bottom: 16px;"></textarea>
+      <button class="btn-open-lab" style="width: 100%; justify-content: center;" onclick="submitFeedback()">
+        Submit Feedback <i class="ri-send-plane-line"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<script>
+// === STATE ===
+let isInitialLoad = true;
+const state = {
+  user: 'Guest',
+  category: 'all',
+  search: '',
+  pinned: [],
+  recent: [],
+  theme: 'indigo'
+};
+
+// === DATA ===
+const navItems = [
+  { id: 'all', icon: 'ri-apps-line', label: 'All Modules' },
+  { id: 'pinned', icon: 'ri-pushpin-line', label: 'Pinned' },
+  { id: 'recent', icon: 'ri-history-line', label: 'Recent' },
+  { type: 'divider' },
+  { id: 'algorithms', icon: 'ri-code-s-slash-line', label: 'Algorithms' },
+  { id: 'graphics', icon: 'ri-paint-brush-line', label: 'Graphics' },
+  { id: 'systems', icon: 'ri-cpu-line', label: 'Systems' },
+  { id: 'ai', icon: 'ri-brain-line', label: 'AI & ML' }
+];
+
+const labModules = [
+  { id: 'dsa', name: 'Data Structures', tag: 'Algorithms', desc: 'Visualize linked lists, trees, stacks, queues and their operations.', preview: 'tree', meta: ['6 Structures', 'Interactive'], category: 'algorithms', url: 'dsa/dsa.html' },
+  { id: 'sorting', name: 'Sorting Algorithms', tag: 'Algorithms', desc: 'Watch bubble sort, merge sort, quick sort and more in action.', preview: 'sorting', meta: ['6 Algorithms', 'Visualization'], category: 'algorithms', url: 'sorting/sortholder.html' },
+  { id: 'searching', name: 'Searching Algorithms', tag: 'Algorithms', desc: 'Linear, binary, and interpolation search visualizations.', preview: 'searching', meta: ['6 Algorithms', 'Interactive'], category: 'algorithms', url: 'searching/searchholder.html' },
+  { id: 'maze', name: 'Maze Pathfinding', tag: 'Algorithms', desc: 'Explore BFS, DFS, A* and other pathfinding algorithms solving mazes.', preview: 'maze', meta: ['6 Algorithms', 'Simulation'], category: 'algorithms', url: 'MazeSearching/MazeSearchHolder.html' },
+  { id: 'complexity', name: 'Time Complexity', tag: 'Algorithms', desc: 'Compare Big O notations and algorithm efficiency visually.', preview: 'complexity', meta: ['2 Analysis', 'Tool'], category: 'algorithms', url: 'TimeComplexity/TimeAndSpaceHolder.html' },
+  { id: 'cg', name: 'Computer Graphics', tag: 'Graphics', desc: 'Raster algorithms, transformations, and 3D rendering basics.', preview: 'cube', meta: ['14 Modules', 'Interactive'], category: 'graphics', url: 'computerGraphics/computerGraphHolder.html' },
+  { id: 'os', name: 'Operating Systems', tag: 'Systems', desc: 'Process scheduling, memory management, and deadlock visualization.', preview: 'scheduling', meta: ['8 Topics', 'Simulation'], category: 'systems', url: 'OperatingSystem/OSholder.html' },
+  { id: 'ml', name: 'Machine Learning', tag: 'AI & ML', desc: 'Neural networks, gradient descent, and model training visualized.', preview: 'neural', meta: ['14 Models', 'Interactive'], category: 'ai', url: 'MachineLearning/MLholder.html' },
+  { id: 'dt', name: 'Digital Techniques', tag: 'Electronics', desc: 'Visualize logic gates, flip-flops, combinational and sequential circuits.', preview: 'digital', meta: ['Logic Gates', 'Circuits'], category: 'systems', url: 'DT/DTEholder.html' }
+];
+
+// === INITIALIZATION ===
+document.addEventListener('DOMContentLoaded', async () => {
+  const email = localStorage.getItem("userEmail");
+
+  if (email) {
+    try {
+      const res = await fetch("http://localhost:3000/get-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        state.user = data.name || 'Guest';
+        state.theme = data.accentColor || 'indigo';
+        state.pinned = data.pinned ? JSON.parse(data.pinned) : [];
+        state.recent = data.recent ? JSON.parse(data.recent) : [];
+      }
+    } catch (err) {
+      console.error("DB Load Error:", err);
+    }
+  }
+
+  applyTheme(state.theme);
+  document.getElementById('displayName').innerText = state.user;
+  document.getElementById('profileInitial').innerText = state.user.charAt(0).toUpperCase();
+  document.getElementById('nameInput').value = state.user;
+
+  renderNav();
+  renderCards();
+  updateStats();
+  
+  isInitialLoad = false;
+
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    state.search = e.target.value.toLowerCase();
+    renderCards();
+  });
+});
+
+function applyTheme(color) {
+  document.body.setAttribute('data-theme-color', color);
+  document.querySelectorAll('.theme-circle').forEach(c => c.classList.remove('active'));
+  const match = document.querySelector(`.t-${color}`);
+  if (match) match.classList.add('active');
+}
+
+// === SAVE TO DB ===
+async function saveSettings() {
+  if (isInitialLoad) return;
+  const email = localStorage.getItem("userEmail");
+  if (!email) return;
+
+  try {
+    await fetch("http://localhost:3000/save-settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        accentColor: state.theme,
+        pinned: state.pinned,
+        recent: state.recent
+      })
+    });
+  } catch (err) {
+    console.error("Save Error:", err);
+  }
+}
+
+// === RENDER FUNCTIONS ===
+function renderNav() {
+  const container = document.getElementById('navContainer');
+  container.innerHTML = '';
+  
+  navItems.forEach(item => {
+    if (item.type === 'divider') {
+      const divider = document.createElement('div');
+      divider.style.cssText = 'height: 1px; background: var(--border); margin: 12px 0;';
+      container.appendChild(divider);
+      return;
+    }
+    
+    const div = document.createElement('div');
+    div.className = `nav-item ${state.category === item.id ? 'active' : ''}`;
+    div.innerHTML = `<i class="${item.icon}"></i> ${item.label}`;
+    div.onclick = () => setCategory(item.id);
+    container.appendChild(div);
+  });
+}
+
+function renderCards() {
+  const container = document.getElementById('cardsContainer');
+  container.innerHTML = '';
+  
+  let filtered = labModules.filter(m => {
+    const matchSearch = m.name.toLowerCase().includes(state.search) || 
+                       m.desc.toLowerCase().includes(state.search);
+    
+    if (state.category === 'all') return matchSearch;
+    if (state.category === 'pinned') return state.pinned.includes(m.id) && matchSearch;
+    if (state.category === 'recent') return state.recent.includes(m.id) && matchSearch;
+    
+    if (state.category === 'all') return matchSearch;
+    if (state.category === 'pinned') return state.pinned.includes(m.id) && matchSearch;
+    if (state.category === 'recent') return state.recent.includes(m.id) && matchSearch;
+    return m.category === state.category && matchSearch;
+  });
+  
+  // Sort: Pinned items to top
+  filtered.sort((a, b) => {
+    const aPinned = state.pinned.includes(a.id);
+    const bPinned = state.pinned.includes(b.id);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return 0;
+  });
+  
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="ri-inbox-line"></i>
+        <h3>No modules found</h3>
+        <p style="color: var(--text-dim); margin-top: 8px;">Try a different search or category</p>
+      </div>
+    `;
+    return;
+  }
+  
+  filtered.forEach(module => {
+    const card = document.createElement('div');
+    card.className = 'lab-card';
+    card.onclick = () => openLab(module);
+    
+    const isPinned = state.pinned.includes(module.id);
+    
+    card.innerHTML = `
+      <button class="pin-btn ${isPinned ? 'active' : ''}" onclick="event.stopPropagation(); togglePin('${module.id}')">
+        <i class="${isPinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'}"></i>
+      </button>
+      
+      <div class="card-preview">
+        <canvas id="preview-${module.preview}"></canvas>
+        <div class="live-badge">Interactive</div>
+      </div>
+      
+      <div class="card-body">
+        <span class="card-tag">${module.tag}</span>
+        <h3 class="card-title">${module.name}</h3>
+        <p class="card-desc">${module.desc}</p>
+        
+        <div class="card-footer">
+          <div class="card-meta">
+            ${module.meta.map(m => `<span class="meta-item"><i class="ri-information-line"></i>${m}</span>`).join('')}
+          </div>
+          <button class="btn-open-lab">
+            Open Lab <i class="ri-arrow-right-line"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    container.appendChild(card);
+  });
+  
+  // Initialize Canvas Previews after rendering
+  initAllPreviews();
+  updateCategoryLabel();
+}
+
+// === PREVIEW CANVAS LOGIC ===
+function initAllPreviews() {
+  labModules.forEach(m => {
+    const canvas = document.getElementById(`preview-${m.preview}`);
+    if (canvas) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      
+      switch(m.preview) {
+        case 'sorting': initSortingPreview(canvas); break;
+        case 'searching': initSearchingPreview(canvas); break;
+        case 'maze': initMazePreview(canvas); break;
+        case 'cube': initCubePreview(canvas); break;
+        case 'scheduling': initSchedulingPreview(canvas); break;
+        case 'neural': initNeuralPreview(canvas); break;
+        case 'tree': initTreePreview(canvas); break;
+        case 'digital': initDigitalPreview(canvas); break;
+        case 'complexity': initComplexityPreview(canvas); break;
+      }
+    }
+  });
+}
+
+// === 1. SORTING (Bubble Sort Simulation) ===
+function initSortingPreview(canvas) {
+  const ctx = canvas.getContext('2d');
+  const arr = [];
+  const n = 20;
+  for(let i=0; i<n; i++) arr.push(20 + Math.random() * 80);
+  
+  let i = 0, j = 0, sorted = false, resetTimer = 0;
+
+  function draw() {
+    ctx.fillStyle = '#12121a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if(!sorted) {
+      // One step of bubble sort
+      if(arr[j] > arr[j+1]) [arr[j], arr[j+1]] = [arr[j+1], arr[j]];
+      j++;
+      if(j >= n-i-1) { j=0; i++; }
+      if(i >= n) { sorted = true; resetTimer = 100; }
+    } else {
+      resetTimer--;
+      if(resetTimer <= 0) {
+        for(let k=0; k<n; k++) arr[k] = 20 + Math.random() * 80;
+        i=0; j=0; sorted=false;
+      }
+    }
+
+    const w = canvas.width / n;
+    arr.forEach((h, idx) => {
+      ctx.fillStyle = sorted ? '#10b981' : (idx === j || idx === j+1 ? '#ffffff' : '#6366f1');
+      ctx.fillRect(idx * w, canvas.height - h, w - 2, h);
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === 2. SEARCHING (Binary Search Visualization) ===
+function initSearchingPreview(canvas) {
+  const ctx = canvas.getContext('2d');
+  const arr = [5, 12, 19, 26, 33, 40, 47, 54, 61, 68, 75, 82, 89, 96];
+  const n = arr.length;
+  let target = arr[Math.floor(Math.random() * n)];
+  let low = 0, high = n - 1, mid = -1, found = false, timer = 0;
+
+  function draw() {
+    ctx.fillStyle = '#12121a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    timer++;
+
+    if(timer % 30 === 0 && !found) {
+      if(low <= high) {
+        mid = Math.floor((low + high) / 2);
+        if(arr[mid] === target) found = true;
+        else if(arr[mid] < target) low = mid + 1;
+        else high = mid - 1;
+      } else {
+        // Reset
+        low = 0; high = n - 1; found = false;
+        target = arr[Math.floor(Math.random() * n)];
+      }
+    }
+    
+    if(found && timer % 120 === 0) {
+      low = 0; high = n - 1; found = false;
+      target = arr[Math.floor(Math.random() * n)];
+    }
+
+    const w = canvas.width / n;
+    arr.forEach((v, idx) => {
+      const x = idx * w;
+      const h = (v/100) * (canvas.height - 20);
+      
+      if(found && idx === mid) ctx.fillStyle = '#10b981';
+      else if(idx === mid) ctx.fillStyle = '#ffffff';
+      else if(idx >= low && idx <= high) ctx.fillStyle = '#6366f1';
+      else ctx.fillStyle = '#2a2a3e';
+
+      ctx.fillRect(x, canvas.height - h, w-1, h);
+      
+      ctx.fillStyle = '#ccc';
+      ctx.font = '8px sans-serif';
+      ctx.fillText(v, x + 2, canvas.height - 5);
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === 3. MAZE (DFS Generation & Solve) ===
+function initMazePreview(canvas) {
+  const ctx = canvas.getContext('2d');
+  const rows = 15, cols = 25;
+  const cellW = canvas.width / cols;
+  const cellH = canvas.height / rows;
+  const grid = [];
+  
+  // Initialize grid
+  for(let r=0; r<rows; r++) {
+    grid[r] = [];
+    for(let c=0; c<cols; c++) grid[r][c] = 1; // Wall
+  }
+  
+  // Simple DFS carving
+  let stack = [{r:1, c:1}];
+  grid[1][1] = 0;
+  
+  function carve() {
+    if(stack.length === 0) {
+       // Reset
+       for(let r=0; r<rows; r++) for(let c=0; c<cols; c++) grid[r][c] = 1;
+       stack = [{r:1, c:1}];
+       grid[1][1] = 0;
+       return;
+    }
+    
+    let current = stack[stack.length - 1];
+    let neighbors = [];
+    
+    // Find neighbors
+    let dirs = [{r:-2, c:0}, {r:2, c:0}, {r:0, c:-2}, {r:0, c:2}];
+    dirs.forEach(d => {
+      let nr = current.r + d.r;
+      let nc = current.c + d.c;
+      if(nr > 0 && nr < rows-1 && nc > 0 && nc < cols-1 && grid[nr][nc] === 1) {
+        neighbors.push({r: nr, c: nc, wr: current.r + d.r/2, wc: current.c + d.c/2});
+      }
+    });
+    
+    if(neighbors.length > 0) {
+      let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+      grid[next.r][next.c] = 0;
+      grid[next.wr][next.wc] = 0;
+      stack.push({r: next.r, c: next.c});
+    } else {
+      stack.pop();
+    }
+  }
+
+  function draw() {
+    carve(); // Step generation
+    
+    ctx.fillStyle = '#12121a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    for(let r=0; r<rows; r++) {
+      for(let c=0; c<cols; c++) {
+        if(grid[r][c] === 1) {
+          ctx.fillStyle = '#2a2a3e';
+          ctx.fillRect(c*cellW, r*cellH, cellW, cellH);
+        } else {
+          // Path
+          ctx.fillStyle = '#12121a';
+          ctx.fillRect(c*cellW, r*cellH, cellW, cellH);
+        }
+      }
+    }
+    
+    // Draw current carver
+    if(stack.length > 0) {
+       let curr = stack[stack.length-1];
+       ctx.fillStyle = '#6366f1';
+       ctx.shadowBlur = 10;
+       ctx.shadowColor = '#6366f1';
+       ctx.fillRect(curr.c*cellW, curr.r*cellH, cellW, cellH);
+       ctx.shadowBlur = 0;
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === 4. CUBE (3D Rotation) ===
+function initCubePreview(canvas) {
+  const ctx = canvas.getContext('2d');
+  let angle = 0;
+  
+  const vertices = [
+    [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+    [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]
+  ];
+  const edges = [
+    [0,1],[1,2],[2,3],[3,0],
+    [4,5],[5,6],[6,7],[7,4],
+    [0,4],[1,5],[2,6],[3,7]
+  ];
+
+  function project(p, rot) {
+    let x = p[0] * Math.cos(rot) - p[2] * Math.sin(rot);
+    let z = p[0] * Math.sin(rot) + p[2] * Math.cos(rot);
+    let y = p[1];
+    
+    let y2 = y * Math.cos(rot/2) - z * Math.sin(rot/2);
+    let z2 = y * Math.sin(rot/2) + z * Math.cos(rot/2);
+
+    const scale = 50;
+    const dist = 4;
+    const factor = scale / (dist - z2);
+    
+    return {
+      x: canvas.width/2 + x * factor,
+      y: canvas.height/2 + y2 * factor
+    };
+  }
+
+  function draw() {
+    angle += 0.02;
+    ctx.fillStyle = '#12121a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#6366f1';
+    ctx.shadowBlur = 15;
+
+    edges.forEach(e => {
+      const p1 = project(vertices[e[0]], angle);
+      const p2 = project(vertices[e[1]], angle);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    });
+    
+    ctx.shadowBlur = 0;
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === 5. SCHEDULING (Round Robin) ===
+function initSchedulingPreview(canvas) {
+  const ctx = canvas.getContext('2d');
+  const processes = [
+    {id: 'P1', burst: 100, color: '#6366f1'},
+    {id: 'P2', burst: 80, color: '#8b5cf6'},
+    {id: 'P3', burst: 120, color: '#06b6d4'},
+    {id: 'P4', burst: 60, color: '#10b981'}
+  ];
+  
+  let time = 0;
+  let currentProcess = 0;
+  let cpuTimeSlice = 0;
+  const quantum = 30; // Time slice
+
+  function draw() {
+    ctx.fillStyle = '#12121a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    time++;
+    
+    // Draw Ready Queue
+    ctx.fillStyle = '#1c1c28';
+    ctx.fillRect(20, 20, canvas.width-40, 50);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('Ready Queue', 25, 35);
+    
+    let xOffset = 100;
+    processes.forEach((p, idx) => {
+       if(idx !== currentProcess) {
+         ctx.fillStyle = p.color;
+         ctx.globalAlpha = 0.5;
+         ctx.fillRect(xOffset, 30, 30, 30);
+         ctx.globalAlpha = 1;
+         ctx.fillStyle = '#fff';
+         ctx.fillText(p.id, xOffset + 8, 50);
+         xOffset += 40;
+       }
+    });
+
+    // Draw CPU
+    ctx.strokeStyle = '#6366f1';
+    ctx.strokeRect(canvas.width/2 - 40, 100, 80, 50);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('CPU', canvas.width/2 - 12, 118);
+    
+    // Current Process execution
+    let p = processes[currentProcess];
+    ctx.fillStyle = p.color;
+    ctx.fillRect(canvas.width/2 - 30, 125, 60, 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(p.id, canvas.width/2 - 8, 138);
+    
+    // Logic
+    cpuTimeSlice++;
+    if(cpuTimeSlice > quantum) {
+       cpuTimeSlice = 0;
+       currentProcess = (currentProcess + 1) % processes.length;
+    }
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === 6. NEURAL (Signal Propagation) ===
+function initNeuralPreview(canvas) {
+  const ctx = canvas.getContext('2d');
+  const layers = [2, 4, 4, 1]; // Topology
+  const nodes = [];
+  const signals = [];
+  const layerGap = canvas.width / (layers.length + 1);
+  
+  // Create Nodes
+  layers.forEach((count, lIdx) => {
+    let nodeGap = canvas.height / (count + 1);
+    for(let i=0; i<count; i++) {
+      nodes.push({
+        x: layerGap * (lIdx + 1),
+        y: nodeGap * (i + 1),
+        layer: lIdx
+      });
+    }
+  });
+
+  function draw() {
+    ctx.fillStyle = '#12121a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw connections
+    nodes.filter(n => n.layer < layers.length-1).forEach(n1 => {
+      nodes.filter(n => n.layer === n1.layer+1).forEach(n2 => {
+        ctx.beginPath(); ctx.moveTo(n1.x, n1.y); ctx.lineTo(n2.x, n2.y);
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.1)'; ctx.stroke();
+      });
+    });
+    
+    // Spawn signals
+    if(Math.random() < 0.05) {
+      let startNodes = nodes.filter(n => n.layer === 0);
+      let s = startNodes[Math.floor(Math.random()*startNodes.length)];
+      signals.push({x: s.x, y: s.y, layer: 0});
+    }
+    
+    // Update & Draw Signals
+    for(let i=signals.length-1; i>=0; i--) {
+      let s = signals[i];
+      let nextLayerNodes = nodes.filter(n => n.layer === s.layer + 1);
+      if(nextLayerNodes.length === 0) { signals.splice(i, 1); continue; }
+      
+      let target = nextLayerNodes[Math.floor(Math.random()*nextLayerNodes.length)]; // Random path for visual
+      let angle = Math.atan2(target.y - s.y, target.x - s.x);
+      s.x += Math.cos(angle) * 3;
+      s.y += Math.sin(angle) * 3;
+      
+      ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.shadowColor='#fff'; ctx.shadowBlur=10; ctx.fill(); ctx.shadowBlur=0;
+      
+      if(Math.hypot(s.x - target.x, s.y - target.y) < 4) {
+        s.layer++;
+        if(s.layer >= layers.length-1) signals.splice(i, 1);
+      }
+    }
+    
+    // Draw Nodes
+    nodes.forEach(n => {
+      ctx.beginPath(); ctx.arc(n.x, n.y, 6, 0, Math.PI*2);
+      ctx.fillStyle = '#6366f1'; ctx.fill();
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === 7. TREE (BST Insertion) ===
+function initTreePreview(canvas) {
+  const ctx = canvas.getContext('2d');
+  const values = [50, 30, 70, 20, 40, 60, 80];
+  let nodes = [];
+  let valIdx = 0;
+  let animationTimer = 0;
+  
+  function rebuildTree() {
+    nodes = [];
+    let root = null;
+    
+    function insert(node, val, x, y, spread) {
+      if(!node) return { val, x, y, left: null, right: null };
+      
+      if(val < node.val) {
+        node.left = insert(node.left, val, node.x - spread, node.y + 40, spread * 0.6);
+      } else {
+        node.right = insert(node.right, val, node.x + spread, node.y + 40, spread * 0.6);
+      }
+      return node;
+    }
+    
+    function flatten(node) {
+      if(!node) return;
+      nodes.push(node);
+      flatten(node.left);
+      flatten(node.right);
+    }
+    
+    for(let i=0; i<=valIdx; i++) {
+      root = insert(root, values[i], canvas.width/2, 30, 60);
+    }
+    flatten(root);
+  }
+  
+  rebuildTree();
+
+  function draw() {
+    ctx.fillStyle = '#12121a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    animationTimer++;
+    
+    if(animationTimer % 60 === 0) {
+      valIdx = (valIdx + 1) % values.length;
+      if(valIdx === 0) nodes = [];
+      rebuildTree();
+    }
+    
+    // Draw edges
+    nodes.forEach(n => {
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.3)';
+      ctx.lineWidth = 1;
+      if(n.left) { ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(n.left.x, n.left.y); ctx.stroke(); }
+      if(n.right) { ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(n.right.x, n.right.y); ctx.stroke(); }
+    });
+    
+    // Draw nodes
+    nodes.forEach((n, i) => {
+       // Pulse effect for recently added
+       let radius = (i === nodes.length - 1 && animationTimer % 10 < 5) ? 8 : 6;
+       ctx.beginPath(); ctx.arc(n.x, n.y, radius, 0, Math.PI*2);
+       ctx.fillStyle = '#6366f1'; ctx.shadowColor='#6366f1'; ctx.shadowBlur=8; ctx.fill(); ctx.shadowBlur=0;
+       ctx.fillStyle = '#fff'; ctx.font = '8px sans-serif'; ctx.fillText(n.val, n.x-4, n.y+3);
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === 8. DIGITAL (Logic Gates) ===
+function initDigitalPreview(canvas) {
+  const ctx = canvas.getContext('2d');
+  let time = 0;
+  
+  const gates = [
+    {type: 'AND', x: 80, y: 60, in1: 0, in2: 0, out: 0},
+    {type: 'OR', x: 180, y: 120, in1: 0, in2: 0, out: 0}
+  ];
+  
+  function draw() {
+    time++;
+    ctx.fillStyle = '#12121a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Simulate inputs changing
+    if(time % 30 === 0) {
+      gates.forEach(g => {
+        g.in1 = Math.random() > 0.5 ? 1 : 0;
+        g.in2 = Math.random() > 0.5 ? 1 : 0;
+        g.out = (g.type === 'AND') ? (g.in1 && g.in2) : (g.in1 || g.in2);
+      });
+    }
+    
+    gates.forEach(g => {
+      // Draw box
+      ctx.fillStyle = '#1c1c28';
+      ctx.strokeStyle = '#6366f1';
+      ctx.fillRect(g.x, g.y, 40, 30);
+      ctx.strokeRect(g.x, g.y, 40, 30);
+      
+      // Label
+      ctx.fillStyle = '#fff';
+      ctx.font = '8px sans-serif';
+      ctx.fillText(g.type, g.x + 8, g.y + 18);
+      
+      // Draw LEDs (Inputs/Outputs)
+      // In1
+      ctx.beginPath(); ctx.arc(g.x - 10, g.y + 10, 4, 0, Math.PI*2);
+      ctx.fillStyle = g.in1 ? '#10b981' : '#2a2a3e'; ctx.fill();
+      
+      // In2
+      ctx.beginPath(); ctx.arc(g.x - 10, g.y + 20, 4, 0, Math.PI*2);
+      ctx.fillStyle = g.in2 ? '#10b981' : '#2a2a3e'; ctx.fill();
+      
+      // Out
+      ctx.beginPath(); ctx.arc(g.x + 50, g.y + 15, 4, 0, Math.PI*2);
+      ctx.fillStyle = g.out ? '#10b981' : '#2a2a3e'; ctx.fill();
+    });
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// === 9. COMPLEXITY (Growth Comparison) ===
+function initComplexityPreview(canvas) {
+  const ctx = canvas.getContext('2d');
+  let n = 0;
+  const maxN = 50;
+  let phase = 0; // 0: grow, 1: reset
+
+  function draw() {
+    ctx.fillStyle = '#12121a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    if(phase === 0) {
+      n += 0.5;
+      if(n > maxN) phase = 1;
+    } else {
+      n -= 1;
+      if(n <= 0) { n = 0; phase = 0; }
+    }
+    
+    // Draw Axes
+    ctx.strokeStyle = '#475569';
+    ctx.beginPath(); ctx.moveTo(40, 10); ctx.lineTo(40, canvas.height-20); ctx.lineTo(canvas.width-10, canvas.height-20); ctx.stroke();
+    
+    // O(n^2)
+    let h1 = Math.pow(n, 2) / 15;
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(40, canvas.height - 20 - h1, 20, h1);
+    
+    // O(n log n)
+    let h2 = (n * Math.log(n)) / 5;
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(100, canvas.height - 20 - h2, 20, h2);
+    
+    // O(n)
+    let h3 = n * 2;
+    ctx.fillStyle = '#10b981';
+    ctx.fillRect(160, canvas.height - 20 - h3, 20, h3);
+    
+    // Legend
+    ctx.font = '9px sans-serif';
+    ctx.fillStyle = '#ef4444'; ctx.fillRect(240, 30, 10, 10); ctx.fillStyle = '#fff'; ctx.fillText('O(n^2)', 255, 38);
+    ctx.fillStyle = '#f59e0b'; ctx.fillRect(240, 50, 10, 10); ctx.fillStyle = '#fff'; ctx.fillText('O(n log n)', 255, 58);
+    ctx.fillStyle = '#10b981'; ctx.fillRect(240, 70, 10, 10); ctx.fillStyle = '#fff'; ctx.fillText('O(n)', 255, 78);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+
+// === ACTIONS ===
+function setCategory(id) {
+  state.category = id;
+  renderNav();
+  renderCards();
+  if (window.innerWidth < 1024) toggleSidebar();
+}
+
+function openLab(module) {
+  addToRecent(module.id);
+  showToast(`Opening ${module.name}...`);
+  setTimeout(() => { window.location.href = module.url; }, 600);
+}
+
+function togglePin(id) {
+  const index = state.pinned.indexOf(id);
+  if (index > -1) {
+    state.pinned.splice(index, 1);
+    showToast('Removed from pins');
+  } else {
+    state.pinned.push(id);
+    showToast('Pinned successfully');
+  }
+  saveSettings();
+  updateStats();
+  renderCards();
+}
+
+function addToRecent(id) {
+  state.recent = state.recent.filter(i => i !== id);
+  state.recent.unshift(id);
+  if (state.recent.length > 10) state.recent.pop();
+  saveSettings();
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('pinnedCount').innerText = state.pinned.length;
+  document.getElementById('recentCount').innerText = state.recent.length;
+  document.getElementById('topicCount').innerText = labModules.length;
+}
+
+function updateCategoryLabel() {
+  const label = document.getElementById('categoryLabel');
+  const item = navItems.find(i => i.id === state.category);
+  label.innerText = item ? item.label : 'All Modules';
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const main = document.getElementById('main');
+
+  if (window.innerWidth >= 1024) {
+    sidebar.classList.toggle('collapsed');
+    main.classList.toggle('expanded');
+  } else {
+    sidebar.classList.toggle('open');
+  }
+}
+
+function toggleFocus() {
+  document.body.classList.toggle('focus-mode');
+  const isFocus = document.body.classList.contains('focus-mode');
+  showToast(isFocus ? 'Focus Mode Enabled' : 'Focus Mode Disabled');
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = "auto";
+}
+
+function confirmNameChange() {
+  const newName = document.getElementById('nameInput').value.trim();
+  if (newName && newName !== state.user) {
+    updateUserName(newName);
+  } else {
+    showToast('Name unchanged or invalid');
+  }
+}
+
+async function updateUserName(newName) {
+  const email = localStorage.getItem("userEmail");
+  if (!email) {
+    state.user = newName;
+    document.getElementById('displayName').innerText = newName;
+    document.getElementById('profileInitial').innerText = newName.charAt(0).toUpperCase();
+    showToast('Name updated locally!');
+    return;
+  }
+
+  try {
+    const res = await fetch("http://localhost:3000/update-name", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, newName })
+    });
+    const data = await res.json();
+    if (data.success) {
+      state.user = newName;
+      document.getElementById('displayName').innerText = newName;
+      document.getElementById('profileInitial').innerText = newName.charAt(0).toUpperCase();
+      showToast('Name updated!');
+    }
+  } catch (err) {
+    showToast('Update failed');
+  }
+}
+
+function setTheme(theme, el) {
+  state.theme = theme;
+  applyTheme(theme);
+  saveSettings();
+}
+
+function clearPins() {
+  state.pinned = [];
+  saveSettings();
+  renderCards();
+  updateStats();
+  showToast('Pins cleared');
+}
+
+function clearRecents() {
+  state.recent = [];
+  saveSettings();
+  updateStats();
+  showToast('Recent history cleared');
+}
+
+function clearAllData() {
+  if (confirm('Clear all your data? This cannot be undone.')) {
+    state.pinned = [];
+    state.recent = [];
+    saveSettings();
+    renderCards();
+    updateStats();
+    showToast('Data cleared');
+    closeModal('settingsModal');
+  }
+}
+
+async function submitFeedback(){
+
+  const email = localStorage.getItem("userEmail");
+  const message = document.querySelector("#feedbackModal textarea").value;
+  
+  if(!message){
+  showToast("Please write feedback");
+  return;
+  }
+  
+  try{
+  
+  const res = await fetch("http://localhost:3000/submit-feedback",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({
+  email,
+  message
+  })
+  });
+  
+  const data = await res.json();
+  
+  if(data.success){
+  showToast("Thank you for your feedback!");
+  document.querySelector("#feedbackModal textarea").value="";
+  closeModal("feedbackModal");
+  }else{
+  showToast("Failed to send feedback");
+  }
+  
+  }catch(err){
+  showToast("Server error");
+  }
+  
+  }
+
+function showToast(message) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<i class="ri-checkbox-circle-fill"></i> ${message}`;
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+async function updatePassword(){
+
+const email = localStorage.getItem("userEmail");
+const newPassword = document.getElementById("newPasswordInput").value;
+
+if(!newPassword){
+showToast("Enter a password");
+return;
+}
+if(newPassword.length < 6){
+showToast("Password must be at least 6 characters");
+return;
+}
+
+
+try{
+
+const res = await fetch("http://localhost:3000/change-password",{
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body: JSON.stringify({
+email,
+newPassword
+})
+});
+
+const data = await res.json();
+
+if(data.success){
+showToast("Password updated successfully");
+document.getElementById("newPasswordInput").value="";
+}else{
+showToast("Update failed");
+}
+
+}catch(err){
+showToast("Server error");
+}
+
+}
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>

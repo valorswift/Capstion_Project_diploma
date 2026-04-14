@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OS Process Visualizer | Learn by Seeing</title>
+    <style>
+        /* =========================================
+           STYLES - Clean & Educational Design
+           ========================================= */
+        :root {
+            --primary: #3b82f6;      /* Soft Blue */
+            --secondary: #64748b;    /* Slate Grey */
+            --bg-body: #f8fafc;      /* Light Grey Background */
+            --bg-panel: #ffffff;     /* White Panel */
+            --text-main: #1e293b;    /* Dark Text */
+            --text-light: #64748b;   /* Muted Text */
+            --border: #e2e8f0;       /* Light Border */
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg-panel);
+            padding: 15px 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { margin: 0; font-size: 1.5rem; color: var(--primary); }
+        header .subtitle { font-size: 0.9rem; color: var(--text-light); }
+
+        /* Main Layout: 3 Columns */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden; /* Prevent body scroll, let panels scroll */
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Column Widths */
+        .col-input { flex: 0 0 300px; }  /* Left */
+        .col-viz   { flex: 1; }            /* Center */
+        .col-learn { flex: 0 0 320px; }  /* Right */
+
+        /* UI Elements */
+        h2 { font-size: 1.1rem; margin-top: 0; color: var(--text-main); border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        h3 { font-size: 1rem; color: var(--secondary); margin-top: 20px; }
+
+        label { display: block; font-size: 0.9rem; margin-bottom: 5px; color: var(--text-light); }
+        input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: #2563eb; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); margin-top: 5px; }
+        .btn-outline:hover { background: #eff6ff; }
+        .btn-danger { background-color: var(--text-light); }
+        
+        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-step { background: var(--secondary); }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 8px; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-light); }
+        .process-color-dot { height: 10px; width: 10px; display: inline-block; border-radius: 50%; margin-right: 5px; }
+
+        /* Visualization Area (Center) */
+        .viz-box {
+            background: #f1f5f9;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        canvas { width: 100%; height: 150px; background: white; border-radius: 4px; border: 1px solid var(--border); }
+
+        /* State Diagram (SVG) */
+        .state-diagram { width: 100%; height: 100px; margin-top: 20px; }
+        .state-node { fill: white; stroke: var(--secondary); stroke-width: 2; }
+        .state-text { font-size: 12px; text-anchor: middle; font-family: sans-serif; fill: var(--text-main); pointer-events: none; }
+        .state-arrow { stroke: var(--secondary); stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+        
+        /* Highlight active state */
+        .state-active { fill: #dbeafe; stroke: var(--primary); stroke-width: 3; }
+        .token { fill: var(--primary); transition: all 0.3s ease; }
+
+        /* Learning Panel (Right) */
+        .info-card {
+            background: #fffbeb; /* Light yellow for hints */
+            border-left: 4px solid var(--accent-orange);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .info-title { font-weight: bold; color: #92400e; margin-bottom: 5px; display: block; }
+        .info-text { font-size: 0.9rem; color: #4b5563; line-height: 1.5; }
+
+        .log-entry {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        .log-entry.active { background-color: #eff6ff; border-left: 3px solid var(--primary); }
+        .log-time { font-weight: bold; color: var(--text-light); font-size: 0.8rem; }
+
+        /* Metrics */
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .metric-box { background: #f8fafc; padding: 10px; text-align: center; border: 1px solid var(--border); border-radius: 4px; }
+        .metric-val { font-size: 1.2rem; font-weight: bold; color: var(--primary); }
+        .metric-label { font-size: 0.75rem; color: var(--text-light); }
+
+        /* Helpers */
+        .hidden { display: none; }
+        .help-text { font-size: 0.75rem; color: var(--text-light); font-style: italic; margin-bottom: 15px; display: block; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>OS Process Visualizer</h1>
+            <span class="subtitle">A visual textbook for Scheduling Algorithms</span>
+        </div>
+        <div>
+            <button class="btn btn-outline" onclick="app.resetAll()" style="width: auto;">Reset All</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <!-- LEFT PANEL: Inputs -->
+        <aside class="panel col-input">
+            <h2>1. Define Processes</h2>
+            <span class="help-text">Create the tasks the CPU needs to handle.</span>
+
+            <div style="background: #f1f5f9; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                <label>Arrival Time</label>
+                <input type="number" id="in-arrival" value="0" min="0">
+                <span class="help-text">👉 When does the process enter the system?</span>
+
+                <label>Burst Time</label>
+                <input type="number" id="in-burst" value="4" min="1">
+                <span class="help-text">👉 How long does it need the CPU?</span>
+
+                <button class="btn" onclick="app.addProcess()">+ Add Process</button>
+            </div>
+
+            <h3>Process List</h3>
+            <table id="process-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Arrival</th>
+                        <th>Burst</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows added by JS -->
+                </tbody>
+            </table>
+            <div id="empty-msg" style="text-align: center; color: var(--text-light); font-size: 0.9rem; margin-top: 10px;">
+                No processes yet. Add one above!
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+
+            <h2>2. Choose Algorithm</h2>
+            <label>Which strategy should the CPU use?</label>
+            <select id="algo-select" onchange="app.updateAlgoInfo()">
+                <option value="FCFS">First Come First Serve (FCFS)</option>
+                <option value="SJF">Shortest Job First (SJF)</option>
+                <option value="RR">Round Robin</option>
+            </select>
+
+            <div id="algo-desc" class="info-card" style="margin-top: 10px;">
+                <span class="info-title">FCFS: The Queue</span>
+                <span class="info-text">Works exactly like a line at a grocery store. The first person to arrive gets served first. Simple, but short tasks might wait a long time if a big task is in front.</span>
+            </div>
+
+            <button class="btn" onclick="app.startSimulation()">▶ Start Simulation</button>
+        </aside>
+
+
+        <!-- CENTER PANEL: Visualization -->
+        <main class="panel col-viz">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Execution Timeline</h2>
+                <div id="step-controls" class="btn-group hidden">
+                    <button class="btn btn-step" onclick="app.prevStep()">◀ Back</button>
+                    <button class="btn btn-step" onclick="app.nextStep()">Next Step ▶</button>
+                </div>
+            </div>
+
+            <!-- Gantt Chart Canvas -->
+            <div class="viz-box">
+                <canvas id="ganttCanvas"></canvas>
+                <div style="text-align: center; margin-top: 10px; font-weight: bold; color: var(--text-light);">
+                    Time: <span id="timer-display" style="color: var(--primary); font-size: 1.2rem;">0</span>
+                </div>
+            </div>
+
+            <h2>Process States</h2>
+            <span class="help-text">Watch where the "Token" (blue dot) moves.</span>
+            
+            <!-- SVG State Diagram -->
+            <svg class="state-diagram" viewBox="0 0 600 100">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+                    </marker>
+                </defs>
+                
+                <!-- Paths -->
+                <path d="M100 50 L200 50" class="state-arrow" />
+                <path d="M350 50 L450 50" class="state-arrow" />
+                <path d="M600 50 L700 50" class="state-arrow" /> <!-- Mock path for visual balance -->
+                
+                <!-- Nodes -->
+                <g id="node-new" transform="translate(10, 25)">
+                    <rect width="90" height="50" rx="10" class="state-node" />
+                    <text x="45" y="30" class="state-text">NEW</text>
+                </g>
+
+                <g id="node-ready" transform="translate(200, 25)">
+                    <rect width="150" height="50" rx="4" class="state-node" />
+                    <text x="75" y="30" class="state-text">READY</text>
+                </g>
+
+                <g id="node-running" transform="translate(450, 25)">
+                    <rect width="150" height="50" rx="4" class="state-node" />
+                    <text x="75" y="30" class="state-text">RUNNING</text>
+                </g>
+
+                <!-- Token (The moving dot) -->
+                <circle id="state-token" cx="55" cy="50" r="6" class="token" />
+            </svg>
+
+            <div id="final-metrics" class="hidden" style="margin-top: 30px;">
+                <h3>📊 Simulation Results</h3>
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <div class="metric-val" id="res-avg-wait">0</div>
+                        <div class="metric-label">Avg Waiting Time</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-val" id="res-avg-turn">0</div>
+                        <div class="metric-label">Avg Turnaround Time</div>
+                    </div>
+                </div>
+                <div class="info-card" style="margin-top: 15px; border-left-color: var(--accent-green); background: #f0fdf4;">
+                    <span class="info-title">Teacher's Note:</span>
+                    <span class="info-text" id="res-explanation">
+                        Lower waiting time is usually better because it means users don't have to wait long for their apps to respond!
+                    </span>
+                </div>
+            </div>
+        </main>
+
+
+        <!-- RIGHT PANEL: Explanations -->
+        <aside class="panel col-learn">
+            <h2>What is happening?</h2>
+            <div id="step-explanation" class="info-card" style="border-left-color: var(--primary); background: #eff6ff;">
+                <span class="info-title">Ready to Start</span>
+                <span class="info-text">Click "Start Simulation" to begin. We will go step-by-step so you can understand exactly what the CPU is doing.</span>
+            </div>
+
+            <h3>Event Log</h3>
+            <div id="log-container" style="flex: 1; overflow-y: auto;">
+                <div style="text-align: center; color: var(--text-light); margin-top: 20px;">
+                    Events will appear here...
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- =========================================
+         JAVASCRIPT LOGIC
+         ========================================= -->
+    <script>
+        /**
+         * Process Object
+         * Represents a single task in the system.
+         */
+        class Process {
+            constructor(id, arrival, burst) {
+                this.id = id;
+                this.arrival = parseInt(arrival);
+                this.burst = parseInt(burst);
+                this.remaining = parseInt(burst); // For RR/Preemptive
+                this.color = this.getColor();
+            }
+
+            // Generate a consistent color based on ID
+            getColor() {
+                const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+                // Simple hash of ID to pick color
+                const index = this.id.charCodeAt(1) % colors.length; 
+                return colors[index];
+            }
+        }
+
+        /**
+         * Main Application Controller
+         * Handles all logic, UI updates, and scheduling.
+         */
+        const app = {
+            processes: [],
+            simulationSteps: [], // Array of { time, pid, type, reason }
+            currentStepIndex: 0,
+            currentAlgo: 'FCFS',
+            canvas: null,
+            ctx: null,
+
+            // Initialization
+            init: function() {
+                this.canvas = document.getElementById('ganttCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.updateAlgoInfo();
+            },
+
+            // --- 1. INPUT HANDLING ---
+
+            addProcess: function() {
+                const arrival = document.getElementById('in-arrival').value;
+                const burst = document.getElementById('in-burst').value;
+
+                if (burst < 1) {
+                    alert("Burst time must be at least 1.");
+                    return;
+                }
+
+                const id = "P" + (this.processes.length + 1);
+                const p = new Process(id, arrival, burst);
+                this.processes.push(p);
+                
+                this.renderTable();
+                
+                // Clear inputs for next entry
+                document.getElementById('in-burst').value = parseInt(burst) + 1; // Increment slightly for convenience
+                document.getElementById('in-arrival').value = arrival; // Keep arrival same
+            },
+
+            renderTable: function() {
+                const tbody = document.querySelector('#process-table tbody');
+                tbody.innerHTML = '';
+                
+                if (this.processes.length === 0) {
+                    document.getElementById('empty-msg').style.display = 'block';
+                } else {
+                    document.getElementById('empty-msg').style.display = 'none';
+                }
+
+                this.processes.forEach((p, index) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><span class="process-color-dot" style="background:${p.color}"></span>${p.id}</td>
+                        <td>${p.arrival}</td>
+                        <td>${p.burst}</td>
+                        <td><button style="color:red; background:none; border:none; cursor:pointer;" onclick="app.removeProcess(${index})">✕</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            removeProcess: function(index) {
+                this.processes.splice(index, 1);
+                // Re-assign IDs just to keep them P1, P2... nice and tidy
+                this.processes.forEach((p, i) => p.id = "P" + (i + 1));
+                this.renderTable();
+            },
+
+            updateAlgoInfo: function() {
+                const select = document.getElementById('algo-select');
+                const descBox = document.getElementById('algo-desc');
+                this.currentAlgo = select.value;
+                
+                let title = "";
+                let text = "";
+
+                if (this.currentAlgo === 'FCFS') {
+                    title = "FCFS: The Queue";
+                    text = "Works exactly like a line at a ticket counter. The process that arrives first gets the CPU first. It's simple, but a short task might wait a long time if a long task is in front of it.";
+                } else if (this.currentAlgo === 'SJF') {
+                    title = "SJF: Shortest Job First";
+                    text = "The CPU looks at all waiting processes and picks the one with the shortest Burst Time. This minimizes the average waiting time, making the system feel faster overall.";
+                } else if (this.currentAlgo === 'RR') {
+                    title = "Round Robin: Fair Sharing";
+                    text = "Each process gets a small slice of time (Quantum). If it doesn't finish, it goes to the back of the line. This ensures no single process hogs the CPU.";
+                }
+
+                descBox.innerHTML = `<span class="info-title">${title}</span><span class="info-text">${text}</span>`;
+            },
+
+            // --- 2. SIMULATION ENGINE (The Brain) ---
+
+            startSimulation: function() {
+                if (this.processes.length === 0) {
+                    alert("Please add at least one process.");
+                    return;
+                }
+
+                // Reset UI
+                this.simulationSteps = [];
+                this.currentStepIndex = 0;
+                document.getElementById('step-controls').classList.remove('hidden');
+                document.getElementById('final-metrics').classList.add('hidden');
+                document.getElementById('log-container').innerHTML = '';
+                
+                // Generate the "Script" of events based on algorithm
+                if (this.currentAlgo === 'FCFS') this.calculateFCFS();
+                else if (this.currentAlgo === 'SJF') this.calculateSJF();
+                else if (this.currentAlgo === 'RR') this.calculateRR();
+
+                // Render Initial State
+                this.updateUI();
+            },
+
+            /* Logic: FCFS */
+            calculateFCFS: function() {
+                // 1. Sort by arrival time
+                let queue = [...this.processes].sort((a, b) => a.arrival - b.arrival);
+                let currentTime = 0;
+
+                queue.forEach(p => {
+                    // If CPU is idle before arrival
+                    if (currentTime < p.arrival) {
+                        this.addStep(currentTime, null, 'IDLE', `CPU is idle waiting for ${p.id} to arrive.`);
+                        currentTime = p.arrival;
+                    }
+
+                    // Process starts
+                    this.addStep(currentTime, p, 'START', `${p.id} arrived and starts running immediately (FCFS).`);
+                    
+                    // Process runs for burst time
+                    for(let t=1; t<p.burst; t++) {
+                        this.addStep(currentTime + t, p, 'RUN', `${p.id} is using the CPU.`);
+                    }
+
+                    // Process finishes
+                    currentTime += p.burst;
+                    this.addStep(currentTime, p, 'END', `${p.id} finished its task. CPU is now free.`);
+                });
+            },
+
+            /* Logic: SJF (Non-Preemptive) */
+            calculateSJF: function() {
+                let queue = [...this.processes];
+                let currentTime = 0;
+                let completed = 0;
+                let n = queue.length;
+
+                while (completed < n) {
+                    // Find processes that have arrived by currentTime
+                    let available = queue.filter(p => p.arrival <= currentTime && p.remaining > 0);
+
+                    if (available.length === 0) {
+                        this.addStep(currentTime, null, 'IDLE', 'CPU is idle. No processes have arrived yet.');
+                        currentTime++;
+                        continue;
+                    }
+
+                    // Pick the one with shortest burst
+                    available.sort((a, b) => a.burst - b.burst);
+                    let p = available[0];
+
+                    this.addStep(currentTime, p, 'START', `${p.id} is selected because it has the shortest burst time (${p.burst}).`);
+
+                    // Run to completion
+                    for(let t=1; t<p.burst; t++) {
+                        this.addStep(currentTime + t, p, 'RUN', `${p.id} is running.`);
+                    }
+
+                    currentTime += p.burst;
+                    this.addStep(currentTime, p, 'END', `${p.id} finished.`);
+                    p.remaining = 0; // Mark done
+                    completed++;
+                }
+            },
+
+            /* Logic: Round Robin */
+            calculateRR: function() {
+                const quantum = 2; // Fixed quantum for simplicity
+                let queue = [...this.processes].sort((a, b) => a.arrival - b.arrival);
+                let currentTime = 0;
+                let readyQueue = [];
+                let completed = 0;
+                let index = 0; // pointer to main list to add arrivals
+
+                // Initial add
+                while(index < queue.length && queue[index].arrival <= currentTime) {
+                    readyQueue.push(queue[index]);
+                    index++;
+                }
+
+                while (completed < queue.length) {
+                    if (readyQueue.length === 0) {
+                        this.addStep(currentTime, null, 'IDLE', 'CPU Idle. Waiting for arrivals.');
+                        currentTime++;
+                        // Check for new arrivals during idle
+                        while(index < queue.length && queue[index].arrival <= currentTime) {
+                            readyQueue.push(queue[index]);
+                            index++;
+                        }
+                        continue;
+                    }
+
+                    let p = readyQueue.shift(); // Get first in line
+
+                    this.addStep(currentTime, p, 'START', `${p.id} gets the CPU for ${quantum} seconds (Quantum).`);
+
+                    let execTime = Math.min(p.remaining, quantum);
+                    
+                    for(let t=0; t<execTime; t++) {
+                         this.addStep(currentTime + t, p, 'RUN', `${p.id} is executing.`);
+                    }
+
+                    currentTime += execTime;
+                    p.remaining -= execTime;
+
+                    // Add any new arrivals that happened during execution
+                    while(index < queue.length && queue[index].arrival <= currentTime) {
+                        readyQueue.push(queue[index]);
+                        index++;
+                    }
+
+                    if (p.remaining === 0) {
+                        this.addStep(currentTime, p, 'END', `${p.id} finished completely.`);
+                        completed++;
+                    } else {
+                        this.addStep(currentTime, p, 'WAIT', `${p.id} used up its time slice. Going to back of line.`);
+                        readyQueue.push(p);
+                    }
+                }
+            },
+
+            addStep: function(time, process, type, reason) {
+                this.simulationSteps.push({
+                    time: time,
+                    process: process,
+                    type: type, // START, RUN, END, IDLE, WAIT
+                    reason: reason
+                });
+            },
+
+            // --- 3. STEP CONTROLLER ---
+
+            nextStep: function() {
+                if (this.currentStepIndex < this.simulationSteps.length - 1) {
+                    this.currentStepIndex++;
+                    this.updateUI();
+                }
+            },
+
+            prevStep: function() {
+                if (this.currentStepIndex > 0) {
+                    this.currentStepIndex--;
+                    this.updateUI();
+                }
+            },
+
+            resetAll: function() {
+                this.processes = [];
+                this.renderTable();
+                this.simulationSteps = [];
+                this.currentStepIndex = 0;
+                document.getElementById('step-controls').classList.add('hidden');
+                document.getElementById('final-metrics').classList.add('hidden');
+                document.getElementById('log-container').innerHTML = '';
+                document.getElementById('timer-display').innerText = '0';
+                this.ctx.clearRect(0,0, this.canvas.width, this.canvas.height);
+                
+                // Reset Token
+                const token = document.getElementById('state-token');
+                token.setAttribute('cx', 55);
+                document.querySelectorAll('.state-node').forEach(el => el.classList.remove('state-active'));
+            },
+
+            // --- 4. VISUALIZATION & RENDERING ---
+
+            updateUI: function() {
+                const step = this.simulationSteps[this.currentStepIndex];
+                
+                // 1. Update Timer
+                document.getElementById('timer-display').innerText = step.time;
+
+                // 2. Update Explanation Box
+                const title = step.process ? `Step: ${step.process.id}` : 'System State';
+                const desc = step.reason;
+                document.querySelector('#step-explanation').innerHTML = `
+                    <span class="info-title">${title}</span>
+                    <span class="info-text">${desc}</span>
+                `;
+
+                // 3. Update Log (Highlight current)
+                this.updateLog(step);
+
+                // 4. Draw Gantt Chart up to this point
+                this.drawGanttChart();
+
+                // 5. Update State Diagram
+                this.updateStateDiagram(step);
+
+                // 6. Check if finished
+                if (this.currentStepIndex === this.simulationSteps.length - 1) {
+                    this.showMetrics();
+                }
+            },
+
+            updateLog: function(currentStep) {
+                const container = document.getElementById('log-container');
+                // Only append if we are moving forward
+                if (container.children.length <= this.currentStepIndex) {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry';
+                    div.id = `log-${this.currentStepIndex}`;
+                    
+                    let icon = "ℹ️";
+                    if (currentStep.type === 'END') icon = "✅";
+                    if (currentStep.type === 'IDLE') icon = "💤";
+                    if (currentStep.type === 'WAIT') icon = "⏳";
+
+                    const pName = currentStep.process ? currentStep.process.id : "System";
+                    
+                    div.innerHTML = `
+                        <div class="log-time">T${currentStep.time}</div>
+                        <div><b>${pName}</b>: ${currentStep.reason}</div>
+                    `;
+                    container.appendChild(div);
+                }
+                
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+
+                // Highlight active
+                document.querySelectorAll('.log-entry').forEach(el => el.classList.remove('active'));
+                const activeEl = document.getElementById(`log-${this.currentStepIndex}`);
+                if(activeEl) activeEl.classList.add('active');
+            },
+
+            drawGanttChart: function() {
+                const w = this.canvas.width = this.canvas.offsetWidth;
+                const h = this.canvas.height = this.canvas.offsetHeight;
+                const ctx = this.ctx;
+
+                ctx.clearRect(0, 0, w, h);
+
+                // Determine scale
+                const maxTime = this.simulationSteps[this.simulationSteps.length - 1].time;
+                const unitWidth = w / (maxTime + 1); // +1 for padding
+
+                // Draw grid lines
+                ctx.strokeStyle = '#f1f5f9';
+                ctx.beginPath();
+                for(let i=0; i<=maxTime; i++) {
+                    ctx.moveTo(i * unitWidth, 0);
+                    ctx.lineTo(i * unitWidth, h);
+                }
+                ctx.stroke();
+
+                // Draw blocks for steps UP TO current index
+                // Note: Steps are granular (every second). 
+                // We need to group them into blocks to draw nicely.
+                
+                // Simple approach: Iterate 0 to currentStepIndex
+                for(let i=0; i <= this.currentStepIndex; i++) {
+                    const step = this.simulationSteps[i];
+                    
+                    if (step.process && (step.type === 'START' || step.type === 'RUN' || step.type === 'END')) {
+                        ctx.fillStyle = step.process.color;
+                        // Draw a rectangle representing this time unit
+                        // We offset by 0.5 to center it on the tick
+                        ctx.fillRect(step.time * unitWidth, 20, unitWidth, h - 40);
+                        
+                        // Draw ID text if wide enough
+                        if (unitWidth > 20) {
+                            ctx.fillStyle = 'white';
+                            ctx.font = '12px sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(step.process.id, (step.time * unitWidth) + (unitWidth/2), h/2 + 5);
+                        }
+                    }
+                }
+            },
+
+            updateStateDiagram: function(step) {
+                // Reset all nodes
+                document.querySelectorAll('.state-node').forEach(el => el.classList.remove('state-active'));
+                
+                const token = document.getElementById('state-token');
+                let x = 55; // Default NEW
+                let activeNode = 'node-new';
+
+                if (step.type === 'IDLE') {
+                    x = 55; // Back to New (conceptually ready for new work) or just hide?
+                    // Let's put it in READY if there are pending jobs, or IDLE (not in diagram) if none.
+                    // For simplicity, let's keep it at READY if idle but jobs exist.
+                    x = 275; activeNode = 'node-ready'; 
+                }
+                else if (step.type === 'START' || step.type === 'RUN') {
+                    x = 525; activeNode = 'node-running';
+                }
+                else if (step.type === 'WAIT') {
+                    x = 275; activeNode = 'node-ready';
+                }
+                else if (step.type === 'END') {
+                    // Could go to Terminated, but let's just keep it running briefly or go back to ready for next job?
+                    // Let's go to a "Terminated" visual state by fading token or moving it right
+                    x = 650; // Off chart right
+                }
+
+                token.setAttribute('cx', x);
+                if (activeNode) {
+                    document.getElementById(activeNode).classList.add('state-active');
+                }
+            },
+
+            showMetrics: function() {
+                const panel = document.getElementById('final-metrics');
+                panel.classList.remove('hidden');
+                
+                // Simple Calculation based on finished processes
+                let totalWait = 0;
+                let totalTurn = 0;
+                
+                // We need to calculate these from the simulation result.
+                // Since this is a simplified visualizer, we'll approximate based on End times found in steps.
+                
+                // Map completion times
+                const completions = {};
+                const startTimes = {}; // First time we saw START
+                
+                this.simulationSteps.forEach(s => {
+                    if (s.process) {
+                        if (s.type === 'START' && !startTimes[s.process.id]) {
+                            startTimes[s.process.id] = s.time;
+                        }
+                        if (s.type === 'END') {
+                            completions[s.process.id] = s.time;
+                        }
+                    }
+                });
+
+                this.processes.forEach(p => {
+                    const finish = completions[p.id] || 0;
+                    const start = startTimes[p.id] || 0;
+                    const arrival = p.arrival;
+                    
+                    const turnaround = finish - arrival;
+                    const waiting = turnaround - p.burst;
+                    
+                    totalTurn += turnaround;
+                    totalWait += waiting;
+                });
+
+                const avgWait = (totalWait / this.processes.length).toFixed(2);
+                const avgTurn = (totalTurn / this.processes.length).toFixed(2);
+
+                document.getElementById('res-avg-wait').innerText = avgWait;
+                document.getElementById('res-avg-turn').innerText = avgTurn;
+            }
+        };
+
+        // Initialize App on Load
+        window.onload = function() {
+            app.init();
+        };
+
+    </script>
+</body>
+</html>

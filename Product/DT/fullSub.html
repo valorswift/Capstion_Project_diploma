@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Full Subtractor Visual</title>
+<style>
+    /* --- CSS VARIABLES & RESET --- */
+    :root {
+        --bg-dark: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.7);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --text-main: #f1f5f9;
+        --text-muted: #94a3b8;
+        
+        --color-off: #334155;     /* Grey for Low */
+        --color-on: #f43f5e;      /* Rose/Red for High (Changed from Cyan to indicate 'Borrow') */
+        --glow-on: 0 0 15px rgba(244, 63, 94, 0.6);
+        
+        /* Keeping Cyan for logical flow to distinguish from the 'Borrow' concept, 
+           or you can keep it all one color. Let's use Cyan for signals. */
+        --color-on: #06b6d4;      
+        --glow-on: 0 0 15px rgba(6, 182, 212, 0.6);
+        
+        --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+        font-family: var(--font-family);
+        background-color: var(--bg-dark);
+        background-image: 
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        color: var(--text-main);
+        margin: 0; 
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    h1 {
+        text-align: center; 
+        margin-bottom: 40px;
+        font-size: 2.5rem;
+        font-weight: 300;
+        text-transform: uppercase;
+        background: linear-gradient(to right, #fff, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: none;
+    }
+
+    /* --- MAIN CONTAINER --- */
+    .simulator {
+        display: flex; 
+        gap: 40px; 
+        flex-wrap: wrap; 
+        justify-content: center;
+        align-items: flex-start;
+        max-width: 1400px;
+        width: 100%;
+    }
+
+    /* --- CARDS (Glassmorphism) --- */
+    .diagram {
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        padding: 30px; 
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        position: relative;
+        flex: 2;
+        min-width: 300px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .panel {
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        padding: 30px; 
+        color: var(--text-main);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        flex: 1;
+        min-width: 300px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .panel h2 { 
+        text-align: center; 
+        margin-bottom: 20px; 
+        font-weight: 500;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 1.2rem;
+    }
+
+    /* --- SVG STYLES --- */
+    svg {
+        width: 100%; 
+        height: auto;
+        max-width: 900px;
+        display: block; 
+    }
+
+    /* Wires */
+    .wire, .wire2 {
+        stroke: var(--color-off); 
+        stroke-width: 4; 
+        stroke-linecap: round; 
+        transition: stroke 0.4s ease, filter 0.4s ease;
+    }
+
+    /* Gate Shapes */
+    #gateDiagram path:not(.wire2) {
+        fill: #1e293b;
+        stroke: #475569;
+        stroke-width: 3;
+    }
+    
+    /* Inverter Bubbles (Small circles on wires) */
+    .inv-bubble {
+        fill: #1e293b;
+        stroke: #fff;
+        stroke-width: 2;
+    }
+
+    /* Rectangle Diagram Box */
+    #rectDiagram rect {
+        fill: rgba(30, 41, 59, 0.5);
+        stroke: var(--color-on);
+        stroke-width: 2;
+    }
+    
+    #rectDiagram text {
+        fill: var(--text-main);
+        font-size: 24px;
+        letter-spacing: 1px;
+    }
+
+    /* Text Labels inside SVG */
+    svg text {
+        font-family: var(--font-family);
+        fill: var(--text-muted);
+        font-weight: 600;
+    }
+
+    /* Active Signal Styles */
+    .signal {
+        stroke: var(--color-on) !important; 
+        stroke-dasharray: 8, 4; 
+        animation: flow 1s linear infinite;
+        filter: drop-shadow(0 0 5px var(--color-on));
+        z-index: 10;
+    }
+
+    @keyframes flow {to {stroke-dashoffset:-20;}}
+
+    /* Terminals & Indicators */
+    .terminal {
+        fill: #1e293b; 
+        stroke: #475569; 
+        stroke-width: 3; 
+        cursor: pointer; 
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .terminal:hover {
+        stroke: #fff;
+        fill: #334155;
+    }
+
+    .terminal.on {
+        fill: var(--color-on); 
+        stroke: #fff;
+        filter: var(--glow-on);
+    }
+
+    .indicator {
+        fill: #1e293b; 
+        stroke: #475569; 
+        stroke-width: 3; 
+        transition: all 0.3s ease;
+    }
+
+    .indicator.on {
+        fill: var(--color-on); 
+        stroke: #fff;
+        filter: var(--glow-on);
+    }
+
+    /* --- TOGGLE SWITCH --- */
+    .toggle-container {
+        position: absolute; 
+        top: 20px; 
+        right: 20px;
+        display: flex; 
+        align-items: center; 
+        gap: 10px; 
+        color: var(--text-muted);
+        font-weight: 600; 
+        font-size: 0.9rem; 
+        z-index: 10;
+        background: rgba(0,0,0,0.3);
+        padding: 8px 12px;
+        border-radius: 20px;
+        border: 1px solid var(--card-border);
+    }
+
+    .toggle-container input[type="checkbox"] {
+        width: 36px; 
+        height: 20px;
+        -webkit-appearance: none; 
+        background: #334155; 
+        border-radius: 20px;
+        position: relative; 
+        outline: none; 
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .toggle-container input[type="checkbox"]:checked {background: var(--color-on);}
+    .toggle-container input[type="checkbox"]::before {
+        content:''; 
+        position: absolute; 
+        width: 16px; 
+        height: 16px; 
+        border-radius: 50%;
+        background: #fff; 
+        top: 2px; 
+        left: 2px; 
+        transition: 0.3s;
+    }
+    .toggle-container input[type="checkbox"]:checked::before {left: 18px;}
+
+    /* --- TRUTH TABLE --- */
+    table {
+        width: 100%; 
+        border-collapse: separate; 
+        border-spacing: 0; 
+        text-align: center; 
+        font-size: 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--card-border);
+        overflow: hidden;
+    }
+
+    th, td {
+        border: none;
+        padding: 12px;
+        font-weight: 600;
+    }
+
+    th {
+        background: rgba(255,255,255,0.05);
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 1px solid var(--card-border);
+    }
+
+    tr.active {
+        background: rgba(6, 182, 212, 0.15); 
+        color: var(--color-on);
+    }
+    
+    tr.active td {
+        font-weight: 800;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+        .simulator { flex-direction: column; align-items: center; }
+        .diagram, .panel { width: 100%; }
+    }
+</style>
+</head>
+<body>
+
+<h1>Full Subtractor Visual</h1>
+
+<div class="simulator">
+<div class="diagram">
+    <!-- Toggle -->
+    <div class="toggle-container">
+        Show Gates
+        <input type="checkbox" id="toggleGates"/>
+    </div>
+
+    <svg viewBox="0 0 900 500">
+        <!-- Rectangle diagram -->
+        <g id="rectDiagram">
+            <!-- Inputs -->
+            <circle id="A" cx="80" cy="100" r="20" class="terminal"/>
+            <circle id="B" cx="80" cy="250" r="20" class="terminal"/>
+            <circle id="Bin" cx="80" cy="400" r="20" class="terminal"/>
+            <!-- Box -->
+            <rect x="200" y="80" width="500" height="350" rx="15"/>
+            <text x="450" y="250" text-anchor="middle">Full Subtractor</text>
+            <!-- Wires -->
+            <line id="wireA" x1="100" y1="100" x2="200" y2="100" class="wire"/>
+            <line id="wireB" x1="100" y1="250" x2="200" y2="250" class="wire"/>
+            <line id="wireBin" x1="100" y1="400" x2="200" y2="400" class="wire"/>
+            <line id="wireDiff" x1="700" y1="150" x2="820" y2="150" class="wire"/>
+            <line id="wireBout" x1="700" y1="350" x2="820" y2="350" class="wire"/>
+            <!-- Outputs -->
+            <circle id="Diff" cx="820" cy="150" r="20" class="indicator"/>
+            <circle id="Bout" cx="820" cy="350" r="20" class="indicator"/>
+            <!-- Labels -->
+            <text x="45" y="105">A</text>
+            <text x="45" y="255">B</text>
+            <text x="45" y="405">Bin</text>
+            <text x="840" y="150">Diff</text>
+            <text x="840" y="350">Bout</text>
+        </g>
+
+        <!-- Gate-level diagram -->
+        <g id="gateDiagram" visibility="hidden">
+            <!-- Inputs -->
+            <circle id="gA" cx="80" cy="80" r="15" class="terminal"/>
+            <line id="gWireA" x1="95" y1="80" x2="280" y2="80" class="wire2"/>
+            
+            <circle id="gB" cx="80" cy="180" r="15" class="terminal"/>
+            <line id="gWireB" x1="95" y1="180" x2="280" y2="180" class="wire2"/>
+            
+            <circle id="gBin" cx="80" cy="400" r="15" class="terminal"/>
+            <line id="gWireBin" x1="95" y1="400" x2="480" y2="400" class="wire2"/>
+            <line id="gWireBinUp" x1="480" y1="400" x2="480" y2="210" class="wire2"/>
+            <line id="gWireBinXor2" x1="480" y1="210" x2="525" y2="210" class="wire2"/>
+
+            <!-- Logic for Borrow: Bout = (!A & B) | (!(A^B) & Bin) -->
+            
+            <!-- Wires from Inputs -->
+            <!-- A Split -->
+            <circle id="gP1" cx="220" cy="80" r="6" fill="white"/>
+            <!-- A to XOR1 (Top path) -->
+            <line id="gWireA_XOR" x1="220" y1="80" x2="280" y2="80" class="wire2"/> <!-- Logical High if A=1 -->
+            <!-- A to NOT (Bottom path for Borrow logic !A) -->
+            <line id="gWireA_NotIn" x1="220" y1="80" x2="220" y2="230" class="wire2"/>
+            <!-- The Inverter Bubble for A -->
+            <circle id="invA" cx="220" cy="230" r="6" class="inv-bubble"/>
+            <!-- Wire from NOT A to AND1 -->
+            <line id="gWireA_NotOut" x1="220" y1="236" x2="220" y2="270" class="wire2"/> <!-- Logical High if A=0 -->
+            <line id="gWireA_And1" x1="220" y1="270" x2="270" y2="270" class="wire2"/>
+
+            <!-- B Split -->
+            <circle id="gP2" cx="180" cy="180" r="6" fill="white"/>
+            <!-- B to XOR1 -->
+            <line id="gWireB_XOR" x1="180" y1="180" x2="180" y2="140" class="wire2"/>
+            <line id="gWireB_XorH" x1="180" y1="140" x2="280" y2="140" class="wire2"/> <!-- Approx input to XOR -->
+            <!-- B to AND1 -->
+            <line id="gWireB_And1" x1="180" y1="180" x2="180" y2="230" class="wire2"/>
+            <line id="gWireB_And1H" x1="180" y1="230" x2="270" y2="230" class="wire2"/>
+
+            <!-- XOR Gate 1 (A ^ B) -->
+            <path d="M270 70 Q340 130 270 190" stroke="#fff" stroke-width="3" fill="none"/>
+            <path d="M285 70 Q360 130 285 190 Q370 190 440 130 Q370 70 285 70 Z" stroke="#fff" stroke-width="3" fill="none"/>
+            <text x="360" y="135" text-anchor="middle">XOR</text>
+            
+            <!-- Wire XOR1 to XOR2 -->
+            <line id="gWireX1_X2" x1="440" y1="130" x2="510" y2="130" class="wire2"/>
+            
+            <!-- Wire XOR1 to NOT (for Borrow logic !(A^B)) -->
+            <circle id="gJ2" cx="450" cy="130" r="5" fill="white"/>
+            <line id="gWireX1_NotIn" x1="450" y1="130" x2="450" y2="290" class="wire2"/>
+            <!-- Inverter Bubble for XOR1 -->
+            <circle id="invX" cx="450" cy="290" r="6" class="inv-bubble"/>
+            <!-- Wire from NOT XOR1 to AND2 -->
+            <line id="gWireX1_NotOut" x1="450" y1="296" x2="450" y2="330" class="wire2"/> <!-- Logical High if (A^B)=0 -->
+            <line id="gWireX1_And2" x1="450" y1="330" x2="520" y2="330" class="wire2"/>
+
+            <!-- XOR Gate 2 (Input: Bin) -->
+            <path d="M500 120 Q570 180 500 240" stroke="#fff" stroke-width="3" fill="none"/>
+            <path d="M515 120 Q590 180 515 240 Q600 240 670 180 Q600 120 515 120 Z" stroke="#fff" stroke-width="3" fill="none"/>
+            <text x="590" y="180" text-anchor="middle">XOR</text>
+
+            <!-- Difference Output Wire -->
+            <line id="gWireDiff" x1="670" y1="180" x2="800" y2="180" class="wire2"/>
+            <circle id="gDiff" cx="800" cy="180" r="15" class="indicator"/>
+            <text x="820" y="180">Diff</text>
+
+            <!-- AND Gate 1 (Inputs: !A, B) -->
+            <path d="M270 220 H320 A30 30 0 0 1 320 280 H270 Z" stroke="#fff" stroke-width="3" fill="none"/>
+            <text x="295" y="255" text-anchor="middle">AND</text>
+            <!-- Wire AND1 to OR -->
+            <line id="gWireAnd1_Out" x1="350" y1="250" x2="410" y2="250" class="wire2"/>
+            <line id="gWireAnd1_Down" x1="410" y1="250" x2="410" y2="350" class="wire2"/>
+            <line id="gWireAnd1_OR" x1="410" y1="350" x2="660" y2="350" class="wire2"/>
+
+            <!-- AND Gate 2 (Inputs: !(A^B), Bin) -->
+            <path d="M520 320 H580 A30 30 0 0 1 580 380 H520 Z" stroke="#fff" stroke-width="3" fill="none"/>
+            <text x="550" y="350" text-anchor="middle">AND</text>
+            <!-- Wire from Bin Split to AND2 -->
+            <circle id="gJ3" cx="480" cy="330" r="5" fill="white"/>
+            <line id="gWireBin_And2" x1="480" y1="330" x2="520" y2="330" class="wire2"/> 
+            <!-- Wire AND2 to OR -->
+            <line id="gWireAnd2_Out" x1="610" y1="350" x2="660" y2="350" class="wire2"/> <!-- Merged visually for simplicity, OR is right there -->
+
+            <!-- OR Gate -->
+            <path d="M660 330 C670 330, 720 330, 740 360 C720 390, 670 390, 660 390 C665 360, 665 360, 660 330 Z" stroke="#fff" stroke-width="3" fill="none"/>
+            <text x="700" y="360" text-anchor="middle">OR</text>
+            
+            <!-- Bout Output Wire -->
+            <line id="gWireBout" x1="740" y1="360" x2="785" y2="360" class="wire2"/>
+            <circle id="gBout" cx="800" cy="360" r="15" class="indicator"/>
+            <text x="820" y="360">Bout</text>
+        </g>
+    </svg>
+</div>
+
+<div class="panel">
+<h2>Truth Table</h2>
+<table>
+<tr><th>A</th><th>B</th><th>Bin</th><th>Diff</th><th>Bout</th></tr>
+<tr id="r000"><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr id="r001"><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td></tr>
+<tr id="r010"><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td></tr>
+<tr id="r011"><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td></tr>
+<tr id="r100"><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr id="r101"><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+<tr id="r110"><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+<tr id="r111"><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+</table>
+</div>
+</div>
+
+<script>
+const toggle = document.getElementById("toggleGates");
+const rectDiagram = document.getElementById("rectDiagram");
+const gateDiagram = document.getElementById("gateDiagram");
+
+toggle.addEventListener("change", () => {
+    if(toggle.checked){
+        rectDiagram.setAttribute("visibility","hidden");
+        gateDiagram.setAttribute("visibility","visible");
+    } else {
+        rectDiagram.setAttribute("visibility","visible");
+        gateDiagram.setAttribute("visibility","hidden");
+    }
+    update();
+});
+
+let A=0, B=0, Bin=0;
+
+function update() {
+    // --- LOGIC ---
+    const xor1 = A ^ B;         // Intermediate XOR
+    const Diff = xor1 ^ Bin;    // Difference Output
+    
+    // Borrow Logic: Bout = (!A & B) | (!(A^B) & Bin)
+    // Note: In JS !A is boolean, we need bitwise ~A or Number(!A).
+    // Since we are dealing with 0/1 integers:
+    const notA = 1 - A;         // Invert A (if A=1, notA=0)
+    const notXor1 = 1 - xor1;   // Invert (A^B)
+    
+    const and1 = notA & B;      // Term 1 for Borrow
+    const and2 = notXor1 & Bin; // Term 2 for Borrow
+    const Bout = and1 | and2;   // Final Borrow
+
+    // --- RECTANGLE DIAGRAM UPDATE ---
+    document.getElementById("wireA").classList.toggle("signal", A);
+    document.getElementById("wireB").classList.toggle("signal", B);
+    document.getElementById("wireBin").classList.toggle("signal", Bin);
+    document.getElementById("wireDiff").classList.toggle("signal", Diff);
+    document.getElementById("wireBout").classList.toggle("signal", Bout);
+
+    document.getElementById("A").classList.toggle("on", A);
+    document.getElementById("B").classList.toggle("on", B);
+    document.getElementById("Bin").classList.toggle("on", Bin);
+    document.getElementById("Diff").classList.toggle("on", Diff);
+    document.getElementById("Bout").classList.toggle("on", Bout);
+
+    // --- GATE DIAGRAM UPDATE ---
+    // Clear previous signals
+    document.querySelectorAll("#gateDiagram .wire2").forEach(w => w.classList.remove("signal"));
+
+    // Input Wires (from source)
+    if (A) {
+        document.getElementById("gWireA").classList.add("signal");
+        // Wire to XOR1 is active
+        document.getElementById("gWireA_XOR").classList.add("signal");
+        // Wire to Inverter Input is active
+        document.getElementById("gWireA_NotIn").classList.add("signal");
+    }
+    // Wire from Inverter A to AND1 (Active if A is 0)
+    if (notA) {
+        document.getElementById("gWireA_NotOut").classList.add("signal");
+        document.getElementById("gWireA_And1").classList.add("signal");
+    }
+
+    if (B) {
+        document.getElementById("gWireB").classList.add("signal");
+        document.getElementById("gWireB_XOR").classList.add("signal");
+        document.getElementById("gWireB_XorH").classList.add("signal");
+        document.getElementById("gWireB_And1").classList.add("signal");
+        document.getElementById("gWireB_And1H").classList.add("signal");
+    }
+
+    if (Bin) {
+        document.getElementById("gWireBin").classList.add("signal");
+        document.getElementById("gWireBinUp").classList.add("signal");
+        document.getElementById("gWireBinXor2").classList.add("signal");
+        document.getElementById("gWireBin_And2").classList.add("signal");
+    }
+
+    // Intermediate Logic
+    if (xor1) {
+        document.getElementById("gWireX1_X2").classList.add("signal");
+        document.getElementById("gWireX1_NotIn").classList.add("signal");
+    }
+    // Wire from Inverter XOR to AND2 (Active if xor1 is 0)
+    if (notXor1) {
+        document.getElementById("gWireX1_NotOut").classList.add("signal");
+        document.getElementById("gWireX1_And2").classList.add("signal");
+    }
+
+    // AND Gate Outputs
+    if (and1) {
+        document.getElementById("gWireAnd1_Out").classList.add("signal");
+        document.getElementById("gWireAnd1_Down").classList.add("signal");
+        document.getElementById("gWireAnd1_OR").classList.add("signal");
+    }
+
+    if (and2) {
+        document.getElementById("gWireAnd2_Out").classList.add("signal");
+    }
+
+    // Final Outputs
+    if (Diff) document.getElementById("gWireDiff").classList.add("signal");
+    if (Bout) document.getElementById("gWireBout").classList.add("signal");
+
+    document.getElementById("gA").classList.toggle("on", A);
+    document.getElementById("gB").classList.toggle("on", B);
+    document.getElementById("gBin").classList.toggle("on", Bin);
+    document.getElementById("gDiff").classList.toggle("on", Diff);
+    document.getElementById("gBout").classList.toggle("on", Bout);
+
+    // Truth Table
+    document.querySelectorAll("tr").forEach(r => r.classList.remove("active"));
+    document.getElementById(`r${A}${B}${Bin}`).classList.add("active");
+}
+
+// Input Toggles
+document.getElementById("A").onclick = function() { A ^= 1; update(); };
+document.getElementById("B").onclick = function() { B ^= 1; update(); };
+document.getElementById("Bin").onclick = function() { Bin ^= 1; update(); };
+
+document.getElementById("gA").onclick = function() { A ^= 1; update(); };
+document.getElementById("gB").onclick = function() { B ^= 1; update(); };
+document.getElementById("gBin").onclick = function() { Bin ^= 1; update(); };
+
+update();
+
+</script>
+</body>
+</html>
