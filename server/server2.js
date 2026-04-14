@@ -19,6 +19,10 @@ app.use(bodyParser.json());
 // ✅ Serve frontend files (AFTER app is created)
 app.use(express.static(path.join(__dirname, "../")));
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../Login/login.html"));
+});
+
 // ⚠️ Replace with your Gmail + App Password
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
