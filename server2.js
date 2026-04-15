@@ -133,42 +133,27 @@ function generateOTP() {
 app.post("/signup", async (req, res) => {
     const { email, name, password } = req.body;
 
-    // validation
     if (!email || !name || !password) {
         return res.status(400).json({ success: false, message: "All fields required" });
     }
 
     try {
-        // check if user already exists
-        const [rows] = await db.query(
-            "SELECT id FROM users WHERE email = ?",
-            [email]
-        );
+        const [rows] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
 
         if (rows.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Email already registered"
-            });
+            return res.status(400).json({ success: false, message: "Email already registered" });
         }
 
-        // insert directly into DB
         await db.query(
             "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
             [name, email, password]
         );
 
-        res.json({
-            success: true,
-            message: "Signup successful ✅"
-        });
+        res.json({ success: true, message: "Signup successful ✅" });
 
     } catch (err) {
         console.error("Signup Error:", err);
-        res.status(500).json({
-            success: false,
-            message: "Server error ❌"
-        });
+        res.status(500).json({ success: false, message: "Server error ❌" });
     }
 });
 // ================= VERIFY OTP =================
