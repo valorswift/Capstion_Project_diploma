@@ -133,78 +133,44 @@ function generateOTP() {
 app.post("/signup", async (req, res) => {
     const { email, name, password } = req.body;
 
+    // validation
     if (!email || !name || !password) {
         return res.status(400).json({ success: false, message: "All fields required" });
     }
 
-    if (activeRequests.get(email)) {
-        return res.json({ success: false, message: "Request already in progress" });
-    }
-
-    activeRequests.set(email, true);
-
     try {
-        // Check if user already exists
-        const [rows] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
+        // check if user already exists
+        const [rows] = await db.query(
+            "SELECT id FROM users WHERE email = ?",
+            [email]
+        );
+
         if (rows.length > 0) {
-            return res.status(400).json({ success: false, message: "Email already registered" });
-        }
-
-        // Generate OTP
-        const otp = generateOTP();
-
-        // Store temporarily
-        otpStore.set(email, {
-            otp,
-            name,
-            password,
-            createdAt: Date.now()
-        });
-
-        // 🔥 Try sending email
-        try {
-            await transporter.sendMail({
-                from: "projectwork1278@gmail.com",
-                to: email,
-                subject: "Your OTP for Concept Visualizer",
-                html: `
-                    <h2>Hello ${name}</h2>
-                    <p>Your OTP is:</p>
-                    <h1>${otp}</h1>
-                `
+            return res.status(400).json({
+                success: false,
+                message: "Email already registered"
             });
-
-            console.log("Email sent ✅");
-
-        } catch (err) {
-            console.log("Email failed ❌ OTP:", otp);
-
-            // Save directly if email fails
-            try {
-                await db.query(
-                    "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-                    [name, email, password]
-                );
-
-                otpStore.delete(email);
-                console.log("Saved to DB without OTP ✅");
-
-            } catch (dbErr) {
-                console.error("DB Save Error:", dbErr);
-            }
         }
 
-        // Send response
-        res.json({ success: true, message: "Signup processed" });
+        // insert directly into DB
+        await db.query(
+            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+            [name, email, password]
+        );
+
+        res.json({
+            success: true,
+            message: "Signup successful ✅"
+        });
 
     } catch (err) {
         console.error("Signup Error:", err);
-        res.status(500).json({ success: false, message: "Server error ❌" });
-    } finally {
-        activeRequests.delete(email);
+        res.status(500).json({
+            success: false,
+            message: "Server error ❌"
+        });
     }
 });
-
 // ================= VERIFY OTP =================
 app.post("/verify-otp", async (req, res) => {
     const { email, otp } = req.body;
