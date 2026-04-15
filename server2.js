@@ -132,48 +132,72 @@ function generateOTP() {
 // ================= SIGNUP → SEND OTP =================
 app.post("/signup", async (req, res) => {
     const { email, name, password } = req.body;
-    if (!email || !name || !password) return res.status(400).send({ success: false, message: "All fields required" });
+
+    if (!email || !name || !password) {
+        return res.status(400).json({ success: false, message: "All fields required" });
+    }
 
     if (activeRequests.get(email)) {
         return res.json({ success:false, message:"Request already in progress" });
     }
+
     activeRequests.set(email, true);
 
     try {
         // Check if user already exists
         const [rows] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
-        if (rows.length > 0) return res.status(400).send({ success: false, message: "Email already registered" });
+        if (rows.length > 0) {
+            return res.status(400).json({ success: false, message: "Email already registered" });
+        }
 
-        
-
-        // Generate & store OTP
         const otp = generateOTP();
+
+        // Store temporary
         otpStore.set(email, {
-    otp,
-    name,
-    password,
-    createdAt: Date.now()
-}); // Save name + hashed password later after verification
+            otp,
+            name,
+            password,
+            createdAt: Date.now()
+        });
 
-        // Send OTP email
+        // Try sending email
         transporter.sendMail({
-    from: "projectwork1278@gmail.com",
-    to: email,
-    subject: "Your OTP for Concept Visualizer",
-    html: `
-        <h2>Hello ${name}</h2>
-        <p>Your OTP for signing up is:</p>
-        <h1 style="color:#6366f1">${otp}</h1>
-        <p>Enter this code in the app to complete your registration.</p>
-    `
-}).catch(err => console.log("Email failed, OTP:", otp));
+            from: "projectwork1278@gmail.com",
+            to: email,
+            subject: "Your OTP for Concept Visualizer",
+            html: `
+                <h2>Hello ${name}</h2>
+                <p>Your OTP is:</p>
+                <h1>${otp}</h1>
+            `
+        }).then(() => {
+            console.log("Email sent ✅");
+        }).catch(async (err) => {
+            console.log("Email failed ❌ OTP:", otp);
 
-        console.log(`OTP sent to ${email}: ${otp}`);
-        res.send({ success: true, message: "OTP sent ✅" });
+            // ✅ SAVE ONLY IF EMAIL FAILS
+            try {
+                await db.query(
+                    "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+                    [name, email, password]
+                );
+
+                // ❗ Remove from OTP store to prevent duplicate insert
+                otpStore.delete(email);
+
+                console.log("Saved to DB without OTP ✅");
+            } catch (dbErr) {
+                console.error("DB Save Error:", dbErr);
+            }
+        });
+
+        res.json({ success: true, message: "Signup processed" });
+
     } catch (err) {
         console.error("Signup Error:", err);
-        res.status(500).send({ success: false, message: "Server error ❌" });
+        res.status(500).json({ success: false, message: "Server error ❌" });
     } finally {
+        // ✅ VERY IMPORTANT
         activeRequests.delete(email);
     }
 });
