@@ -156,17 +156,17 @@ app.post("/signup", async (req, res) => {
 }); // Save name + hashed password later after verification
 
         // Send OTP email
-        await transporter.sendMail({
-            from: "projectwork1278@gmail.com",
-            to: email,
-            subject: "Your OTP for Concept Visualizer",
-            html: `
-                <h2>Hello ${name}</h2>
-                <p>Your OTP for signing up is:</p>
-                <h1 style="color:#6366f1">${otp}</h1>
-                <p>Enter this code in the app to complete your registration.</p>
-            `
-        });
+        transporter.sendMail({
+    from: "projectwork1278@gmail.com",
+    to: email,
+    subject: "Your OTP for Concept Visualizer",
+    html: `
+        <h2>Hello ${name}</h2>
+        <p>Your OTP for signing up is:</p>
+        <h1 style="color:#6366f1">${otp}</h1>
+        <p>Enter this code in the app to complete your registration.</p>
+    `
+}).catch(err => console.log("Email failed, OTP:", otp));
 
         console.log(`OTP sent to ${email}: ${otp}`);
         res.send({ success: true, message: "OTP sent ✅" });
